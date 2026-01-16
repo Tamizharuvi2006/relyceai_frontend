@@ -384,8 +384,8 @@ function AppContent() {
 
         {/* Chat Window with Header */}
         <main className="flex-1 flex flex-col overflow-hidden relative min-w-0 w-full">
-          {/* Header - positioned to start after sidebar */}
-          <div className="backdrop-blur-sm z-50 border-b transition-colors bg-zinc-900/90 border-emerald-500/20">
+          {/* Header - sticky to prevent hiding on mobile scroll */}
+          <div className="sticky top-0 backdrop-blur-sm z-50 border-b transition-colors bg-zinc-900/95 border-emerald-500/20">
             <div className="flex items-center justify-between py-3 px-4">
               {/* Left side */}
               <div className="flex items-center gap-3">

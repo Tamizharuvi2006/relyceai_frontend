@@ -64,6 +64,12 @@ html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover { backg
   .chat-message { padding: 0.75rem 1rem !important; }
   .chat-header, .chat-input-container { padding: 0.5rem !important; }
   .chat-window-container, .messages-container, .message-content { overflow-x: hidden !important; }
+  
+  /* Fix for mobile browser address bar - use dvh for dynamic viewport height */
+  .h-screen { height: 100dvh !important; min-height: 100dvh !important; }
+  
+  /* Ensure sticky header stays visible on mobile */
+  .sticky { position: -webkit-sticky; position: sticky; }
 }
 
 /* Message Styles */
