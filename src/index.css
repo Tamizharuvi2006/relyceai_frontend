@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #000000;
+  --bg-secondary: #111111;
+  --bg-tertiary: #1a1a1a;
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-tertiary: #cbd5e1;
+  --border-color: #374151;
+  --accent-color: #10b981;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+@layer base {
+  body { @apply bg-black text-slate-100; }
+}
+
+@layer components {
+  .primary-btn {
+    @apply w-full mt-4 px-12 py-3 bg-emerald-500 text-black font-bold text-base rounded-lg cursor-pointer transition-all duration-300 hover:scale-105 hover:bg-emerald-600 shadow-lg shadow-emerald-500/30;
+  }
+  .google-btn {
+    @apply w-full flex items-center justify-center gap-3 border border-zinc-700 rounded-lg px-6 py-3 font-semibold text-zinc-200 hover:bg-zinc-800 transition-colors duration-300;
+  }
+  .overlay-btn {
+    @apply bg-transparent border-2 border-white text-white px-12 py-3 rounded-lg font-bold uppercase tracking-wider transition-transform duration-200 hover:scale-105;
+  }
+}
+
+/* Scrollbars */
+html::-webkit-scrollbar, body::-webkit-scrollbar { width: 8px; }
+html::-webkit-scrollbar-track, body::-webkit-scrollbar-track { background: #0a0a0a; }
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb { background: #18181b; border-radius: 4px; }
+html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover { background: #27272a; }
+
+.smooth-scroll { scroll-behavior: smooth; }
+.smooth-scroll::-webkit-scrollbar { width: 6px; }
+.smooth-scroll::-webkit-scrollbar-track { background: #18181b; border-radius: 4px; }
+.smooth-scroll::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #10b981, #059669); border-radius: 4px; }
+
+.theme-scrollbar { scrollbar-width: thin; scrollbar-color: #10b981 #18181b; }
+.theme-scrollbar::-webkit-scrollbar { width: 6px; }
+.theme-scrollbar::-webkit-scrollbar-track { background: #18181b; border-radius: 4px; }
+.theme-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #10b981, #059669); border-radius: 4px; }
+
+/* Mobile Chat Styles */
+@media (max-width: 768px) {
+  .chat-message-container { max-width: 90% !important; }
+  .chat-message { padding: 0.75rem 1rem !important; }
+  .chat-header, .chat-input-container { padding: 0.5rem !important; }
+  .chat-window-container, .messages-container, .message-content { overflow-x: hidden !important; }
+  
+  /* Fix for mobile browser address bar - use dvh for dynamic viewport height */
+  .h-screen { height: 100dvh !important; min-height: 100dvh !important; }
+  
+  /* Ensure sticky header stays visible on mobile */
+  .sticky { position: -webkit-sticky; position: sticky; }
+}
+
+/* Message Styles */
+.bot-message { border-radius: 0.75rem; border-top-left-radius: 0.25rem; }
+.user-message { border-radius: 0.75rem; border-top-right-radius: 0.25rem; }
+.chat-window-container { height: 100%; max-height: 100%; }
+.messages-container { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.message-content { overflow-x: hidden; word-wrap: break-word; }
+
+@layer utilities {
+  .theme-bg-primary { background-color: var(--bg-primary); }
+  .theme-bg-secondary { background-color: var(--bg-secondary); }
+  .theme-bg-tertiary { background-color: var(--bg-tertiary); }
+  .theme-text-primary { color: var(--text-primary); }
+  .theme-text-secondary { color: var(--text-secondary); }
+  .theme-text-tertiary { color: var(--text-tertiary); }
+  .theme-border { border-color: var(--border-color); }
+  
+  @keyframes bubble {
+    0% { transform: scale(0.95); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-bubble { animation: bubble 0.25s ease-out; }
+}
+
+::selection { background-color: #34d399; color: black; }
+::-moz-selection { background-color: #34d399; color: black; }

@@ -1,0 +1,149 @@
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../utils/firebaseConfig';
+import {
+  createUserProfile,
+  updateUserLastLogin,
+  assignUserIdToExistingUser,
+  ensureUserHasId
+} from '../features/users/services/userService';
+import {
+  getUserMembership,
+  checkMembershipExpiry
+} from '../features/membership/services/membershipService';
+
+const AuthContext = createContext();
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+// Cache for user profiles to prevent repeated fetches
+const userProfileCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// This is the single, correct AuthProvider component
+export default function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [membership, setMembership] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
+  const fetchUserProfile = async (uid, skipExpensiveOperations = false) => {
+    try {
+      // Check cache first, but allow force refresh
+      const cacheKey = `${uid}_${skipExpensiveOperations}`;
+      const cached = userProfileCache.get(cacheKey);
+
+      // Always fetch fresh data from Firestore, don't rely on cache for critical operations
+      const docSnap = await getDoc(doc(db, 'users', uid));
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+
+        // Ensure user has a uniqueUserId assigned
+        if (!userData.uniqueUserId) {
+          const assignedId = await ensureUserHasId(uid);
+          if (assignedId) {
+            userData.uniqueUserId = assignedId;
+          }
+        }
+
+        // Only run expensive operations if not skipping
+        if (!skipExpensiveOperations) {
+          // Check membership expiry (run in background)
+          checkMembershipExpiry(uid).catch(console.error);
+
+          // Update last login (run in background)
+          updateUserLastLogin(uid).catch(console.error);
+        }
+
+        // Get membership data (lightweight operation)
+        let membershipData;
+        try {
+          membershipData = await getUserMembership(uid);
+        } catch (err) {
+          console.warn('Failed to get membership data:', err);
+          membershipData = userData.membership || null;
+        }
+
+        // Cache the result
+        userProfileCache.set(cacheKey, {
+          userProfile: userData,
+          membership: membershipData,
+          timestamp: Date.now()
+        });
+
+        setUserProfile(userData);
+        setMembership(membershipData);
+
+        return userData;
+      } else {
+        // Create new user profile if doesn't exist
+        try {
+          const newProfile = await createUserProfile({ uid, email: auth.currentUser?.email });
+          setUserProfile(newProfile);
+          setMembership(newProfile.membership);
+          return newProfile;
+        } catch (err) {
+          console.error('Failed to create user profile:', err);
+          return null;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      // Set user and loading IMMEDIATELY - don't wait for profile
+      setUser(authUser);
+      setLoading(false); // Unblock UI immediately!
+      
+      if (authUser) {
+        // Fetch profile in background - don't block the UI
+        const skipExpensive = !initialLoadComplete;
+        fetchUserProfile(authUser.uid, skipExpensive).then(() => {
+          if (!initialLoadComplete) {
+            setInitialLoadComplete(true);
+          }
+        }).catch(console.error);
+      } else {
+        setUserProfile(null);
+        setMembership(null);
+      }
+    });
+    return unsubscribe;
+  }, [initialLoadComplete]);
+
+  const refreshUserProfile = async () => {
+    if (user) {
+      // Clear cache before refreshing to ensure fresh data
+      userProfileCache.clear();
+      await fetchUserProfile(user.uid, false); // Don't skip expensive operations on manual refresh
+    }
+  };
+
+  // Get role directly from userProfile - this is now secure as it comes from backend
+  const role = userProfile?.role || 'user';
+
+  const value = {
+    currentUser: user,
+    userProfile,
+    membership,
+    role, // Secure role from backend database
+    auth,
+    loading,
+    refreshUserProfile,
+    refreshUserRole: refreshUserProfile, // Alias for backward compatibility
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}

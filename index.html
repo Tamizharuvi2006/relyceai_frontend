@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Optimize resource loading -->
+    <meta name="theme-color" content="#10b981" />
+    <meta name="description" content="Relyce AI - Advanced AI Chat Assistant" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <title>Relyce ai</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <!-- Extension conflict resolution -->
+    <script>
+      // Handle extension conflicts
+      window.addEventListener('error', (e) => {
+        if (e.message && e.message.includes('chrome-extension')) {
+          e.stopImmediatePropagation();
+        }
+      }, true);
+    </script>
+  </body>
+</html>

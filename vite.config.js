@@ -1,0 +1,65 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [
+    tailwindcss(),
+    react({ fastRefresh: true })
+  ],
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          router: ['react-router-dom'],
+          ui: ['lucide-react', 'react-hot-toast', 'framer-motion'],
+        }
+      }
+    },
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
+    minify: 'terser',
+    terserOptions: {
+      compress: { drop_console: true, drop_debugger: true }
+    }
+  },
+
+  optimizeDeps: {
+    include: [
+      'react', 'react-dom', 'react-router-dom',
+      'firebase/app', 'firebase/auth', 'firebase/firestore',
+      'lucide-react', 'framer-motion'
+    ],
+    exclude: ['@gsap/react'],
+    esbuildOptions: { target: 'esnext' }
+  },
+
+  server: {
+    strictPort: true,
+    port: 5173,
+    hmr: {
+      overlay: {
+        errors: (error) => {
+          const msg = error.message || '';
+          return !(msg.includes('ECONNREFUSED') || msg.includes('ws proxy error') || msg.includes('WebSocket'));
+        }
+      }
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        configure: (proxy) => proxy.on('error', () => {})
+      },
+      '/ws': {
+        target: 'ws://localhost:8000',
+        ws: true,
+        changeOrigin: true,
+        configure: (proxy) => proxy.on('error', () => {})
+      }
+    }
+  }
+})
