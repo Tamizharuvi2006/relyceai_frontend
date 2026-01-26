@@ -289,11 +289,7 @@ const ChatWindowHeader = ({
             </div>
           )}
 
-          {userUniqueId && (
-              <span className="text-xs px-2 py-1 rounded-full bg-zinc-700 text-zinc-300 hidden md:inline-block">
-                {userUniqueId}
-              </span>
-            )}
+
         </div>
 
         {/* Right side - Actions */}

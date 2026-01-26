@@ -146,11 +146,21 @@ export default function Header() {
                 className="flex items-center gap-3 p-1.5 rounded-full hover:bg-zinc-800 transition-colors"
               >
                 {userAvatar ? (
+                  <>
                   <img
                     src={userAvatar}
                     alt="Profile"
+                    referrerPolicy="no-referrer"
                     className="w-10 h-10 rounded-full border border-emerald-500/30"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
                   />
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 hidden items-center justify-center font-bold text-emerald-300 border border-emerald-500/30 absolute top-1.5 left-1.5 pointer-events-none">
+                    {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  </>
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 border border-emerald-500/30">
                     {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
@@ -277,7 +287,21 @@ export default function Header() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {userAvatar ? (
-                  <img src={userAvatar} alt="Profile" className="w-9 h-9 rounded-full border border-emerald-500/30" />
+                  <>
+                  <img 
+                    src={userAvatar} 
+                    alt="Profile" 
+                    referrerPolicy="no-referrer"
+                    className="w-9 h-9 rounded-full border border-emerald-500/30" 
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 hidden items-center justify-center font-bold text-emerald-300 border border-emerald-500/30 absolute">
+                    {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  </>
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 border border-emerald-500/30">
                     {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
