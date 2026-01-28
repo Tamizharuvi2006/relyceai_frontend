@@ -1,36 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
-import { createRequire } from 'node:module'
-
-const require = createRequire(import.meta.url)
-const vitePrerender = require('vite-plugin-prerender')
-
-const Renderer = vitePrerender.PuppeteerRenderer
-
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    react({ fastRefresh: true }),
-    vitePrerender({
-      staticDir: path.join(__dirname, 'dist'),
-      routes: ['/', '/about', '/contact', '/privacy', '/terms'],
-      renderer: new Renderer({
-        renderAfterTime: 1000,
-        maxConcurrentRoutes: 1,
-      }),
-      server: {
-        port: 5173
-      }, 
-      postProcess (renderedRoute) {
-        renderedRoute.html = renderedRoute.html.replace(
-          /http:\/\/localhost:\d+/g,
-          ''
-        )
-        return renderedRoute
-      }
-    })
+    react({ fastRefresh: true })
   ],
 
   build: {
