@@ -3,6 +3,8 @@ import { Mail, Send, Phone, MapPin, Clock, MessageCircle, Headphones, Building2,
 import { FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import toast, { Toaster } from 'react-hot-toast';
 
+import { Helmet } from 'react-helmet-async';
+
 // Easter egg colors for random hover effects
 const easterEggColors = [
   'text-pink-400',
@@ -206,6 +208,14 @@ export default function ContactPage() {
       className="relative min-h-screen overflow-hidden bg-[#05060a] text-white"
       onClick={handlePageClick}
     >
+      <Helmet>
+        <title>Contact Relyce AI – Get in Touch</title>
+        <meta
+          name="description"
+          content="Have questions about Relyce AI? Contact our team for support, sales, or partnerships."
+        />
+        <link rel="canonical" href="https://relyceai.com/contact" />
+      </Helmet>
       <Toaster />
 
       {/* Click Burst Effects */}
@@ -289,12 +299,12 @@ export default function ContactPage() {
                 </div>
                 <h3 className="text-xl font-bold">{option.title}</h3>
                 <p className="mt-3 text-gray-400 text-sm">{option.description}</p>
-                <a
-                  href={option.link}
+                <button
+                  onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
                   className="inline-block mt-6 px-6 py-2 text-sm font-semibold text-emerald-400 border border-emerald-500/50 rounded-xl hover:bg-emerald-500 hover:text-black transition-all"
                 >
                   {option.action}
-                </a>
+                </button>
               </div>
             ))}
           </div>
@@ -528,9 +538,9 @@ export default function ContactPage() {
           </div>
           <div className="mt-12 text-center">
             <p className="text-gray-400">Still have questions?</p>
-            <a href="#contact-form" className="inline-block mt-4 px-8 py-3 font-semibold rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-105 transition-all">
+            <button onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })} className="inline-block mt-4 px-8 py-3 font-semibold rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-105 transition-all">
               Contact Our Team
-            </a>
+            </button>
           </div>
         </div>
       </section>

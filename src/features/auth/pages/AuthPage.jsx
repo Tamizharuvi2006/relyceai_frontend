@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Helmet } from 'react-helmet-async';
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -171,6 +172,10 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 font-sans bg-gradient-to-br from-zinc-900 to-black">
+      <Helmet>
+        <title>{location.pathname === '/login' ? 'Login' : 'Sign Up'} – Relyce AI</title>
+        <meta name="robots" content="noindex" />
+      </Helmet>
       <AuthStyles />
 
       {/* Desktop View */}

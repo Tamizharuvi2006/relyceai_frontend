@@ -55,7 +55,16 @@ export function sanitizeUserData(userData, isAdminContext = false) {
 export function validateRoleChange(currentRole, newRole, requesterRole) {
   const validRoles = ['user', 'premium', 'admin', 'superadmin'];
   if (!validRoles.includes(currentRole) || !validRoles.includes(newRole) || !validRoles.includes(requesterRole)) return false;
-  if (requesterRole !== 'superadmin') return false;
-  if (currentRole === 'superadmin' && newRole !== 'superadmin') return false;
-  return true;
+  
+  // Superadmin can do anything
+  if (requesterRole === 'superadmin') return true;
+
+  // Admin can only manage 'user' and 'premium'
+  if (requesterRole === 'admin') {
+    if (currentRole === 'admin' || currentRole === 'superadmin') return false; // Cannot modify other admins
+    if (newRole === 'admin' || newRole === 'superadmin') return false; // Cannot promote to admin
+    return true; 
+  }
+
+  return false;
 }

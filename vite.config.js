@@ -1,11 +1,36 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const vitePrerender = require('vite-plugin-prerender')
+
+const Renderer = vitePrerender.PuppeteerRenderer
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    react({ fastRefresh: true })
+    react({ fastRefresh: true }),
+    vitePrerender({
+      staticDir: path.join(__dirname, 'dist'),
+      routes: ['/', '/about', '/contact', '/privacy', '/terms'],
+      renderer: new Renderer({
+        renderAfterTime: 1000,
+        maxConcurrentRoutes: 1,
+      }),
+      server: {
+        port: 5173
+      }, 
+      postProcess (renderedRoute) {
+        renderedRoute.html = renderedRoute.html.replace(
+          /http:\/\/localhost:\d+/g,
+          ''
+        )
+        return renderedRoute
+      }
+    })
   ],
 
   build: {
@@ -16,11 +41,15 @@ export default defineConfig({
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           router: ['react-router-dom'],
           ui: ['lucide-react', 'react-hot-toast', 'framer-motion'],
+          nivo: ['@nivo/bar', '@nivo/line', '@nivo/pie', '@nivo/core'],
+          xlsx: ['xlsx'],
+          grid: ['ag-grid-react', 'ag-grid-community'],
+          syntax: ['react-syntax-highlighter', 'refractor'],
         }
       }
     },
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1600,
     minify: 'terser',
     terserOptions: {
       compress: { drop_console: true, drop_debugger: true }

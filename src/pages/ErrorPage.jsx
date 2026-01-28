@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useRouteError } from 'react-router-dom';
 import { AlertTriangle, Home, LogIn, ArrowLeft } from 'lucide-react';
 
 const ErrorPage = ({ 
@@ -10,6 +10,11 @@ const ErrorPage = ({
   showBackButton = false
 }) => {
   const navigate = useNavigate();
+  const error = useRouteError();
+  
+  const displayTitle = error?.status === 404 ? "Page Not Found" : error?.statusText || title;
+  const displayMessage = error?.error?.message || error?.message || message;
+  const displayCode = error?.status || 404;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center px-4">
@@ -25,14 +30,14 @@ const ErrorPage = ({
         {/* Error Content */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-4">
-            {title}
+            {displayTitle}
           </h1>
           
           <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
               <p className="text-zinc-700 dark:text-zinc-300 text-sm text-left">
-                {message}
+                {displayMessage}
               </p>
             </div>
           </div>
@@ -78,7 +83,7 @@ const ErrorPage = ({
 
         {/* Error Code */}
         <div className="mt-8 text-xs text-zinc-500 dark:text-zinc-600">
-          Error Code: 404 | Page Not Found
+          Error Code: {displayCode} | {displayTitle}
         </div>
       </div>
     </div>

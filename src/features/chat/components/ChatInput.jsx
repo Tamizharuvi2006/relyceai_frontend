@@ -59,6 +59,15 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
 
     const handleSend = () => {
         if (!text.trim() && uploadedFiles.length === 0) return;
+        if (botTyping) return; // Prevent double submit while streaming
+
+        // Safety: Max length check (2k chars)
+        if (text.length > 2000) {
+            // Toast or alert would be better, but console warn for now if no toast available in props
+            console.warn("Message too long (max 2000 chars)");
+            alert("Message must be under 2000 characters."); 
+            return;
+        }
         
         // Debug: Log fileIds being sent
         const fileIds = uploadedFiles.filter(f => f.fileId).map(f => f.fileId);

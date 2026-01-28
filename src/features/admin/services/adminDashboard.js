@@ -4,11 +4,11 @@ import { verifyAdminAccess, validateRoleChange } from './adminSecurity';
 import { generateUserId } from '../../users/services/userService';
 
 export const MEMBERSHIP_PLANS = {
-  free: { name: 'Free', monthly: 0, yearly: 0, yearlyDiscountPercentage: 0, features: ['Basic chat', '2 file uploads', '5MB file limit'] },
-  student: { name: 'Student', monthly: 249, yearly: 2499, yearlyDiscountPercentage: 16.7, features: ['Unlimited chat', '10 file uploads', '25MB file limit'] },
-  plus: { name: 'Plus', monthly: 999, yearly: 9999, yearlyDiscountPercentage: 16.7, features: ['Unlimited chat', '50 file uploads', '100MB file limit'] },
-  pro: { name: 'Pro', monthly: 1999, yearly: 19999, yearlyDiscountPercentage: 16.7, features: ['Unlimited chat', '250 file uploads', '250MB file limit', 'Priority processing', 'Advanced features'] },
-  business: { name: 'Business', monthly: 2499, yearly: 24999, yearlyDiscountPercentage: 16.7, features: ['Unlimited everything', 'Priority support', '500MB file limit'] }
+  free: { name: 'Free', monthly: 0, yearly: 0, yearlyDiscountPercentage: 0, features: ['Generic AI chatbot', 'Limited business chatbot', 'Basic data visualization', '15 chats/month', '30-day history'] },
+  starter: { name: 'Starter', monthly: 199, yearly: 1999, yearlyDiscountPercentage: 16.7, features: ['Generic + Business chatbot', 'Interactive visualization', '150 chats/month', '60-day history', 'Export chat', 'Priority support'] },
+  plus: { name: 'Plus', monthly: 499, yearly: 4999, yearlyDiscountPercentage: 16.7, features: ['Advanced business workflows', 'Enhanced visualization', '600 chats/month', 'File upload (50 files, 100MB)', 'Premium support', 'Export reports'] },
+  pro: { name: 'Pro', monthly: 1499, yearly: 14999, yearlyDiscountPercentage: 16.7, features: ['Team collaboration (5 users)', 'Advanced analytics', 'Custom branding', 'API access', '1,500 chats/month', 'Priority tech support'] },
+  business: { name: 'Business', monthly: 4999, yearly: 49999, yearlyDiscountPercentage: 16.7, features: ['Unlimited chats', 'Unlimited file uploads', 'Dedicated support manager', 'Team management', 'Advanced security', 'SLA guarantee'] }
 };
 
 export const getAllUsers = async (requesterId) => {
@@ -16,12 +16,12 @@ export const getAllUsers = async (requesterId) => {
   if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized access to user data');
 
   const snapshot = await getDocs(collection(db, 'users'));
-  const users = [];
-  for (const userDoc of snapshot.docs) {
-    const userData = { id: userDoc.id, ...userDoc.data() };
-    userData.stats = await getUserStats(userDoc.id);
-    users.push(userData);
-  }
+  const users = snapshot.docs.map(userDoc => ({
+    id: userDoc.id, 
+    ...userDoc.data(),
+    stats: { filesUploaded: 0, conversations: 0, folders: 0 } // Default stats to avoid UI breaking
+  }));
+
   return users.sort((a, b) => {
     const idA = a.uniqueUserId ? parseInt(a.uniqueUserId.replace('RA', '')) : 0;
     const idB = b.uniqueUserId ? parseInt(b.uniqueUserId.replace('RA', '')) : 0;

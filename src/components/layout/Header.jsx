@@ -278,8 +278,16 @@ export default function Header() {
             >
               {label}
             </Link>
-
           ))}
+          {user && (
+            <Link
+              to="/settings"
+              onClick={() => setIsMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            >
+              Settings
+            </Link>
+          )}
         </nav>
 
         <div className="mt-auto p-4 border-t border-zinc-800">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import ReactDOM from 'react-dom';
 import ChatHistory from '../components/ChatHistory.jsx';
 import ChatWindow from '../components/ChatWindow.jsx';
@@ -386,6 +387,10 @@ function AppContent() {
 
   return (
     <div className="flex h-screen w-full font-sans overflow-hidden transition-colors duration-300 bg-zinc-900 text-gray-200">
+      <Helmet>
+        <title>Chat – Relyce AI</title>
+        <meta name="robots" content="noindex" />
+      </Helmet>
       {/* Content with sidebar and chat area */}
       <div className="flex h-full w-full">
         {/* Sidebar */}

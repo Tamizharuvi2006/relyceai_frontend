@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Building2, MessageSquare, UserCircle2, BookOpen, BarChart3, Database, Bot } from 'lucide-react';
 
 // Import images
-import aiPersonaImg from '../../assets/ai_persona.png';
 import businessImg from '../../assets/business.webp';
 import dataVizImg from '../../assets/data visuvilation.webp';
 import genericImg from '../../assets/genric.webp';
 import libraryImg from '../../assets/library.webp';
+import aiPersonaImg from '../../assets/ai persona dashboard.webp';
 
 const FeatureShowcase = () => {
     const [currentSlide, setCurrentSlide] = useState(0);

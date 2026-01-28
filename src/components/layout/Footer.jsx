@@ -59,15 +59,15 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold text-white">Connect</h3>
             <div className="mt-6 flex items-center gap-5">
-              <a href="#" className="text-zinc-400 hover:text-white transition-colors" aria-label="LinkedIn">
+              <Link to="#" className="text-zinc-400 hover:text-white transition-colors" aria-label="LinkedIn">
                 <Linkedin size={24} />
-              </a>
-              <a href="#" className="text-zinc-400 hover:text-white transition-colors" aria-label="Instagram">
+              </Link>
+              <Link to="#" className="text-zinc-400 hover:text-white transition-colors" aria-label="Instagram">
                 <Instagram size={24} />
-              </a>
-              <a href="#" className="text-zinc-400 hover:text-white transition-colors" aria-label="WhatsApp">
+              </Link>
+              <Link to="#" className="text-zinc-400 hover:text-white transition-colors" aria-label="WhatsApp">
                 <FaWhatsapp size={24} />
-              </a>
+              </Link>
             </div>
           </div>
 

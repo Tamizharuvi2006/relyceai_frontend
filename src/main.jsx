@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import router from './router.jsx';
-import AuthProvider from './context/AuthContext';
+import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from './context/ThemeContext';
 import { registerSW } from './utils/serviceWorker.js';
 import './index.css';
@@ -23,10 +23,10 @@ if (import.meta.env.PROD) {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <ThemeProvider>
-      <AuthProvider>
+    <HelmetProvider>
+      <ThemeProvider>
         <RouterProvider router={router} />
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );

@@ -9,8 +9,8 @@ import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 import ErrorPage from "./pages/ErrorPage";
 import LoadingSpinner from "./components/loading/LoadingSpinner";
 import HeroSkeleton from "./components/skeletons/HeroSkeleton";
-import { usePreloadComponents } from "./hooks/usePreloadComponents";
 import useRoleRedirect from "./hooks/useRoleRedirect";
+import AuthProvider from "./context/AuthContext";
 
 // Component cache for lazy loading
 const componentCache = new Map();
@@ -31,6 +31,7 @@ const Membership = createLazyComponent(() => import("./features/membership/pages
 const Auth = createLazyComponent(() => import("./features/auth/pages/AuthPage.jsx"), 'Auth');
 const About = createLazyComponent(() => import("./pages/AboutPage.jsx"), 'About');
 const Contact = createLazyComponent(() => import("./pages/ContactPage.jsx"), 'Contact');
+const Features = createLazyComponent(() => import("./pages/FeaturesPage.jsx"), 'Features');
 const Settings = createLazyComponent(() => import("./features/settings/pages/SettingsPage.jsx"), 'Settings');
 const UserFiles = createLazyComponent(() => import("./features/files/pages/UserFilesPage.jsx"), 'UserFiles');
 const SharedChat = createLazyComponent(() => import("./features/chat/pages/SharedChatPage.jsx"), 'SharedChat');
@@ -51,17 +52,17 @@ const LazyWrapper = memo(({ children, useHeroSkeleton = false }) => {
 LazyWrapper.displayName = 'LazyWrapper';
 
 // Theme updater component
-const ThemeUpdater = ({ isChatPage }) => {
-  const { setIsChatPage } = useTheme();
-  useEffect(() => setIsChatPage(isChatPage), [isChatPage, setIsChatPage]);
-  return null;
-};
 
-const AppLayout = memo(() => {
+
+// App Layout with AuthProvider (Logic Heavy)
+// App Layout with AuthProvider (Logic Heavy)
+const AppLayoutContent = memo(() => {
   const location = useLocation();
-  
+  const { isChatPage, setIsChatPage } = useTheme();
+
   useEffect(() => window.scrollTo(0, 0), [location.pathname]);
-  usePreloadComponents();
+  
+  // These hooks consume AuthContext, so they must be inside AuthProvider
   useRoleRedirect();
 
   const appRoutes = ['/chat', '/library'];
@@ -71,36 +72,63 @@ const AppLayout = memo(() => {
     location.pathname.startsWith('/super') ||
     location.pathname.startsWith('/boss');
 
+  // Update theme context based on route
+  useEffect(() => {
+      setIsChatPage(!!isAppPage);
+  }, [isAppPage, setIsChatPage]);
+
   if (isAppPage) {
     return (
-      <>
-        <ThemeUpdater isChatPage={true} />
         <div className="flex flex-col h-screen bg-black text-slate-100">
           <main className="flex-1 overflow-hidden"><Outlet /></main>
         </div>
-      </>
     );
   }
 
+  // Fallback for app routes that still want header/footer but need Auth
   return (
-    <>
-      <ThemeUpdater isChatPage={false} />
       <div className="min-h-screen bg-black text-slate-100">
         <Header />
         <main><Outlet /></main>
         <Footer />
       </div>
-    </>
+  );
+});
+AppLayoutContent.displayName = 'AppLayoutContent';
+
+const AppLayout = memo(() => {
+  return (
+    <AuthProvider>
+      <AppLayoutContent />
+    </AuthProvider>
   );
 });
 AppLayout.displayName = 'AppLayout';
 
 const router = createBrowserRouter([
+  // 1. Marketing / Public Routes (Wrapped in AppLayout for Header/Footer)
   {
-    path: "/",
     element: <AppLayout />,
     children: [
       { path: "/", element: <LazyWrapper useHeroSkeleton><Home /></LazyWrapper> },
+      { path: "/about", element: <LazyWrapper><About /></LazyWrapper> },
+      { path: "/features", element: <LazyWrapper><Features /></LazyWrapper> },
+      { path: "/contact", element: <LazyWrapper><Contact /></LazyWrapper> },
+      { path: "/terms", element: <LazyWrapper><TermsPage /></LazyWrapper> },
+      { path: "/privacy", element: <LazyWrapper><PrivacyPage /></LazyWrapper> },
+    ],
+  },
+
+  // 2. Auth / App Routes (Wrapped in AppLayout)
+  {
+    element: <AppLayout />,
+    errorElement: <ErrorPage />,
+    children: [
+      // Auth Pages
+      { path: "/login", element: <LazyWrapper><Auth /></LazyWrapper> },
+      { path: "/signup", element: <LazyWrapper><Auth /></LazyWrapper> },
+
+      // Protected App Pages
       { path: "/chat", element: <ProtectedRoute><LazyWrapper><Chat /></LazyWrapper></ProtectedRoute> },
       { path: "/chat/:chatId", element: <ProtectedRoute><LazyWrapper><Chat /></LazyWrapper></ProtectedRoute> },
       { path: "/visualize", element: <LazyWrapper><VisualizeData /></LazyWrapper> },
@@ -108,25 +136,23 @@ const router = createBrowserRouter([
       { path: "/personalities/create", element: <ProtectedRoute><LazyWrapper><PersonalityEditor /></LazyWrapper></ProtectedRoute> },
       { path: "/personalities/edit/:id", element: <ProtectedRoute><LazyWrapper><PersonalityEditor /></LazyWrapper></ProtectedRoute> },
       { path: "/membership", element: <ProtectedRoute><LazyWrapper><Membership /></LazyWrapper></ProtectedRoute> },
-      { path: "/login", element: <LazyWrapper><Auth /></LazyWrapper> },
-      { path: "/signup", element: <LazyWrapper><Auth /></LazyWrapper> },
-      { path: "/Signup", element: <LazyWrapper><Auth /></LazyWrapper> },
-      { path: "/About", element: <LazyWrapper><About /></LazyWrapper> },
-      { path: "/contact", element: <LazyWrapper><Contact /></LazyWrapper> },
+      
       { path: "/settings", element: <LazyWrapper><Settings /></LazyWrapper> },
       { path: "/files", element: <LazyWrapper><UserFiles /></LazyWrapper> },
       { path: "/library", element: <ProtectedRoute><LazyWrapper><LibraryPage /></LazyWrapper></ProtectedRoute> },
       { path: "/shared/:shareId", element: <LazyWrapper><SharedChat /></LazyWrapper> },
-      { path: "/terms", element: <LazyWrapper><TermsPage /></LazyWrapper> },
-      { path: "/privacy", element: <LazyWrapper><PrivacyPage /></LazyWrapper> },
+      
+      // Admin Routes
       { path: "/super", element: <AdminProtectedRoute><LazyWrapper><AdminDashboard /></LazyWrapper></AdminProtectedRoute> },
       { path: "/super/*", element: <AdminProtectedRoute><LazyWrapper><AdminDashboard /></LazyWrapper></AdminProtectedRoute> },
       { path: "/boss", element: <SuperAdminProtectedRoute requireSuperAdmin><LazyWrapper><SuperAdminDashboard /></LazyWrapper></SuperAdminProtectedRoute> },
       { path: "/boss/*", element: <SuperAdminProtectedRoute requireSuperAdmin><LazyWrapper><SuperAdminDashboard /></LazyWrapper></SuperAdminProtectedRoute> },
-      { path: "/error", element: <ErrorPage /> },
-      { path: "*", element: <ErrorPage title="Page Not Found" message="The page you're looking for doesn't exist." showLoginButton={false} /> },
     ],
   },
+  
+  // Error Routes
+  { path: "/error", element: <ErrorPage /> },
+  { path: "*", element: <ErrorPage title="Page Not Found" message="The page you're looking for doesn't exist." showLoginButton={false} /> },
 ]);
 
 export default router;
