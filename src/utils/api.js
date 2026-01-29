@@ -54,8 +54,10 @@ export async function sendChatMessage(message, sessionId, userId, chatMode = 'no
     };
 
     if (personality) {
-      body.personality = personality;
-      if (personality.id) body.personality_id = personality.id;
+      // Sanitize personality to avoid sending large data (e.g. base64 avatars)
+      const { id, name, prompt, description, content_mode } = personality;
+      body.personality = { id, name, prompt, description, content_mode };
+      if (id) body.personality_id = id;
     }
 
     const result = await apiFetch('/chat', {
@@ -91,8 +93,10 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
     };
 
     if (personality) {
-      body.personality = personality;
-      if (personality.id) body.personality_id = personality.id;
+      // Sanitize personality to avoid sending large data
+      const { id, name, prompt, description, content_mode } = personality;
+      body.personality = { id, name, prompt, description, content_mode };
+      if (id) body.personality_id = id;
     }
 
     const response = await fetch(`${API_BASE_URL}/chat/stream`, {

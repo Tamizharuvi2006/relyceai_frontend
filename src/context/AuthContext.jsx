@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../utils/firebaseConfig';
@@ -29,7 +29,8 @@ export default function AuthProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null);
   const [membership, setMembership] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  // Use Ref to track initialization within the closure
+  const initialLoadComplete = useRef(false);
 
   const fetchUserProfile = async (uid, skipExpensiveOperations = false) => {
     try {
@@ -126,17 +127,18 @@ export default function AuthProvider({ children }) {
                   });
 
                   // Trigger background tasks only once on initial load of this session
-                  if (!initialLoadComplete) {
+                  if (!initialLoadComplete.current) {
                       updateUserLastLogin(authUser.uid).catch(console.error);
                       checkMembershipExpiry(authUser.uid).catch(console.error);
-                      setInitialLoadComplete(true);
+                      initialLoadComplete.current = true;
                   }
               } else {
                    // User doc deleted or doesn't exist? Create profile.
                    // Only try once to avoid loops
-                   if (!initialLoadComplete) {
+                   if (!initialLoadComplete.current) {
                        try {
                            await createUserProfile({ uid: authUser.uid, email: authUser.email });
+                           initialLoadComplete.current = true;
                        } catch (e) {
                            console.error("Error creating profile on snapshot missing:", e);
                        }
