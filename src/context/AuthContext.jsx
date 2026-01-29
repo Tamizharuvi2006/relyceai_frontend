@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../utils/firebaseConfig';
 import {
   createUserProfile,
@@ -99,25 +99,66 @@ export default function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      // Set user and loading IMMEDIATELY - don't wait for profile
+      // Set user and loading IMMEDIATELY
       setUser(authUser);
-      setLoading(false); // Unblock UI immediately!
       
       if (authUser) {
-        // Fetch profile in background - don't block the UI
-        const skipExpensive = !initialLoadComplete;
-        fetchUserProfile(authUser.uid, skipExpensive).then(() => {
-          if (!initialLoadComplete) {
-            setInitialLoadComplete(true);
-          }
-        }).catch(console.error);
+          // Subscribe to real-time updates for the User Profile
+          const profileUnsubscribe = onSnapshot(doc(db, 'users', authUser.uid), async (docSnap) => {
+              if (docSnap.exists()) {
+                  const userData = docSnap.data();
+                  
+                  // Ensure uniqueUserId exists (idempotent check)
+                  if (!userData.uniqueUserId) {
+                      await ensureUserHasId(authUser.uid);
+                      // On snapshot update, we don't need to re-set here, the next snapshot will catch it.
+                  }
+
+                  // Update State
+                  setUserProfile(userData);
+                  setMembership(userData.membership || null);
+
+                  // Update cache
+                  userProfileCache.set(authUser.uid, {
+                      userProfile: userData,
+                      membership: userData.membership || null,
+                      timestamp: Date.now()
+                  });
+
+                  // Trigger background tasks only once on initial load of this session
+                  if (!initialLoadComplete) {
+                      updateUserLastLogin(authUser.uid).catch(console.error);
+                      checkMembershipExpiry(authUser.uid).catch(console.error);
+                      setInitialLoadComplete(true);
+                  }
+              } else {
+                   // User doc deleted or doesn't exist? Create profile.
+                   // Only try once to avoid loops
+                   if (!initialLoadComplete) {
+                       try {
+                           await createUserProfile({ uid: authUser.uid, email: authUser.email });
+                       } catch (e) {
+                           console.error("Error creating profile on snapshot missing:", e);
+                       }
+                   }
+              }
+              setLoading(false);
+          }, (error) => {
+              console.error("Profile snapshot error:", error);
+              setLoading(false);
+          });
+
+          // Cleanup the snapshot listener when auth state changes (e.g. logout)
+          return () => profileUnsubscribe();
+
       } else {
         setUserProfile(null);
         setMembership(null);
+        setLoading(false);
       }
     });
     return unsubscribe;
-  }, [initialLoadComplete]);
+  }, []); // Remove dependency on initialLoadComplete to avoid re-subscribing loop
 
   const refreshUserProfile = async () => {
     if (user) {

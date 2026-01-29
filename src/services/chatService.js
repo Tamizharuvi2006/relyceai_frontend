@@ -44,6 +44,13 @@ class ChatService {
     }
   }
 
+  static async updateSessionPersonality(userId, sessionId, personalityId) {
+    if (sessionId && userId) {
+      const sessionRef = doc(db, 'users', userId, 'chatSessions', sessionId);
+      await updateDoc(sessionRef, { personalityId: personalityId });
+    }
+  }
+
   static async getUserUniqueId(userId) {
     try {
       if (userId) {

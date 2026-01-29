@@ -145,8 +145,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                 let fullResponse = '';
                 
                 // Use streaming API - token by token
-                // Pass activePersonality only if mode is normal
-                // Pass activePersonality only if mode is normal
+                // PERSONALIZATION CONSTRAINT: Only applies to NORMAL mode
                 const personalityToSend = (effectiveMode === 'normal' || chatMode === 'normal') ? activePersonality : null;
                 const userSettings = userProfile?.settings || null;
 

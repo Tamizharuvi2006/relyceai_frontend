@@ -1,6 +1,7 @@
 import React from 'react';
 import LegalDocumentViewer from '../features/legal/LegalDocumentViewer';
 import { PRIVACY_CONTENT, PRIVACY_LAST_UPDATED } from '../features/legal/legalContent';
+import { Helmet } from 'react-helmet-async';
 
 const PrivacyPage = () => {
     return (

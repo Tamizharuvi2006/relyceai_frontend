@@ -54,8 +54,8 @@ export async function sendChatMessage(message, sessionId, userId, chatMode = 'no
     };
 
     if (personality) {
+      body.personality = personality;
       if (personality.id) body.personality_id = personality.id;
-      else body.personality = personality;
     }
 
     const result = await apiFetch('/chat', {
@@ -91,8 +91,8 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
     };
 
     if (personality) {
+      body.personality = personality;
       if (personality.id) body.personality_id = personality.id;
-      else body.personality = personality;
     }
 
     const response = await fetch(`${API_BASE_URL}/chat/stream`, {
@@ -238,18 +238,28 @@ export class WebSocketChatManager {
     }
   }
   
-  /**
+   /**
    * Send a chat message
    * @param {string} content - Message content
    * @param {string} chatMode - 'normal' | 'business' | 'deepsearch'
+   * @param {object|null} personality - Active personality object
+   * @param {object|null} userSettings - User preference settings
    */
-  sendMessage(content, chatMode = 'normal') {
+  sendMessage(content, chatMode = 'normal', personality = null, userSettings = null) {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify({
+      const payload = {
         type: 'message',
         content,
-        chat_mode: chatMode
-      }));
+        chat_mode: chatMode,
+        user_settings: userSettings
+      };
+
+      if (personality) {
+         // Pass ID if available, otherwise backend might not resolve it
+         if (personality.id) payload.personality_id = personality.id;
+      }
+
+      this.socket.send(JSON.stringify(payload));
     } else {
       console.error('[WS] Socket not connected');
       this.onError('Not connected to server');

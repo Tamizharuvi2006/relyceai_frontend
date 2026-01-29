@@ -103,6 +103,47 @@ function AppContent() {
     }
   }, [user?.uid, location.key]); // Refetch on navigation (location.key changes)
 
+  // Persist personality change to the current session
+  const handleSetActivePersonality = useCallback((persona) => {
+      setActivePersonality(persona);
+      if (currentSessionId && user?.uid && persona?.id) {
+          ChatService.updateSessionPersonality(user.uid, currentSessionId, persona.id);
+      }
+  }, [currentSessionId, user]);
+
+  // Sync Active Personality with Session Data
+  useEffect(() => {
+    if (!currentSessionId || !chatSessions.length || !personalities.length) return;
+
+    const currentSession = chatSessions.find(s => s.id === currentSessionId);
+    if (currentSession?.personalityId) {
+        // Session has a saved preference, use it
+        const savedPersona = personalities.find(p => p.id === currentSession.personalityId);
+        if (savedPersona && savedPersona.id !== activePersonality?.id) {
+            console.log('[ChatPage] Restoring saved personality:', savedPersona.name);
+            setActivePersonality(savedPersona);
+        }
+    } else {
+        // No saved preference? If activePersonality is null (e.g. refresh), set default.
+        // If it's ALREADY set (e.g. just switched sessions and kept previous state?), 
+        // usually we want to reset to Default for a new/unspecified chat? 
+        // User said: "REMAINS ONLY IF USER CHANGES". 
+        // This implies if I switch to a chat without preference, it might be safer to default to Relyce AI 
+        // to avoid "leaking" personality from previous chat? 
+        // Let's default to Relyce AI if session has NO preference, to be safe and consistent.
+        if (activePersonality?.id !== 'default_relyce') {
+             const defaultPersona = personalities.find(p => p.is_default && p.id === 'default_relyce') || personalities[0];
+             if (defaultPersona && activePersonality?.id !== defaultPersona.id) {
+                  // Only reset if we are not already default. 
+                  // But wait, if user creates NEW chat, we want default.
+                  // If user switches to old chat that never had personality set, we want default.
+                  setActivePersonality(defaultPersona);
+             }
+        }
+    }
+  }, [currentSessionId, chatSessions, personalities]);
+
+
 
 
 
@@ -439,7 +480,7 @@ function AppContent() {
              }}
              personalities={personalities}
              activePersonality={activePersonality}
-             setActivePersonality={setActivePersonality}
+             setActivePersonality={handleSetActivePersonality}
              setPersonalities={setPersonalities}
           />
 
