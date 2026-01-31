@@ -48,6 +48,7 @@ const AdminSidebar = memo(({ isSuperAdmin, isCollapsed, toggleSidebar, mobileOpe
     const adminMenuItems = [
         { id: 'overview', label: 'Overview', icon: TrendingUp },
         { id: 'users', label: 'User Management', icon: Users },
+        { id: 'payments', label: 'Payments & Revenue', icon: DollarSign },
         { id: 'coupons', label: 'Coupons', icon: CreditCard },
         { id: 'analytics', label: 'Analytics', icon: BarChart }
     ];

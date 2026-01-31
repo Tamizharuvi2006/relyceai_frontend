@@ -17,7 +17,7 @@ const loadRazorpayScript = () => {
     });
 };
 
-export const createOrder = async (amount, currency = 'INR', planId) => {
+export const createOrder = async (amount, currency = 'INR', planId, options = {}) => {
     try {
         const token = localStorage.getItem('token'); // Get auth token if needed
         const headers = {
@@ -25,13 +25,21 @@ export const createOrder = async (amount, currency = 'INR', planId) => {
         };
         if (token) headers['Authorization'] = `Bearer ${token}` ;
 
+        // Construct notes with all necessary metadata for webhook
+        const notes = {
+            plan_id: planId,
+            user_id: options.userId,
+            billing_cycle: options.billingCycle,
+            ...options.notes // Allow overriding/adding more notes
+        };
+
         const response = await fetch(`${API_BASE_URL}/payment/create-order`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
                 amount: amount * 100, // Convert to subunits (paise)
                 currency,
-                notes: { plan_id: planId }
+                notes: notes
             })
         });
 
@@ -89,7 +97,11 @@ export const handleRazorpayPayment = async (plan, amount, user, billingCycle, on
 
     try {
         // 1. Create Order
-        const orderData = await createOrder(amount, 'INR', plan.id);
+        // Pass userId and billingCycle for webhook handling
+        const orderData = await createOrder(amount, 'INR', plan.id, {
+            userId: user.uid,
+            billingCycle: billingCycle
+        });
         
         if (!orderData.success) throw new Error('Order creation failed');
 

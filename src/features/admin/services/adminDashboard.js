@@ -317,7 +317,44 @@ export const getUsersByMembership = async (membershipType, requesterId) => {
   try {
     const { isAdmin, isSuperAdmin, error } = await verifyAdminAccess(requesterId);
     if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized');
-    const q = query(collection(db, 'users'), where('membership.plan', '==', membershipType));
     return (await getDocs(q)).docs.map(d => ({ id: d.id, ...d.data() }));
   } catch { return []; }
+};
+
+export const checkPaymentStatus = async (paymentId) => {
+  try {
+     const token = localStorage.getItem('token');
+     const response = await fetch(`http://localhost:8080/payment/admin/check-payment/${paymentId}`, {
+        method: 'GET',
+        headers: {
+           'Authorization': `Bearer ${token}`
+        }
+     });
+     if (!response.ok) {
+        throw new Error((await response.json()).detail || 'Failed to check payment');
+     }
+     return await response.json();
+  } catch (error) {
+     throw error;
+  }
+};
+
+export const syncPaymentManual = async (paymentId, userId, planId) => {
+  try {
+     const token = localStorage.getItem('token');
+     const response = await fetch(`http://localhost:8080/payment/admin/sync-payment/${paymentId}`, {
+        method: 'POST',
+        headers: {
+           'Content-Type': 'application/json',
+           'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ user_id: userId, plan_id: planId })
+     });
+     if (!response.ok) {
+        throw new Error((await response.json()).detail || 'Failed to sync payment');
+     }
+     return await response.json();
+  } catch (error) {
+     throw error;
+  }
 };

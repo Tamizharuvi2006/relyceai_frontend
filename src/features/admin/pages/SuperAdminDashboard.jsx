@@ -377,7 +377,10 @@ const SuperAdminDashboard = () => {
       {activeTab === 'overview' && (
         <SuperAdminOverviewTab
           tabVariants={tabVariants}
-          statistics={statistics}
+          statistics={{
+            ...statistics,
+            monthlyRevenue: paymentAnalytics?.analytics?.totalRevenue || 0
+          }}
           allUsers={allUsers}
           admins={admins}
           superadmins={superadmins}
@@ -405,6 +408,7 @@ const SuperAdminDashboard = () => {
         <SuperAdminPaymentsTab
           tabVariants={tabVariants}
           paymentAnalytics={paymentAnalytics}
+          onSyncSuccess={fetchAllData}
         />
       )}
 

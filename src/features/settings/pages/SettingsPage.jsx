@@ -984,6 +984,7 @@ export default function SettingsPage() {
                 )}
 
                 {activeTab === 'Subscription' && (
+                  <>
                   <SettingsCard title="Subscription">
                     <SettingsRow
                       icon={<CreditCard size={18} />}
@@ -1018,7 +1019,22 @@ export default function SettingsPage() {
                             />
                         </>
                     )}
-                  </SettingsCard>
+                    </SettingsCard>
+                    
+                     <div className="mt-4 p-4 rounded-lg bg-yellow-900/10 border border-yellow-900/30">
+                        <div className="flex items-start gap-3">
+                           <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                           <div>
+                              <h4 className="text-sm font-semibold text-yellow-500 mb-1">Payment & Cancellation Policy</h4>
+                              <p className="text-sm text-yellow-200/80 leading-relaxed">
+                                 Please note that all one-time payments are <strong>non-refundable</strong>. 
+                                 However, you can <span className="text-white hover:underline cursor-pointer">cancel your subscription</span> at any time to prevent future charges. 
+                                 Your access will remain active until the end of your current billing period.
+                              </p>
+                           </div>
+                        </div>
+                     </div>
+                  </>
                 )}
 
                 {activeTab === 'Notifications' && (

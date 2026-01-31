@@ -32,6 +32,7 @@ import { getUserRole } from '../../users/services/userService';
 import OverviewTab from '../components/OverviewTab';
 import UsersTab from '../components/UsersTab';
 import SuperAdminCouponsTab from '../components/SuperAdminCouponsTab';
+import SuperAdminPaymentsTab from '../components/SuperAdminPaymentsTab';
 import AnalyticsTab from '../components/AnalyticsTab';
 import toast, { Toaster } from 'react-hot-toast';
 import AdminLayout from '../layouts/AdminLayout';
@@ -516,7 +517,13 @@ const AdminDashboard = () => {
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <OverviewTab statistics={statistics} formatCurrency={(value) => `₹${value}`} />
+        <OverviewTab 
+            statistics={{
+                ...statistics,
+                monthlyRevenue: paymentAnalytics?.analytics?.monthlyRevenue?.[`${new Date().getFullYear()}-${new Date().getMonth() + 1}`] || 0
+            }} 
+            formatCurrency={(value) => `₹${value}`} 
+        />
       )}
 
       {/* Users Tab */}
@@ -563,6 +570,23 @@ const AdminDashboard = () => {
           users={users}
         />
       )}
+
+      {/* Payments Reconciliation Tab */}
+      {activeTab === 'payments' && (
+        <SuperAdminPaymentsTab
+          tabVariants={tabVariants}
+          paymentAnalytics={paymentAnalytics}
+          onSyncSuccess={() => {
+             // Re-fetch data on sync success
+             const fetchData = async () => {
+                const pData = await getPaymentAnalytics(user.uid);
+                setPaymentAnalytics(pData);
+             };
+             fetchData();
+          }}
+        />
+      )}
+
     </AdminLayout>
   );
 };
