@@ -1,5 +1,6 @@
 import { collection, getDocs, doc, updateDoc, query, where, orderBy, getDoc, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '../../../utils/firebaseConfig';
+import { API_BASE_URL } from '../../../utils/api';
 import { verifyAdminAccess, validateRoleChange } from './adminSecurity';
 import { generateUserId } from '../../users/services/userService';
 
@@ -324,7 +325,7 @@ export const getUsersByMembership = async (membershipType, requesterId) => {
 export const checkPaymentStatus = async (paymentId) => {
   try {
      const token = localStorage.getItem('token');
-     const response = await fetch(`http://localhost:8080/payment/admin/check-payment/${paymentId}`, {
+     const response = await fetch(`${API_BASE_URL}/payment/admin/check-payment/${paymentId}`, {
         method: 'GET',
         headers: {
            'Authorization': `Bearer ${token}`
@@ -342,7 +343,7 @@ export const checkPaymentStatus = async (paymentId) => {
 export const syncPaymentManual = async (paymentId, userId, planId) => {
   try {
      const token = localStorage.getItem('token');
-     const response = await fetch(`http://localhost:8080/payment/admin/sync-payment/${paymentId}`, {
+     const response = await fetch(`${API_BASE_URL}/payment/admin/sync-payment/${paymentId}`, {
         method: 'POST',
         headers: {
            'Content-Type': 'application/json',
