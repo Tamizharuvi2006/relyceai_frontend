@@ -1001,6 +1001,23 @@ export default function SettingsPage() {
                       description={userProfile?.membership?.billingCycle === 'yearly' ? 'Yearly billing' : 'Monthly billing'}
                       control={<span className="text-xs text-zinc-500">Manage in billing portal</span>}
                     />
+                    
+                    {userProfile?.membership?.status === 'active' && userProfile?.membership?.plan !== 'free' && (
+                        <>
+                            <SettingsRow
+                                icon={<CreditCard size={18} />}
+                                title="Membership Started"
+                                description={userProfile?.membership?.startDate ? new Date(userProfile.membership.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown'}
+                                control={<span className="text-xs text-zinc-500">Auto-renew active</span>}
+                            />
+                            <SettingsRow
+                                icon={<CreditCard size={18} />}
+                                title="Next Billing Date"
+                                description={userProfile?.membership?.expiryDate ? new Date(userProfile.membership.expiryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown'}
+                                control={<span className="text-xs text-emerald-400 font-medium">Active</span>}
+                            />
+                        </>
+                    )}
                   </SettingsCard>
                 )}
 

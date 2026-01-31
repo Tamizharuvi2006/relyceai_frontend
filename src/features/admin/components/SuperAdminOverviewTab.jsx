@@ -7,6 +7,61 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
+const StatCard = ({ title, value, subtext, icon: Icon, color, trend }) => (
+    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl p-6 group hover:border-zinc-700 transition-all duration-300">
+        <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-${color}-500/10 blur-2xl group-hover:bg-${color}-500/20 transition-all`} />
+        <div className="relative flex justify-between items-start">
+            <div>
+                <p className="text-sm font-medium text-zinc-400">{title}</p>
+                <h3 className="mt-2 text-3xl font-bold text-white tracking-tight">{value}</h3>
+                {subtext && (
+                    <div className="mt-2 flex items-center text-xs">
+                        {trend === 'up' && <ArrowUpRight className="h-3 w-3 mr-1 text-emerald-500" />}
+                        <span className={trend === 'up' ? "text-emerald-500" : "text-zinc-500"}>
+                            {subtext}
+                        </span>
+                    </div>
+                )}
+            </div>
+            <div className={`p-3 rounded-xl bg-${color}-500/10 text-${color}-500 shadow-inner ring-1 ring-inset ring-${color}-500/20`}>
+                <Icon className="h-6 w-6" />
+            </div>
+        </div>
+    </div>
+);
+
+const PlanBar = ({ label, count, total, color }) => {
+    const percentage = total > 0 ? (count / total) * 100 : 0;
+    return (
+        <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+                <span className="text-zinc-400">{label}</span>
+                <span className="font-medium text-zinc-200">{count} ({percentage.toFixed(1)}%)</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-zinc-800">
+                <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percentage}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={`h-full rounded-full bg-${color}-500`}
+                />
+            </div>
+        </div>
+    );
+};
+
+const QuickAction = ({ label, icon: Icon, onClick, color }) => (
+    <button
+        onClick={onClick}
+        className="flex flex-col items-center justify-center p-4 rounded-xl border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800/50 hover:border-zinc-700 transition-all group"
+    >
+        <div className={`p-3 rounded-full bg-${color}-500/10 text-${color}-500 mb-3 group-hover:scale-110 transition-transform`}>
+            <Icon className="h-6 w-6" />
+        </div>
+        <span className="text-sm font-medium text-zinc-300 group-hover:text-white">{label}</span>
+    </button>
+);
+
 const SuperAdminOverviewTab = ({
     tabVariants,
     statistics,
@@ -15,61 +70,6 @@ const SuperAdminOverviewTab = ({
     superadmins
 }) => {
     const { theme } = useTheme();
-
-    const StatCard = ({ title, value, subtext, icon: Icon, color, trend }) => (
-        <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl p-6 group hover:border-zinc-700 transition-all duration-300">
-            <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-${color}-500/10 blur-2xl group-hover:bg-${color}-500/20 transition-all`} />
-            <div className="relative flex justify-between items-start">
-                <div>
-                    <p className="text-sm font-medium text-zinc-400">{title}</p>
-                    <h3 className="mt-2 text-3xl font-bold text-white tracking-tight">{value}</h3>
-                    {subtext && (
-                        <div className="mt-2 flex items-center text-xs">
-                            {trend === 'up' && <ArrowUpRight className="h-3 w-3 mr-1 text-emerald-500" />}
-                            <span className={trend === 'up' ? "text-emerald-500" : "text-zinc-500"}>
-                                {subtext}
-                            </span>
-                        </div>
-                    )}
-                </div>
-                <div className={`p-3 rounded-xl bg-${color}-500/10 text-${color}-500 shadow-inner ring-1 ring-inset ring-${color}-500/20`}>
-                    <Icon className="h-6 w-6" />
-                </div>
-            </div>
-        </div>
-    );
-
-    const PlanBar = ({ label, count, total, color }) => {
-        const percentage = total > 0 ? (count / total) * 100 : 0;
-        return (
-            <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                    <span className="text-zinc-400">{label}</span>
-                    <span className="font-medium text-zinc-200">{count} ({percentage.toFixed(1)}%)</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-zinc-800">
-                    <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${percentage}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className={`h-full rounded-full bg-${color}-500`}
-                    />
-                </div>
-            </div>
-        );
-    };
-
-    const QuickAction = ({ label, icon: Icon, onClick, color }) => (
-        <button
-            onClick={onClick}
-            className="flex flex-col items-center justify-center p-4 rounded-xl border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800/50 hover:border-zinc-700 transition-all group"
-        >
-            <div className={`p-3 rounded-full bg-${color}-500/10 text-${color}-500 mb-3 group-hover:scale-110 transition-transform`}>
-                <Icon className="h-6 w-6" />
-            </div>
-            <span className="text-sm font-medium text-zinc-300 group-hover:text-white">{label}</span>
-        </button>
-    );
 
     // Calculate plan counts
     const studentCount = allUsers.filter(u => u.membership?.plan === 'student').length;

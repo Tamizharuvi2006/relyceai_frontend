@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { updateUserMembership } from '../services/membershipService';
+import { handleRazorpayPayment } from '../services/paymentService';
 import { getCurrentPricing } from '../../admin/services/adminDashboard';
 import { validateCoupon, getAllCoupons } from '../../../utils/couponManagement';
 import toast, { Toaster } from 'react-hot-toast';
@@ -381,15 +382,53 @@ export default function Membership() {
     try {
       const plan = [...plansData.personal, ...plansData.business].find(p => p.id === planId);
       const finalPrice = calculateFinalPrice(plan);
-      if (planId === 'free') { await updateUserMembership(user.uid, planId, billingCycle); toast.success('Successfully downgraded to Free plan!'); }
-      else {
-        const paymentData = { transactionId: `txn_${Date.now()}`, method: 'card', amount: finalPrice, originalAmount: billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice, couponCode: appliedCoupon ? couponCode : null, currency: 'INR' };
-        await updateUserMembership(user.uid, planId, billingCycle, paymentData);
-        toast.success(`Successfully upgraded to ${plan.title} plan!`);
+      
+      if (planId === 'free') { 
+        await updateUserMembership(user.uid, planId, billingCycle); 
+        toast.success('Successfully downgraded to Free plan!'); 
+        setIsPurchasing(null);
+      } else {
+        // Trigger Razorpay Payment
+        handleRazorpayPayment(
+          plan,
+          finalPrice,
+          user,
+          billingCycle,
+          async (paymentData) => {
+             // On Success
+             try {
+                // Add coupon info to payment data if needed
+                const completePaymentData = {
+                    ...paymentData,
+                    couponCode: appliedCoupon ? couponCode : null,
+                    originalAmount: billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
+                };
+                
+                // Backend already updated membership during verification
+                // await updateUserMembership(user.uid, planId, billingCycle, completePaymentData); 
+                
+                // Just refresh local state
+                await refreshUserProfile();
+                toast.success(`Successfully upgraded to ${plan.title} plan!`);
+             } catch (err) {
+                console.error(err);
+                toast.error('Payment successful but failed to update membership. Please contact support.');
+             } finally {
+                setIsPurchasing(null);
+             }
+          },
+          (error) => {
+            // On Failure
+            console.error(error);
+            setIsPurchasing(null);
+          }
+        );
       }
-      await refreshUserProfile();
-    } catch (err) { console.error(err); toast.error('Something went wrong. Please try again.'); }
-    finally { setIsPurchasing(null); }
+    } catch (err) { 
+        console.error(err); 
+        toast.error('Something went wrong. Please try again.'); 
+        setIsPurchasing(null);
+    }
   };
 
   return (

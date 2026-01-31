@@ -128,10 +128,11 @@ const AdminSidebar = memo(({ isSuperAdmin, isCollapsed, toggleSidebar, mobileOpe
         <>
             {/* Desktop Sidebar */}
             <motion.div
-                className={`hidden md:flex flex-col h-screen fixed left-0 top-0 border-r border-zinc-800 bg-black/95 backdrop-blur-xl z-40 transition-all duration-300 ease-in-out`}
+                className={`hidden md:flex flex-col h-screen fixed left-0 top-0 border-r border-zinc-800 bg-black/95 backdrop-blur-xl z-40 transition-all duration-300 ease-in-out overflow-hidden`}
                 initial={false}
                 animate={isCollapsed ? "collapsed" : "expanded"}
                 variants={sidebarVariants}
+                style={{ width: isCollapsed ? 80 : 260 }}
             >
                 {/* Logo Area */}
                 <div className="h-16 flex items-center justify-between px-4 border-b border-zinc-900 mx-2">

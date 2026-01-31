@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CreditCard, Plus, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { CreditCard, Plus, Eye, EyeOff, Trash2, Pencil } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
 const SuperAdminCouponsTab = ({
@@ -10,9 +10,62 @@ const SuperAdminCouponsTab = ({
     setNewCoupon,
     addCoupon,
     handleToggleCouponStatus,
-    handleDeleteCoupon
+    handleDeleteCoupon,
+    handleUpdateCoupon
 }) => {
     const { theme } = useTheme();
+    const [editingId, setEditingId] = React.useState(null);
+
+    const handleEditClick = (coupon) => {
+        setEditingId(coupon.id);
+        setNewCoupon({
+            code: coupon.code,
+            monthlyDiscount: coupon.monthlyDiscount || '',
+            yearlyDiscount: coupon.yearlyDiscount || '',
+            type: coupon.type,
+            description: coupon.description,
+            active: coupon.active
+        });
+        const modal = document.getElementById('coupon-modal');
+        if (modal) modal.classList.remove('hidden');
+    };
+
+    const handleCloseModal = () => {
+        setEditingId(null);
+        setNewCoupon({
+            code: '',
+            monthlyDiscount: '',
+            yearlyDiscount: '',
+            type: 'percentage',
+            description: '',
+            active: true
+        });
+        const modal = document.getElementById('coupon-modal');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    const handleSave = async () => {
+        if (editingId) {
+            const success = await handleUpdateCoupon(editingId, newCoupon);
+            if (success) handleCloseModal();
+        } else {
+            // allow addCoupon to handle its own logic/state reset if needed, 
+            // but usually we might want to wrap it to close modal on success too.
+            // For now assuming addCoupon handles its own success/failure toast but not modal closing?
+            // Checking previous code: addCoupon resets state but doesn't explicitly close modal via DOM?
+            // The original button just called addCoupon. The modal closing was manual in cancel. 
+            // Let's assume addCoupon needs to be called. 
+            // Actually original Add Coupon button just opened the modal. 
+            // The "Add Coupon" inside modal called addCoupon.
+            // Let's wrap addCoupon to close modal if successful.
+            // But addCoupon in parent doesn't return success/failure easily unless we change it.
+            // Parent addCoupon resets state. 
+            // Let's just call addCoupon(); if it works, user manually closes or we can close it.
+            // Standardizing: Let's close modal after add.
+            await addCoupon();
+            handleCloseModal();
+        }
+    };
 
     return (
         <>
@@ -36,6 +89,15 @@ const SuperAdminCouponsTab = ({
                         </h2>
                         <button
                             onClick={() => {
+                                setEditingId(null);
+                                setNewCoupon({
+                                    code: '',
+                                    monthlyDiscount: '',
+                                    yearlyDiscount: '',
+                                    type: 'percentage',
+                                    description: '',
+                                    active: true
+                                });
                                 const modal = document.getElementById('coupon-modal');
                                 if (modal) modal.classList.remove('hidden');
                             }}
@@ -107,6 +169,13 @@ const SuperAdminCouponsTab = ({
                                                     {coupon.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                 </button>
                                                 <button
+                                                    onClick={() => handleEditClick(coupon)}
+                                                    className="p-1 text-blue-600 hover:text-blue-900 dark:hover:text-blue-300"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </button>
+                                                <button
                                                     onClick={() => handleDeleteCoupon(coupon.id)}
                                                     className="p-1 text-red-600 hover:text-red-900 dark:hover:text-red-300"
                                                     title="Delete"
@@ -131,7 +200,7 @@ const SuperAdminCouponsTab = ({
                         }`}>
                         <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'
                             }`}>
-                            Add New Coupon
+                            {editingId ? 'Edit Coupon' : 'Add New Coupon'}
                         </h3>
                     </div>
                     <div className="px-6 py-4 space-y-4">
@@ -216,19 +285,16 @@ const SuperAdminCouponsTab = ({
                     <div className={`px-6 py-4 border-t ${theme === 'dark' ? 'border-zinc-700' : 'border-gray-200'
                         } flex justify-end space-x-3`}>
                         <button
-                            onClick={() => {
-                                const modal = document.getElementById('coupon-modal');
-                                if (modal) modal.classList.add('hidden');
-                            }}
+                            onClick={handleCloseModal}
                             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
                         >
                             Cancel
                         </button>
                         <button
-                            onClick={addCoupon}
+                            onClick={handleSave}
                             className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                         >
-                            Add Coupon
+                            {editingId ? 'Update Coupon' : 'Add Coupon'}
                         </button>
                     </div>
                 </div>

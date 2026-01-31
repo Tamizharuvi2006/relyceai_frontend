@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getAllUsers, updateUserRole, updateUserMembership, getUserStatistics, getPaymentAnalytics, getAllCoupons, saveCoupon, deleteCoupon, toggleCouponStatus, deleteUser } from '../services/adminDashboard';
+import { getAllUsers, updateUserRole, updateUserMembership, getUserStatistics, getPaymentAnalytics, getAllCoupons, saveCoupon, deleteCoupon, toggleCouponStatus, deleteUser, savePricingChanges as savePricingToFirestore, updateCoupon } from '../services/adminDashboard';
 import { MEMBERSHIP_PLANS } from '../services/adminDashboard';
 import AdminLayout from '../layouts/AdminLayout';
 
@@ -25,8 +25,9 @@ const SuperAdminDashboard = () => {
   const getTabFromPath = () => {
     const path = location.pathname;
     const parts = path.split('/');
-    // Check if this is a /boss route
-    if (parts[1] === 'boss') {
+    // Check if this is a /boss or /super route
+    // parts[0] is empty, parts[1] is 'boss' or 'super', parts[2] is the tab
+    if (parts[1] === 'boss' || parts[1] === 'super') {
       return parts[2] || 'overview';
     }
     return 'overview';
@@ -94,11 +95,13 @@ const SuperAdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.uid]);
 
   useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData, user]);
+    if (user?.uid) {
+        fetchAllData();
+    }
+  }, [fetchAllData, user?.uid]);
 
   // Optimized search with debouncing
   const handleSearchInput = (email) => {
@@ -212,6 +215,30 @@ const SuperAdminDashboard = () => {
   // Save pricing changes
   const savePricingChanges = async () => {
     try {
+      const processedPrices = { ...tempPrices };
+      
+      // Calculate discount percentage based on manual yearly price entry
+      Object.keys(processedPrices).forEach(planId => {
+        const plan = processedPrices[planId];
+        if (plan.monthly && plan.yearly) {
+          const theoreticalYearly = plan.monthly * 12;
+          const discount = theoreticalYearly > 0 ? ((theoreticalYearly - plan.yearly) / theoreticalYearly) * 100 : 0;
+          processedPrices[planId] = { 
+            ...plan, 
+            yearlyDiscountPercentage: parseFloat(discount.toFixed(1))
+          };
+        }
+      });
+
+      await savePricingToFirestore(processedPrices, user.uid);
+      
+      // Update local state
+      Object.keys(processedPrices).forEach(planId => {
+        if (MEMBERSHIP_PLANS[planId]) {
+          MEMBERSHIP_PLANS[planId] = { ...MEMBERSHIP_PLANS[planId], ...processedPrices[planId] };
+        }
+      });
+      
       toast.success('Pricing updated successfully');
       setEditingPrices(false);
     } catch (error) {
@@ -274,6 +301,32 @@ const SuperAdminDashboard = () => {
     } catch (error) {
       console.error('Error updating coupon status:', error);
       toast.error('Failed to update coupon status');
+    }
+  };
+
+  // Update coupon
+  const handleUpdateCoupon = async (id, updateData) => {
+    try {
+      // Validate required fields
+      if (!updateData.code || (!updateData.monthlyDiscount && !updateData.yearlyDiscount)) {
+        toast.error('Code and at least one discount type are required');
+        return;
+      }
+      
+      const result = await updateCoupon(id, updateData, user.uid);
+      if (result.success) {
+        const updatedCoupons = await getAllCoupons(user.uid);
+        setCoupons(updatedCoupons);
+        toast.success('Coupon updated successfully');
+        return true;
+      } else {
+        toast.error(result.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error updating coupon:', error);
+      toast.error('Failed to update coupon');
+      return false;
     }
   };
 
@@ -364,6 +417,7 @@ const SuperAdminDashboard = () => {
           addCoupon={addCoupon}
           handleToggleCouponStatus={handleToggleCouponStatus}
           handleDeleteCoupon={handleDeleteCoupon}
+          handleUpdateCoupon={handleUpdateCoupon}
         />
       )}
 

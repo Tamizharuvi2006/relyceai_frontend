@@ -65,17 +65,9 @@ const PricingTab = ({
                                     {editingPrices ? (
                                         <input
                                             type="number"
-                                            value={tempPrices[planId].yearly}
-                                            onChange={(e) =>
-                                                setTempPrices({
-                                                    ...tempPrices,
-                                                    [planId]: {
-                                                        ...tempPrices[planId],
-                                                        yearly: parseFloat(e.target.value),
-                                                    },
-                                                })
-                                            }
-                                            className="bg-zinc-800 border border-zinc-700 text-white text-sm rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            value={Math.round(tempPrices[planId].monthly * 12 * (1 - (tempPrices[planId].yearlyDiscountPercentage || 0) / 100))}
+                                            disabled
+                                            className="bg-zinc-800/50 border border-zinc-700 text-zinc-400 text-sm rounded-md px-2 py-1 cursor-not-allowed"
                                         />
                                     ) : (
                                         formatCurrency(tempPrices[planId].yearly)

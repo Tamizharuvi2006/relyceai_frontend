@@ -99,13 +99,21 @@ export default function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+    let profileUnsubscribe = null;
+
+    const authUnsubscribe = onAuthStateChanged(auth, async (authUser) => {
       // Set user and loading IMMEDIATELY
       setUser(authUser);
       
+      // Cleanup previous profile listener if it exists (e.g. user switch)
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+        profileUnsubscribe = null;
+      }
+
       if (authUser) {
           // Subscribe to real-time updates for the User Profile
-          const profileUnsubscribe = onSnapshot(doc(db, 'users', authUser.uid), async (docSnap) => {
+          profileUnsubscribe = onSnapshot(doc(db, 'users', authUser.uid), async (docSnap) => {
               if (docSnap.exists()) {
                   const userData = docSnap.data();
                   
@@ -150,16 +158,18 @@ export default function AuthProvider({ children }) {
               setLoading(false);
           });
 
-          // Cleanup the snapshot listener when auth state changes (e.g. logout)
-          return () => profileUnsubscribe();
-
       } else {
         setUserProfile(null);
         setMembership(null);
         setLoading(false);
       }
     });
-    return unsubscribe;
+
+    // Cleanup function
+    return () => {
+      if (profileUnsubscribe) profileUnsubscribe();
+      authUnsubscribe();
+    };
   }, []); // Remove dependency on initialLoadComplete to avoid re-subscribing loop
 
   const refreshUserProfile = async () => {
@@ -173,7 +183,7 @@ export default function AuthProvider({ children }) {
   // Get role directly from userProfile - this is now secure as it comes from backend
   const role = userProfile?.role || 'user';
 
-  const value = {
+  const value = React.useMemo(() => ({
     currentUser: user,
     userProfile,
     membership,
@@ -182,7 +192,7 @@ export default function AuthProvider({ children }) {
     loading,
     refreshUserProfile,
     refreshUserRole: refreshUserProfile, // Alias for backward compatibility
-  };
+  }), [user, userProfile, membership, role, loading]);
 
   return (
     <AuthContext.Provider value={value}>

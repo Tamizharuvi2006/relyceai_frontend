@@ -26,17 +26,17 @@ export const MEMBERSHIP_PLANS = {
             monthlyQuota: 100
         }
     },
-    STUDENT: {
-        id: 'student',
-        name: 'Student Plan',
-        monthlyPrice: 249,
-        yearlyPrice: 2499,
-        duration: 'unlimited', // Students should have ongoing access
+    STARTER: {
+        id: 'starter',
+        name: 'Starter Plan',
+        monthlyPrice: 199,
+        yearlyPrice: 1999,
+        duration: 'unlimited', 
         features: {
-            chatLimit: 100,
+            chatLimit: 150,
             fileUploadLimit: 25,
             fileSizeLimitMB: 25,
-            monthlyQuota: 1000
+            monthlyQuota: 1500
         }
     },
     PLUS: {
@@ -98,7 +98,7 @@ export async function updateUserMembership(userId, newPlan, billingCycle = 'mont
             console.warn('Failed to fetch current pricing, using default:', error);
             currentPricing = {
                 free: { monthly: 0, yearly: 0 },
-                student: { monthly: 249, yearly: 2499 },
+                starter: { monthly: 199, yearly: 1999 },
                 plus: { monthly: 999, yearly: 9999 },
                 pro: { monthly: 1999, yearly: 19999 },
                 business: { monthly: 2499, yearly: 24999 }

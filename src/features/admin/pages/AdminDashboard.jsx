@@ -24,7 +24,8 @@ import {
   getAllCoupons,
   saveCoupon,
   deleteCoupon,
-  toggleCouponStatus
+  toggleCouponStatus,
+  updateCoupon
 } from '../../../utils/couponManagement';
 import { checkIsSuperAdmin, getUserRoleLevel, ROLE_HIERARCHY, canModifyUserRole } from '../services/roleManagement';
 import { getUserRole } from '../../users/services/userService';
@@ -173,13 +174,38 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleUpdateCoupon = async (id, updateData) => {
+    try {
+      // Validate required fields
+      if (!updateData.code || (!updateData.monthlyDiscount && !updateData.yearlyDiscount)) {
+        toast.error('Code and at least one discount type are required');
+        return;
+      }
+      
+      const result = await updateCoupon(id, updateData, user.uid);
+      if (result.success) {
+        const updatedCoupons = await getAllCoupons(user.uid);
+        setCoupons(updatedCoupons);
+        toast.success('Coupon updated successfully');
+        return true;
+      } else {
+        toast.error(result.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error updating coupon:', error);
+      toast.error('Failed to update coupon');
+      return false;
+    }
+  };
+
   useEffect(() => {
     setActiveTab(getTabFromPath());
   }, [location]);
 
   useEffect(() => {
     const checkUserRole = async () => {
-      if (user) {
+      if (user?.uid) {
         const userRole = await getUserRole(user.uid);
         const isSA = checkIsSuperAdmin(userRole);
         const roleLevel = getUserRoleLevel(userRole);
@@ -194,8 +220,10 @@ const AdminDashboard = () => {
         }
       }
     };
-    checkUserRole();
-  }, [user]);
+    if (user?.uid) {
+        checkUserRole();
+    }
+  }, [user?.uid]);
 
 
   useEffect(() => {
@@ -208,10 +236,10 @@ const AdminDashboard = () => {
             yearly: currentPricing.free?.yearly || 0,
             yearlyDiscountPercentage: currentPricing.free?.yearlyDiscountPercentage || 0
           },
-          student: {
-            monthly: currentPricing.student?.monthly || 249,
-            yearly: currentPricing.student?.yearly || 2499,
-            yearlyDiscountPercentage: currentPricing.student?.yearlyDiscountPercentage || 16.7
+          starter: {
+            monthly: currentPricing.starter?.monthly || 199,
+            yearly: currentPricing.starter?.yearly || 1999,
+            yearlyDiscountPercentage: currentPricing.starter?.yearlyDiscountPercentage || 16.7
           },
           plus: {
             monthly: currentPricing.plus?.monthly || 999,
@@ -344,33 +372,25 @@ const AdminDashboard = () => {
   const handleSavePrices = async () => {
     try {
       const processedPrices = { ...tempPrices };
+      // In AdminDashboard/PricingTab, users edit Monthly and Yearly Discount. 
+      // Yearly price is displayed but potentially editable (but overwritten by logic).
+      // We should enforce consistency: derived Yearly Price from Discount.
       Object.keys(processedPrices).forEach(planId => {
         const plan = processedPrices[planId];
-        if (plan.monthly && plan.yearlyDiscountPercentage !== undefined) {
-          const monthlyPrice = plan.monthly;
+        if (plan.monthly !== undefined) {
           const discountPercentage = plan.yearlyDiscountPercentage || 0;
-          const yearlyPrice = Math.round(monthlyPrice * 12 * (1 - discountPercentage / 100));
-          processedPrices[planId] = { ...plan, yearly: yearlyPrice };
-        } else if (plan.monthly && plan.yearly === undefined) {
-          processedPrices[planId] = { ...plan, yearly: plan.monthly * 12 };
+          const yearlyPrice = Math.round(plan.monthly * 12 * (1 - discountPercentage / 100));
+          processedPrices[planId] = { ...plan, yearly: yearlyPrice, yearlyDiscountPercentage: discountPercentage };
         }
       });
 
       await savePricingChanges(processedPrices, user.uid);
       toast.success('Pricing updated successfully!');
 
-      Object.keys(processedPrices).forEach(planId => {
-        if (MEMBERSHIP_PLANS[planId]) {
-          MEMBERSHIP_PLANS[planId].monthly = processedPrices[planId].monthly;
-          MEMBERSHIP_PLANS[planId].yearly = processedPrices[planId].yearly;
-        }
-      });
-
+      setEditingPrices(false);
     } catch (error) {
       console.error('Error saving price changes:', error);
       toast.error('Failed to save pricing changes');
-    } finally {
-      setEditingPrices(false);
     }
   };
 
@@ -406,7 +426,7 @@ const AdminDashboard = () => {
 
   const planOptions = [
     { value: 'free', label: 'Free' },
-    { value: 'student', label: 'Student' },
+    { value: 'starter', label: 'Starter' },
     { value: 'plus', label: 'Plus' },
     { value: 'pro', label: 'Pro' },
     { value: 'business', label: 'Business' }
@@ -510,7 +530,7 @@ const AdminDashboard = () => {
           accessLevel={accessLevel}
           getRoleOptions={getRoleOptions}
           handleMembershipChange={handleMembershipChange}
-          planOptions={[{ label: 'Free', value: 'free' }, { label: 'Plus', value: 'plus' }, { label: 'Pro', value: 'pro' }, { label: 'Business', value: 'business' }, { label: 'Student', value: 'student' }]}
+          planOptions={[{ label: 'Free', value: 'free' }, { label: 'Plus', value: 'plus' }, { label: 'Pro', value: 'pro' }, { label: 'Business', value: 'business' }, { label: 'Starter', value: 'starter' }]}
           handleDeleteUser={handleDeleteUser}
           totalPages={totalPages}
           currentPage={currentPage}
@@ -531,6 +551,7 @@ const AdminDashboard = () => {
           addCoupon={addCoupon}
           handleToggleCouponStatus={handleToggleCouponStatus}
           handleDeleteCoupon={handleDeleteCoupon}
+          handleUpdateCoupon={handleUpdateCoupon}
         />
       )}
 

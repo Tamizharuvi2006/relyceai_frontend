@@ -6,7 +6,7 @@
  * FastAPI Backend Configuration
  * Set VITE_API_BASE_URL in your .env file
  */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 console.log("[Debug] API_BASE_URL =", API_BASE_URL); // Log for production debugging
 const WS_BASE_URL = API_BASE_URL.startsWith('https')
   ? API_BASE_URL.replace('https', 'wss')

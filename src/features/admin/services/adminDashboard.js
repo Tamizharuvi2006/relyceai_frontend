@@ -141,8 +141,8 @@ export const getRevenueAnalytics = async (requesterId) => {
     const { isAdmin, isSuperAdmin, error } = await verifyAdminAccess(requesterId);
     if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized access to revenue analytics');
 
-    const planPricing = { student: { monthly: 249, yearly: 2499 }, plus: { monthly: 999, yearly: 9999 }, business: { monthly: 2499, yearly: 24999 } };
-    const analytics = { daily: {}, monthly: {}, planBreakdown: { student: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, totalRevenue: 0 };
+    const planPricing = { starter: { monthly: 199, yearly: 1999 }, plus: { monthly: 999, yearly: 9999 }, business: { monthly: 2499, yearly: 24999 } };
+    const analytics = { daily: {}, monthly: {}, planBreakdown: { starter: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, totalRevenue: 0 };
 
     (await getDocs(collection(db, 'users'))).docs.forEach(d => {
       const membership = d.data().membership;
@@ -154,7 +154,7 @@ export const getRevenueAnalytics = async (requesterId) => {
       }
     });
     return analytics;
-  } catch { return { daily: {}, monthly: {}, planBreakdown: { student: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, totalRevenue: 0 }; }
+  } catch { return { daily: {}, monthly: {}, planBreakdown: { starter: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, totalRevenue: 0 }; }
 };
 
 export const testPaymentsCollection = async () => {
@@ -166,9 +166,9 @@ export const getPaymentAnalytics = async (requesterId) => {
     const { isAdmin, isSuperAdmin, error } = await verifyAdminAccess(requesterId);
     if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized access to payment analytics');
 
-    if (!await testPaymentsCollection()) return { payments: [], analytics: { totalRevenue: 0, monthlyRevenue: {}, planDistribution: { student: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, pro: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, paymentMethods: { card: 0, upi: 0, netbanking: 0 } } };
+    if (!await testPaymentsCollection()) return { payments: [], analytics: { totalRevenue: 0, monthlyRevenue: {}, planDistribution: { starter: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, pro: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, paymentMethods: { card: 0, upi: 0, netbanking: 0 } } };
 
-    const payments = [], analytics = { totalRevenue: 0, monthlyRevenue: {}, planDistribution: { student: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, pro: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, paymentMethods: { card: 0, upi: 0, netbanking: 0 } };
+    const payments = [], analytics = { totalRevenue: 0, monthlyRevenue: {}, planDistribution: { starter: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, pro: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, paymentMethods: { card: 0, upi: 0, netbanking: 0 } };
 
     (await getDocs(collection(db, 'payments'))).docs.forEach(d => {
       try {
@@ -189,7 +189,7 @@ export const getPaymentAnalytics = async (requesterId) => {
       try { return (b.timestamp?.toDate?.() || new Date(b.timestamp || 0)).getTime() - (a.timestamp?.toDate?.() || new Date(a.timestamp || 0)).getTime(); } catch { return 0; }
     });
     return { payments, analytics };
-  } catch { return { payments: [], analytics: { totalRevenue: 0, monthlyRevenue: {}, planDistribution: { student: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, pro: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, paymentMethods: { card: 0, upi: 0, netbanking: 0 } } }; }
+  } catch { return { payments: [], analytics: { totalRevenue: 0, monthlyRevenue: {}, planDistribution: { starter: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, pro: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, paymentMethods: { card: 0, upi: 0, netbanking: 0 } } }; }
 };
 
 export const updateUserRole = async (userId, newRole, requesterId) => {
