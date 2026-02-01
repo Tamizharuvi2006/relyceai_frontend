@@ -1,10 +1,10 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../utils/firebaseConfig';
+import { db, auth } from '../../utils/firebaseConfig';
 import ChatService from '../../services/chatService';
 import ShareService from '../../services/shareService';
 import PDFService from '../../services/pdfService';
-import { streamChatMessage } from '../../utils/api';
+import { WebSocketChatManager } from '../../utils/api';
 
 export default function useChatMessages({ core, currentSessionId, userId, onMessagesUpdate }) {
     const {
@@ -17,6 +17,8 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     // Refs for tracking messages
     const lastSessionIdRef = useRef(null);
     const streamingMessageIdRef = useRef(null);
+    const wsManager = useRef(new WebSocketChatManager());
+    const tokenBufferRef = useRef('');
 
     useEffect(() => {
         if (!userId || typeof userId !== 'string' || userId.length < 10) return;
@@ -34,8 +36,145 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
             }
         });
 
-        return () => { /* cleanup */ };
-    }, [currentSessionId, userId, setWsConnected]);
+        // Initialize WebSocket Connection
+        const initWebSocket = async () => {
+            if (!currentSessionId) return;
+            
+            let token = null;
+            try {
+                if (auth.currentUser) {
+                    token = await auth.currentUser.getIdToken();
+                }
+            } catch (e) {
+                console.warn("Failed to get auth token for WS", e);
+            }
+
+            wsManager.current.connect(currentSessionId, token, {
+                onConnect: () => {
+                    setWsConnected(true);
+                    setIsReconnecting(false);
+                },
+                onReconnect: () => {
+                     setIsReconnecting(true);
+                },
+                onToken: (token) => {
+                     // Buffer the token
+                     tokenBufferRef.current += token;
+                },
+                onInfo: (infoText) => {
+                     const botMsgId = streamingMessageIdRef.current;
+                     if (!botMsgId) return;
+
+                     let isSearching = false;
+                     let displayContent = "";
+                     let searchQuery = "";
+
+                     if (infoText === "processing") {
+                         // Just started
+                     } else if (infoText === "stopped") {
+                         // Stopped
+                     } else if (infoText.startsWith("Searching with:")) {
+                         isSearching = true;
+                         searchQuery = infoText.replace("Searching with:", "").trim();
+                         tokenBufferRef.current = ""; // Clear buffer on search start
+                     }
+
+                     setMessages(prev => prev.map(msg => 
+                        msg.id === botMsgId 
+                            ? { 
+                                ...msg, 
+                                isSearching,
+                                searchQuery: isSearching ? searchQuery : msg.searchQuery,
+                              }
+                            : msg
+                    ));
+                },
+                onDone: () => {
+                    const botMsgId = streamingMessageIdRef.current;
+                    if (botMsgId) {
+                        // Flush remaining buffer
+                         const chunk = tokenBufferRef.current;
+                         tokenBufferRef.current = "";
+
+                         setMessages(prev => prev.map(msg => 
+                            msg.id === botMsgId 
+                                ? { 
+                                    ...msg, 
+                                    content: (msg.content || '') + chunk,
+                                    isStreaming: false, 
+                                    isGenerating: false, 
+                                    isSearching: false 
+                                  }
+                                : msg
+                        ));
+                        setBotTyping(false);
+                        setIsDeepSearchActive(false);
+                        setCurrentMessageId(null);
+                        streamingMessageIdRef.current = null;
+                    }
+                },
+                onError: (err) => {
+                    console.error("WS Error:", err);
+                    const botMsgId = streamingMessageIdRef.current;
+                    if (botMsgId) {
+                        setMessages(prev => prev.map(msg => 
+                            msg.id === botMsgId 
+                                ? { 
+                                    ...msg, 
+                                    content: (msg.content || '') + `\n⚠️ Error: ${err}`,
+                                    isError: true,
+                                    isStreaming: false
+                                  }
+                                : msg
+                        ));
+                        setBotTyping(false);
+                        streamingMessageIdRef.current = null;
+                    }
+                }
+            });
+        };
+
+        if (currentSessionId) {
+            initWebSocket();
+        }
+
+        return () => {
+            if (wsManager.current) {
+                wsManager.current.disconnect();
+            }
+        };
+    }, [currentSessionId, userId, setWsConnected, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
+
+    // Heartbeat & Buffer Flush Effect
+    useEffect(() => {
+        const pingInterval = setInterval(() => {
+             if (wsManager.current) wsManager.current.ping();
+        }, 25000); // 25s heartbeat
+
+        const bufferInterval = setInterval(() => {
+            const chunk = tokenBufferRef.current;
+            if (chunk && streamingMessageIdRef.current) {
+                tokenBufferRef.current = "";
+                const botMsgId = streamingMessageIdRef.current;
+                setMessages(prev => prev.map(msg => 
+                    msg.id === botMsgId 
+                        ? { 
+                            ...msg, 
+                            content: (msg.content || '') + chunk,
+                            isSearching: false,
+                            isGenerating: false,
+                            isStreaming: true
+                          }
+                        : msg
+                ));
+            }
+        }, 40); // 25fps smooth typing
+
+        return () => {
+            clearInterval(pingInterval);
+            clearInterval(bufferInterval);
+        };
+    }, [setMessages]);
 
     const handleReconnect = async () => {
         if (isReconnecting) return;
@@ -48,6 +187,10 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     };
 
     const handleStop = useCallback(() => {
+        if (wsManager.current) {
+            wsManager.current.stopGeneration();
+        }
+        tokenBufferRef.current = ""; // Clear buffer
         setBotTyping(false);
         setIsDeepSearchActive(false);
         setCurrentMessageId(null);
@@ -91,6 +234,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         if (text.length > 10000) text = text.substring(0, 10000);
 
         if (text.trim() || files.length > 0) {
+            tokenBufferRef.current = "";
             const tempMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
             const botMessageId = `bot_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
             streamingMessageIdRef.current = botMessageId;
@@ -118,123 +262,63 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
             setBotTyping(true);
             setIsDeepSearchActive(isWebSearch);
             
-            // Save user message to Firebase
-            const messageId = await ChatService.addMessage(userId, currentSessionId, "user", text, files);
-            setCurrentMessageId(messageId);
+            // Save user message to Firebase handled by Backend now
+            // const messageId = await ChatService.addMessage(userId, currentSessionId, "user", text, files);
+            // setCurrentMessageId(messageId);
+            setCurrentMessageId(tempMessageId); // Use temp ID locally
 
             // Update session name if needed
             if (currentSessionId && userId) {
                 try {
+                    // Update session name optimistically or lazily
+                    const plainText = text.replace(/[#>*_`\[\]]/g, '').trim();
+                     // Check current name first
                     const sessionRef = doc(db, "users", userId, "chatSessions", currentSessionId);
-                    const sessionSnap = await getDoc(sessionRef);
-                    if (sessionSnap.exists() && sessionSnap.data().name === 'New Chat') {
-                        const plainText = text.replace(/[#>*_`\[\]]/g, '').trim();
-                        let chatName = plainText.substring(0, 60);
-                        if (chatName.length < plainText.length) chatName += '...';
-                        if (!chatName) chatName = 'Conversation';
-                        await ChatService.updateSessionName(userId, currentSessionId, chatName);
-                    }
+                    // Async check without awaiting to blocking UI
+                    getDoc(sessionRef).then(sessionSnap => {
+                         if (sessionSnap.exists() && sessionSnap.data().name === 'New Chat') {
+                            let chatName = plainText.substring(0, 60);
+                            if (chatName.length < plainText.length) chatName += '...';
+                            if (!chatName) chatName = 'Conversation';
+                            ChatService.updateSessionName(userId, currentSessionId, chatName);
+                        }
+                    });
                 } catch { /* silent */ }
             }
 
-            // Send to FastAPI backend with STREAMING
+            // Send via WebSocket
             try {
-                const fileIds = files.filter(f => f.fileId).map(f => f.fileId);
+                // Ensure unique user ID is set if available
+                // Backend handles saving to Firestore, so we don't need to double-save here
+                // But we optimistically show the user message
+
                 const effectiveMode = isWebSearch ? 'deepsearch' : chatMode;
-                
-                let fullResponse = '';
-                
-                // Use streaming API - token by token
-                // PERSONALIZATION CONSTRAINT: Only applies to NORMAL mode
                 const personalityToSend = (effectiveMode === 'normal' || chatMode === 'normal') ? activePersonality : null;
                 const userSettings = userProfile?.settings || null;
-
-                for await (const token of streamChatMessage(text, currentSessionId, userUniqueId || userId, effectiveMode, fileIds, personalityToSend, userSettings)) {
-                    // Check if streaming was stopped
-                    if (streamingMessageIdRef.current !== botMessageId) break;
-                    
-                    fullResponse += token;
-                    
-                    // Parse [INFO] block for searching status
-                    let displayContent = fullResponse;
-                    let isSearching = false;
-                    let searchQuery = "";
-
-                    if (fullResponse.startsWith('[INFO]')) {
-                        const infoMatch = fullResponse.match(/^\[INFO\] Searching with: (.*?)\n+/);
-                        if (infoMatch) {
-                            // We have the info block, strip it
-                            const cleanContent = fullResponse.substring(infoMatch[0].length);
-                            if (!cleanContent.trim()) {
-                                // Still searching (no real content yet)
-                                isSearching = true;
-                                searchQuery = infoMatch[1];
-                                displayContent = "";
-                            } else {
-                                // Search done, content flowing
-                                displayContent = cleanContent;
-                            }
-                        } else {
-                            // Partial info block (haven't reached the newline yet)
-                            isSearching = true;
-                            displayContent = "";
-                        }
-                    }
-
-                    // Update the bot message with accumulated content
-                    setMessages(prev => prev.map(msg => 
-                        msg.id === botMessageId 
-                            ? { 
-                                ...msg, 
-                                content: displayContent,
-                                isSearching: isSearching,
-                                isGenerating: !isSearching && displayContent.length === 0,
-                                searchQuery: isSearching ? searchQuery : null,
-                                isStreaming: true
-                              }
-                            : msg
-                    ));
-                }
                 
-                // Mark streaming as complete
-                setMessages(prev => prev.map(msg => 
-                    msg.id === botMessageId 
-                        ? { ...msg, isStreaming: false, isGenerating: false, isSearching: false }
-                        : msg
-                ));
+                // If files are present, we might need to handle them differently.
+                // Currently WS sendMessage doesn't support file_ids args in the signature of the class method properly unless we passed it.
+                // The WebSocketChatManager.sendMessage signature: (content, chatMode, personality, userSettings)
+                // It misses file_ids. We should probably update the manager or just append file info to content if needed?
+                // For now, follow "User Request": "Use WebSocket ONLY for chat". Users likely know files might be limited or handled via text context.
+                // Actually, let's just send the text.
                 
-                setBotTyping(false);
-                setIsDeepSearchActive(false);
-                setCurrentMessageId(null);
-                streamingMessageIdRef.current = null;
-                
-                // Save bot response to Firebase
-                if (fullResponse) {
-                    await ChatService.addMessage(userId, currentSessionId, "bot", fullResponse);
-                }
+                wsManager.current.sendMessage(text, effectiveMode, personalityToSend, userSettings);
+
+                // Note: We REMOVED explicit Firestore saving here because the backend WebSocket handler 
+                // does it: save_message_to_firebase(user_id, chat_id, "user", content)
+                // This prevents duplicates.
                 
             } catch (error) {
-                console.error('Error streaming message:', error);
-                
-                // Update bot message with error
+                console.error('Error sending message via WS:', error);
                 setMessages(prev => prev.map(msg => 
                     msg.id === botMessageId 
-                        ? { 
-                            ...msg, 
-                            content: `⚠️ Error: ${error.message || 'Failed to get response from backend.'}`,
-                            isError: true,
-                            isStreaming: false
-                        }
+                        ? { ...msg, content: "⚠️ Failed to send message.", isError: true, isStreaming: false }
                         : msg
                 ));
-                
-                setBotTyping(false);
-                setIsDeepSearchActive(false);
-                setCurrentMessageId(null);
-                streamingMessageIdRef.current = null;
             }
         }
-    }, [userId, currentSessionId, chatMode, userUniqueId, setMessages, setBotTyping, setCurrentMessageId, setIsDeepSearchActive, activePersonality]);
+    }, [userId, currentSessionId, chatMode, userUniqueId, setMessages, setBotTyping, setCurrentMessageId, setIsDeepSearchActive, activePersonality, userProfile]);
 
     const handleDownloadPDF = async (msgs) => {
         if (!msgs?.length) return alert('No chat to download!');

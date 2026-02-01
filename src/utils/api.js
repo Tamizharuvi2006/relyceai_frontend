@@ -165,6 +165,7 @@ export class WebSocketChatManager {
     this.onInfo = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
+    this.reconnectTimeout = null;
   }
   
   /**
@@ -179,6 +180,13 @@ export class WebSocketChatManager {
     this.onDone = callbacks.onDone || (() => {});
     this.onError = callbacks.onError || (() => {});
     this.onInfo = callbacks.onInfo || (() => {});
+    this.onConnect = callbacks.onConnect || (() => {});
+    this.onReconnect = callbacks.onReconnect || (() => {});
+    
+    if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = null;
+    }
     
     const params = new URLSearchParams();
     if (token) params.append('token', token);
@@ -192,6 +200,7 @@ export class WebSocketChatManager {
       this.socket.onopen = () => {
         console.log('[WS] Connected to chat:', chatId);
         this.reconnectAttempts = 0;
+        this.onConnect();
       };
       
       this.socket.onmessage = (event) => {
@@ -239,8 +248,11 @@ export class WebSocketChatManager {
   attemptReconnect(token, callbacks) {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
+      if (this.onReconnect) this.onReconnect();
+      
       console.log(`[WS] Reconnecting... attempt ${this.reconnectAttempts}`);
-      setTimeout(() => {
+      
+      this.reconnectTimeout = setTimeout(() => {
         this.connect(this.chatId, token, callbacks);
       }, 1000 * this.reconnectAttempts);
     }
@@ -296,7 +308,12 @@ export class WebSocketChatManager {
    * Disconnect from WebSocket
    */
   disconnect() {
+    if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = null;
+    }
     if (this.socket) {
+      this.socket.onclose = null;
       this.socket.close();
       this.socket = null;
     }
