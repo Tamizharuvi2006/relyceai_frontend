@@ -49,6 +49,8 @@ export function DesktopAuthView({
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         required
+                        autoComplete="username"
+                        name="email"
                     />
                     <InputWithIcon
                         icon={<Lock size={18} className="text-zinc-400" />}
@@ -57,6 +59,8 @@ export function DesktopAuthView({
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         required
+                        autoComplete="current-password"
+                        name="password"
                     />
                     {error && !rightPanelActive && <p className="text-sm mb-4 text-red-400">{error}</p>}
                     <PrimaryButton type="submit">Sign In</PrimaryButton>
@@ -85,6 +89,8 @@ export function DesktopAuthView({
                         value={signUpEmail}
                         onChange={(e) => setSignUpEmail(e.target.value)}
                         required
+                        autoComplete="username"
+                        name="email"
                     />
                     <InputWithIcon
                         icon={<Lock size={18} className="text-zinc-400" />}
@@ -93,6 +99,8 @@ export function DesktopAuthView({
                         value={signUpPassword}
                         onChange={(e) => setSignUpPassword(e.target.value)}
                         required
+                        autoComplete="new-password"
+                        name="password"
                     />
                     <InputWithIcon
                         icon={<Lock size={18} className="text-zinc-400" />}
@@ -101,6 +109,8 @@ export function DesktopAuthView({
                         value={signUpConfirm}
                         onChange={(e) => setSignUpConfirm(e.target.value)}
                         required
+                        autoComplete="new-password"
+                        name="confirm-password"
                     />
                     {error && rightPanelActive && <p className="text-sm mb-4 text-red-400">{error}</p>}
                     <PrimaryButton type="submit">Sign Up</PrimaryButton>
