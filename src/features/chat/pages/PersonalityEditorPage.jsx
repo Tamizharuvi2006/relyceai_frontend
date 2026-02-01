@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import ChatService from '../../../services/chatService';
-import { ArrowLeft, Save, Sparkles, Globe, Brain, Zap } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Globe, Brain, Briefcase, Code, Music, Scale, ShoppingCart, Palette, Heart, GraduationCap, ChevronDown } from 'lucide-react';
 
 const PersonalityEditorPage = () => {
     const { id } = useParams();
@@ -14,7 +14,21 @@ const PersonalityEditorPage = () => {
     const [description, setDescription] = useState('');
     const [prompt, setPrompt] = useState('');
     const [contentMode, setContentMode] = useState('hybrid');
+    const [specialty, setSpecialty] = useState('general');
     const [isSystemPersona, setIsSystemPersona] = useState(false);
+    
+    // Specialty options with icons and descriptions
+    const SPECIALTY_OPTIONS = [
+        { id: 'general', name: 'General', icon: Sparkles, description: 'All-purpose assistant' },
+        { id: 'coding', name: 'Coding & Tech', icon: Code, description: 'Programming, debugging, system design' },
+        { id: 'business', name: 'Business', icon: Briefcase, description: 'Strategy, marketing, operations' },
+        { id: 'ecommerce', name: 'E-Commerce', icon: ShoppingCart, description: 'Shopify, Amazon, product listings' },
+        { id: 'creative', name: 'Creative', icon: Palette, description: 'Design, writing, content creation' },
+        { id: 'music', name: 'Music & Audio', icon: Music, description: 'Songwriting, production, vocal coaching' },
+        { id: 'legal', name: 'Legal', icon: Scale, description: 'Contracts, compliance, terms' },
+        { id: 'health', name: 'Health & Wellness', icon: Heart, description: 'Fitness, nutrition, mental health' },
+        { id: 'education', name: 'Education', icon: GraduationCap, description: 'Teaching, tutoring, explanations' },
+    ];
     
     // UI State
     const [loading, setLoading] = useState(true);
@@ -38,6 +52,7 @@ const PersonalityEditorPage = () => {
                             setDescription(persona.description);
                             setPrompt(persona.prompt);
                             setContentMode(persona.content_mode || 'hybrid');
+                            setSpecialty(persona.specialty || 'general');
                             setIsSystemPersona(persona.is_system === true);
                         } else {
                             setError("Persona not found");
@@ -77,7 +92,8 @@ Keep answers concise and helpful.`);
                     name, 
                     description, 
                     prompt, 
-                    contentMode
+                    contentMode,
+                    specialty
                 );
             } else {
                 result = await ChatService.createPersonality(
@@ -85,7 +101,8 @@ Keep answers concise and helpful.`);
                     name, 
                     description, 
                     prompt, 
-                    contentMode
+                    contentMode,
+                    specialty
                 );
             }
 
@@ -174,6 +191,42 @@ Keep answers concise and helpful.`);
                             />
                         </div>
                     </section>
+
+                    {/* Specialty Selector */}
+                    {!isSystemPersona && (
+                        <section>
+                            <label className="block text-sm font-medium text-zinc-400 mb-3">
+                                Expertise Area <span className="text-zinc-600">(AI will specialize in this field)</span>
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {SPECIALTY_OPTIONS.map((option) => {
+                                    const Icon = option.icon;
+                                    const isSelected = specialty === option.id;
+                                    return (
+                                        <button
+                                            key={option.id}
+                                            onClick={() => setSpecialty(option.id)}
+                                            className={`relative p-3 rounded-xl border text-left transition-all duration-200
+                                                ${isSelected 
+                                                    ? 'bg-amber-500/10 border-amber-500/50 ring-1 ring-amber-500/50' 
+                                                    : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Icon size={16} className={isSelected ? 'text-amber-400' : 'text-zinc-500'} />
+                                                <span className={`text-sm font-medium ${isSelected ? 'text-amber-300' : 'text-zinc-300'}`}>
+                                                    {option.name}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-zinc-500 mt-1 leading-tight">
+                                                {option.description}
+                                            </p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
 
                     {/* Content Mode Selector */}
                     {!isSystemPersona && (

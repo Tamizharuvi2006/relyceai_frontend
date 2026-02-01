@@ -89,86 +89,35 @@ export const MEMBERSHIP_PLANS = {
  * Updates user membership plan
  */
 export async function updateUserMembership(userId, newPlan, billingCycle = 'monthly', paymentData = null) {
+    // DEPRECATION WARNING: Paid plan upgrades should go through Razorpay -> Backend /payment/verify
+    // This function is now ONLY safe for free plan downgrades initiated by user.
+    if (newPlan !== 'free') {
+        console.warn('[membershipService] updateUserMembership is deprecated for paid plans.');
+        console.warn('[membershipService] Use Razorpay payment flow instead. Backend handles membership.');
+        throw new Error('Paid plan updates must go through payment flow for security.');
+    }
+
     try {
-        // Get current pricing from Firestore
-        let currentPricing;
-        try {
-            currentPricing = await getCurrentPricing();
-        } catch (error) {
-            console.warn('Failed to fetch current pricing, using default:', error);
-            currentPricing = {
-                free: { monthly: 0, yearly: 0 },
-                starter: { monthly: 199, yearly: 1999 },
-                plus: { monthly: 999, yearly: 9999 },
-                pro: { monthly: 1999, yearly: 19999 },
-                business: { monthly: 2499, yearly: 24999 }
-            };
-        }
-
-        const planDetails = MEMBERSHIP_PLANS[newPlan.toUpperCase()];
-        if (!planDetails) {
-            throw new Error('Invalid membership plan');
-        }
-
+        // Only allow free plan downgrades from frontend
+        const planDetails = MEMBERSHIP_PLANS['FREE'];
         const now = new Date();
-        const expiryDate = planDetails.duration !== 'unlimited'
-            ? new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000)) // 30 days default
-            : null;
 
         const updateData = {
-            'membership.plan': newPlan,
+            'membership.plan': 'free',
             'membership.planName': planDetails.name,
             'membership.status': 'active',
-            'membership.startDate': now.toISOString(),
-            'membership.expiryDate': expiryDate ? expiryDate.toISOString() : null,
-            'membership.isExpired': false,
-            'membership.billingCycle': billingCycle,
-            'membership.autoRenew': true,
-            'membership.paymentStatus': newPlan === 'free' ? 'free' : 'paid',
+            'membership.billingCycle': null,
+            'membership.autoRenew': false,
+            'membership.paymentStatus': 'free',
             'membership.updatedAt': serverTimestamp()
         };
 
-        // Add payment information if provided
-        if (paymentData && newPlan !== 'free') {
-            // Get the correct amount based on current pricing
-            const planPricing = currentPricing[newPlan] || { monthly: 0, yearly: 0 };
-            const amount = billingCycle === 'yearly' ? planPricing.yearly : planPricing.monthly;
-
-            // Create a new payment history entry
-            const paymentEntry = {
-                transactionId: paymentData.transactionId,
-                amount: amount,
-                currency: paymentData.currency || 'INR',
-                method: paymentData.method,
-                plan: newPlan,
-                billingCycle: billingCycle,
-                timestamp: serverTimestamp(),
-                date: now.toISOString()
-            };
-
-            // Add to payment history array in user document
-            updateData['membership.paymentHistory'] = {
-                [paymentData.transactionId]: paymentEntry
-            };
-
-            // Also add to a separate payments collection for analytics
-            try {
-                await addDoc(collection(db, 'payments'), {
-                    userId: userId,
-                    ...paymentEntry
-                });
-            } catch (paymentError) {
-                console.error('Error saving payment to analytics collection:', paymentError);
-            }
-        }
-
         await updateDoc(doc(db, 'users', userId), updateData);
-
-        console.log(`✅ Membership updated for user ${userId} to ${planDetails.name}`);
-        return { success: true, message: 'Membership updated successfully' };
+        console.log(`✅ User ${userId} downgraded to Free plan`);
+        return { success: true, message: 'Downgraded to Free plan' };
 
     } catch (error) {
-        console.error('❌ Error updating user membership:', error);
+        console.error('❌ Error updating membership:', error);
         throw error;
     }
 }

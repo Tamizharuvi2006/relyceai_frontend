@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, collection, updateDoc, query, getDocs, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../utils/firebaseConfig';
 import { createUserFolderStructure } from '../../files/services/fileService';
 import { MEMBERSHIP_PLANS } from '../../membership/services/membershipService';
@@ -78,18 +78,16 @@ export async function updateUserUsage(userId, updates) {
 }
 
 export async function updateUserLastLogin(userId) {
-    try {
-        await updateDoc(doc(db, 'users', userId), { lastLoginAt: serverTimestamp() });
-    } catch { /* silent */ }
+    // DEPRECATED: Backend /users/init handles lastLoginAt now.
+    console.warn('[userService] updateUserLastLogin is deprecated. Backend handles this via /users/init.');
+    // No-op for security
 }
 
 export async function assignUserIdToExistingUser(userId, userData) {
-    try {
-        if (userData.uniqueUserId) return userData.uniqueUserId;
-        const uniqueUserId = await generateUserId();
-        await updateDoc(doc(db, 'users', userId), { uniqueUserId, updatedAt: serverTimestamp() });
-        return uniqueUserId;
-    } catch { return null; }
+    // DEPRECATED: Backend /users/init generates and assigns uniqueUserId.
+    console.warn('[userService] assignUserIdToExistingUser is deprecated. Backend generates IDs.');
+    // Return existing ID if available, otherwise null (backend will assign)
+    return userData?.uniqueUserId || null;
 }
 
 export async function ensureUserHasId(userId) {

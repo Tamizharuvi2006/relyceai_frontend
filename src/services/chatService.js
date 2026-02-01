@@ -83,18 +83,18 @@ class ChatService {
     }
   }
 
-  static async createPersonality(userId, name, description, prompt, contentMode = 'hybrid') {
+  static async createPersonality(userId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
     try {
-      return await createPersonality(userId, name, description, prompt, contentMode);
+      return await createPersonality(userId, name, description, prompt, contentMode, specialty);
     } catch (error) {
       console.error('ChatService.createPersonality error:', error);
       return { success: false, error: error.message };
     }
   }
 
-  static async updatePersonality(userId, personalityId, name, description, prompt, contentMode = 'hybrid') {
+  static async updatePersonality(userId, personalityId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
     try {
-      return await updatePersonality(userId, personalityId, name, description, prompt, contentMode);
+      return await updatePersonality(userId, personalityId, name, description, prompt, contentMode, specialty);
     } catch (error) {
         console.error('ChatService.updatePersonality error:', error);
         return { success: false, error: error.message };

@@ -389,7 +389,7 @@ export async function fetchPersonalities(userId) {
 /**
  * Create Personality
  */
-export async function createPersonality(userId, name, description, prompt, contentMode = 'hybrid') {
+export async function createPersonality(userId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
   try {
     return await apiFetch(`/personalities?user_id=${userId}`, {
       method: 'POST',
@@ -397,7 +397,8 @@ export async function createPersonality(userId, name, description, prompt, conte
         name,
         description,
         prompt,
-        content_mode: contentMode
+        content_mode: contentMode,
+        specialty
       }),
     });
   } catch (error) {
@@ -409,7 +410,7 @@ export async function createPersonality(userId, name, description, prompt, conte
 /**
  * Update Personality
  */
-export async function updatePersonality(userId, personalityId, name, description, prompt, contentMode = 'hybrid') {
+export async function updatePersonality(userId, personalityId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
     try {
       return await apiFetch(`/personalities/${personalityId}?user_id=${userId}`, {
         method: 'PUT',
@@ -417,7 +418,8 @@ export async function updatePersonality(userId, personalityId, name, description
           name,
           description,
           prompt,
-          content_mode: contentMode
+          content_mode: contentMode,
+          specialty
         }),
       });
     } catch (error) {

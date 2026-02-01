@@ -77,6 +77,10 @@ export const getUserStatistics = async (requesterId) => {
 };
 
 export const updateUserMembership = async (userId, newPlan, billingCycle = 'monthly', paymentData = null, requesterId) => {
+  // DEPRECATION WARNING: For production, admin membership changes should go through backend API
+  // Frontend direct writes are allowed temporarily for admin panel but should be migrated.
+  console.warn('[adminDashboard] updateUserMembership: Direct Firestore write. Consider backend migration.');
+  
   const { isAdmin, isSuperAdmin, error } = await verifyAdminAccess(requesterId);
   if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized access to membership update');
 
@@ -194,6 +198,9 @@ export const getPaymentAnalytics = async (requesterId) => {
 };
 
 export const updateUserRole = async (userId, newRole, requesterId) => {
+  // DEPRECATION WARNING: Role changes should go through backend API for audit trail
+  console.warn('[adminDashboard] updateUserRole: Direct Firestore write. Consider backend migration.');
+  
   const { isAdmin, isSuperAdmin, error: accessError } = await verifyAdminAccess(requesterId);
   if (accessError || (!isAdmin && !isSuperAdmin)) throw new Error('Insufficient permissions to modify user roles');
 
