@@ -165,10 +165,18 @@ export default function AuthProvider({ children }) {
       }
     });
 
+    // Listen for API 401/403 errors to trigger auto-logout
+    const handleUnauthorized = () => {
+      console.warn('[Auth] Session expired or unauthorized. Logging out...');
+      auth.signOut();
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
     // Cleanup function
     return () => {
       if (profileUnsubscribe) profileUnsubscribe();
       authUnsubscribe();
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
     };
   }, []); // Remove dependency on initialLoadComplete to avoid re-subscribing loop
 

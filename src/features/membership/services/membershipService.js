@@ -177,38 +177,11 @@ export async function updateUserMembership(userId, newPlan, billingCycle = 'mont
  * Checks if user's membership has expired and updates status
  */
 export async function checkMembershipExpiry(userId) {
-    try {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (!userDoc.exists()) return false;
-
-        const userData = userDoc.data();
-        const membership = userData.membership;
-
-        if (membership.expiryDate && membership.status === 'active') {
-            const now = new Date();
-            const expiryDate = new Date(membership.expiryDate);
-
-            if (now > expiryDate) {
-                // Membership has expired
-                await updateDoc(doc(db, 'users', userId), {
-                    'membership.status': 'expired',
-                    'membership.isExpired': true,
-                    'membership.plan': 'free',
-                    'membership.planName': 'Free Plan'
-                });
-
-                await addMembershipLog(userId, 'free', 'expired');
-
-                console.log(`⏰ Membership expired for user ${userId}`);
-                return true;
-            }
-        }
-
-        return false;
-    } catch (error) {
-        console.error('❌ Error checking membership expiry:', error);
-        return false;
-    }
+    // START_DEPRECATION_NOTICE
+    // Logic moved to Backend (/users/init) for security.
+    // Frontend should NOT update membership status directly.
+    // END_DEPRECATION_NOTICE
+    return false;
 }
 
 /**

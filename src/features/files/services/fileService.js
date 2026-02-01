@@ -1,6 +1,6 @@
 import { doc, setDoc, addDoc, collection, serverTimestamp, deleteDoc, getDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../utils/firebaseConfig';
-import { updateUserUsage } from '../../users/services/userService';
+// import { updateUserUsage } from '../../users/services/userService'; // REMOVED: Backend handles usage
 import { MEMBERSHIP_PLANS } from '../../membership/services/membershipService';
 import { uploadFile } from '../../../utils/api';
 
@@ -20,13 +20,14 @@ export async function uploadChatFileToBackend(firebaseUid, uniqueUserId, session
             throw new Error(result.error);
         }
         
-        // Update user usage
-        try {
-            await updateUserUsage(firebaseUid, { 
-                filesUploaded: 1, 
-                storageUsedMB: file.size / (1024 * 1024) 
-            });
-        } catch { /* silent */ }
+        /* 
+           USAGE UPDATE: 
+           Removed frontend usage update. 
+           Backend /upload endpoint handles this securely.
+        */
+        // try {
+        //     await updateUserUsage(firebaseUid, { ... });
+        // } catch { /* silent */ }
         
         return {
             success: true,
@@ -61,9 +62,14 @@ export async function uploadUserFileToBackendOnly(userId, file) {
         throw new Error(result.error);
     }
 
-    try {
-        await updateUserUsage(userId, { filesUploaded: 1, storageUsedMB: file.size / (1024 * 1024) });
-    } catch { /* silent */ }
+    /* 
+       USAGE UPDATE: 
+       Removed frontend usage update. 
+       Backend /upload endpoint handles this securely.
+    */
+    // try {
+    //     await updateUserUsage(userId, { ... });
+    // } catch { /* silent */ }
 
     // Save metadata to Firestore
     let fileMetadata = null;

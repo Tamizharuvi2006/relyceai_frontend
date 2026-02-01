@@ -49,6 +49,26 @@ const UsersTab = memo(({
         );
     };
 
+    const UserIdDisplay = ({ uniqueId, rawId }) => {
+        const [showRaw, setShowRaw] = React.useState(false);
+        return (
+            <div className="flex flex-col mt-0.5">
+                <button 
+                    onClick={() => setShowRaw(!showRaw)}
+                    className="flex items-center gap-1 text-xs text-zinc-600 font-mono opacity-70 hover:opacity-100 hover:text-emerald-500 transition-all w-fit"
+                >
+                    <span>ID: {uniqueId}</span>
+                    <ChevronRight size={10} className={`transform transition-transform ${showRaw ? 'rotate-90' : ''}`} />
+                </button>
+                {showRaw && (
+                    <div className="text-[10px] text-zinc-700 font-mono mt-0.5 select-all cursor-text bg-zinc-900/50 px-1 py-0.5 rounded border border-zinc-800/50 w-fit">
+                        {rawId}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -120,7 +140,7 @@ const UsersTab = memo(({
                                                         {user.displayName || 'Unnamed User'}
                                                     </div>
                                                     <div className="text-xs text-zinc-500">{user.email}</div>
-                                                    <div className="text-xs text-zinc-600 font-mono mt-0.5 opacity-50">{user.uniqueUserId}</div>
+                                                    <UserIdDisplay uniqueId={user.uniqueUserId} rawId={user.id} />
                                                 </div>
                                             </div>
                                         </td>

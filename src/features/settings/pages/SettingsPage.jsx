@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
-import { User, Lock, Trash2, CreditCard, ExternalLink, Bell, Shield, Globe, Download, AlertTriangle, X, Hash, Link as LinkIcon, Save, Loader2, Check, Edit2, MessageSquare, Camera, ImageIcon, Cpu, BrainCircuit } from 'lucide-react';
+import { User, Lock, Trash2, CreditCard, ExternalLink, Bell, Shield, Globe, Download, AlertTriangle, X, Hash, Link as LinkIcon, Save, Loader2, Check, Edit2, MessageSquare, Camera, ImageIcon, Cpu, BrainCircuit, ChevronRight, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteUser, updatePassword, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from 'firebase/auth';
@@ -861,17 +861,42 @@ export default function SettingsPage() {
                       }
                     />
                     <SettingsRow
-                      icon={<Hash size={18} />}
+                      icon={<Shield size={18} className="text-emerald-500" />}
                       title="User ID"
                       description={
-                        isRefreshingProfile && !userProfile?.uniqueUserId
-                          ? "Loading..."
-                          : (userProfile?.uniqueUserId || "Assigning ID...")
+                         <div className="flex flex-col gap-1">
+                            <span>{isRefreshingProfile && !userProfile?.uniqueUserId ? "Loading..." : (userProfile?.uniqueUserId || "Assigning ID...")}</span>
+                            {/* Raw ID Reveal */}
+                            <details className="group cursor-pointer">
+                               <summary className="list-none flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-400 transition-colors select-none w-fit">
+                                  <span>Show Internal UID</span>
+                                  <ChevronRight size={10} className="group-open:rotate-90 transition-transform" />
+                               </summary>
+                               <div className="mt-1 flex items-center gap-2 p-1.5 bg-zinc-900/80 border border-zinc-800 rounded-md max-w-xs">
+                                  <code className="text-[10px] font-mono text-zinc-400 break-all select-all">
+                                    {user?.uid}
+                                  </code>
+                                  <button 
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(user?.uid);
+                                      toast.success("UID Copied");
+                                    }}
+                                    title="Copy raw UID"
+                                    className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors"
+                                  >
+                                    <Copy size={10} />
+                                  </button>
+                               </div>
+                            </details>
+                         </div>
                       }
                       control={
-                        <span className="text-xs font-mono text-zinc-500 bg-zinc-900/50 px-2 py-1 rounded border border-zinc-800">
-                           {userProfile?.uniqueUserId || "..."}
-                        </span>
+                        <div className="flex items-center gap-2">
+                           <Lock size={12} className="text-zinc-600" />
+                           <span className="text-xs font-mono text-emerald-500/90 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 font-medium">
+                             {userProfile?.uniqueUserId || "..."}
+                           </span>
+                        </div>
                       }
                     />
                     <SettingsRow

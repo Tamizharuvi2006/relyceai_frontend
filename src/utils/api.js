@@ -28,6 +28,10 @@ async function apiFetch(endpoint, options = {}) {
     });
     
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        // Dispatch unauthorized event for AuthContext to handle (Auto-Logout)
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      }
       const error = await response.json().catch(() => ({ detail: 'Request failed' }));
       throw new Error(error.detail || `HTTP ${response.status}`);
     }

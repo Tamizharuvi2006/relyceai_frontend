@@ -6,14 +6,40 @@ import toast from 'react-hot-toast';
  * Handles Razorpay integration
  */
 
-// Load Razorpay Script dynamically
+// Razorpay SDK Loader with Caching
+let razorpayPromise = null;
+
 const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
+    // Return existing promise if already loading/loaded
+    if (razorpayPromise) return razorpayPromise;
+    
+    // Check if already in DOM (e.g., from previous session)
+    if (document.querySelector('script[src*="checkout.razorpay.com"]')) {
+        razorpayPromise = Promise.resolve(true);
+        return razorpayPromise;
+    }
+
+    razorpayPromise = new Promise((resolve) => {
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.onload = () => resolve(true);
-        script.onerror = () => resolve(false);
+        script.onerror = () => {
+            razorpayPromise = null; // Reset on error to allow retry
+            resolve(false);
+        };
         document.body.appendChild(script);
+    });
+    
+    return razorpayPromise;
+};
+
+/**
+ * Prefetch Razorpay SDK. Call this early (e.g., on MembershipPage mount)
+ * to eliminate SDK load time when user clicks "Pay".
+ */
+export const prefetchRazorpay = () => {
+    loadRazorpayScript().then(loaded => {
+        if (loaded) console.log('[Payment] Razorpay SDK preloaded');
     });
 };
 
@@ -155,6 +181,11 @@ export const handleRazorpayPayment = async (plan, amount, user, billingCycle, on
             modal: {
                 animation: true,
                 backdropclose: false,
+                ondismiss: function() {
+                    // User closed modal without paying
+                    console.log('[Payment] User dismissed payment modal');
+                    if (onFailure) onFailure({ code: 'MODAL_DISMISSED', description: 'Payment cancelled by user' });
+                }
             }
         };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { updateUserMembership } from '../services/membershipService';
-import { handleRazorpayPayment } from '../services/paymentService';
+import { handleRazorpayPayment, prefetchRazorpay } from '../services/paymentService';
 import { getCurrentPricing } from '../../admin/services/adminDashboard';
 import { validateCoupon, getAllCoupons } from '../../../utils/couponManagement';
 import toast, { Toaster } from 'react-hot-toast';
@@ -304,6 +304,9 @@ export default function Membership() {
 
   // Fetch current pricing from Firestore
   useEffect(() => {
+    // Preload Razorpay SDK while user is browsing plans (saves ~2-3s on click)
+    prefetchRazorpay();
+    
     const fetchPricing = async () => {
       try {
         setLoading(true);
