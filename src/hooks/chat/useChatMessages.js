@@ -168,7 +168,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         : msg
                 ));
             }
-        }, 40); // 25fps smooth typing
+        }, 20); // 50fps smooth typing (was 40ms/25fps)
 
         return () => {
             clearInterval(pingInterval);

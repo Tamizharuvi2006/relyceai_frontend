@@ -436,7 +436,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
           {isSearching && <SearchingSkeleton query={msg.searchQuery} />}
 
           {/* Sources + generating */}
-          {isGenerating && !isSearching && (
+          {isGenerating && !isSearching && (!msg.content || msg.content.length === 0) && (
             <>
               {sources.length > 0 && <SourcesDisplay sources={sources} />}
               <GeneratingIndicator />
