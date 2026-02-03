@@ -339,6 +339,37 @@ const ChatWindow = memo(function ChatWindow({
             scrollbar-width: thin;
             scrollbar-color: #005a3e #18181b; /* thumb color, track color */
           }
+          
+          /* Mobile viewport fixes for keyboard */
+          @supports (height: 100dvh) {
+            .mobile-full-height {
+              height: 100dvh;
+            }
+          }
+          
+          /* Ensure header stays visible on mobile when keyboard opens */
+          @media (max-width: 768px) {
+            .mobile-sticky-header {
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
+              z-index: 100 !important;
+            }
+            
+            .mobile-chat-container {
+              padding-top: 56px !important; /* Space for fixed header */
+            }
+            
+            /* Fix iOS keyboard push behavior */
+            .mobile-input-fixed {
+              position: fixed !important;
+              bottom: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
+              padding-bottom: env(safe-area-inset-bottom, 0) !important;
+            }
+          }
         `}
       </style>
 
@@ -444,7 +475,7 @@ const ChatWindow = memo(function ChatWindow({
       </div>
 
       {/* Improved chat input container with overlay positioning */}
-      <div className="absolute bottom-0 left-0 right-0 p-1 backdrop-blur-sm z-20 mobile-input-container bg-zinc-900/90">
+      <div className="absolute bottom-0 left-0 right-0 p-1 backdrop-blur-sm z-20 mobile-input-container mobile-input-fixed bg-zinc-900/90">
         <div className="max-w-5xl mx-auto">
           <ChatInput
             onSend={handleSend}

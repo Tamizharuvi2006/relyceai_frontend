@@ -96,7 +96,7 @@ export async function ensureUserHasId(userId) {
         const userDoc = await getDoc(userDocRef);
         
         if (!userDoc.exists()) {
-             // console.warn...
+             console.warn('[ensureUserHasId] User doc does not exist:', userId);
              return null;
         }
 
@@ -105,11 +105,43 @@ export async function ensureUserHasId(userId) {
             return userData.uniqueUserId;
         }
 
-        console.log('[ensureUserHasId] uniqueUserId missing. Delegating to Backend...');
-        // We do NOT write to DB here. 
+        console.log('[ensureUserHasId] uniqueUserId missing. Calling Backend /users/init...');
+        
+        // FIX: Actually call the backend to initialize the ID
+        try {
+            const { auth } = await import('../../../utils/firebaseConfig');
+            const token = await auth.currentUser?.getIdToken();
+            
+            if (token) {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const response = await fetch(`${apiUrl}/users/init`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('[ensureUserHasId] Backend init successful, re-fetching user...');
+                    // Re-fetch to get the new ID
+                    const updatedDoc = await getDoc(userDocRef);
+                    const newId = updatedDoc.data()?.uniqueUserId || null;
+                    console.log('[ensureUserHasId] New uniqueUserId:', newId);
+                    return newId;
+                } else {
+                    console.error('[ensureUserHasId] Backend init failed:', response.status);
+                }
+            } else {
+                console.warn('[ensureUserHasId] No auth token available');
+            }
+        } catch (backendError) {
+            console.error('[ensureUserHasId] Backend call error:', backendError);
+        }
+        
         return null;
     } catch (error) {
-        console.error('[ensureUserHasId] Error accessing user doc:', error);
+        console.error('[ensureUserHasId] Error:', error);
         return null;
     }
 }

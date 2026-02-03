@@ -136,6 +136,22 @@ export default function AuthProvider({ children }) {
 
                   // Trigger background tasks only once on initial load of this session
                   if (!initialLoadComplete.current) {
+                      // FIX: ALWAYS call backend init on login to ensure role, uniqueUserId, and membership are valid
+                      // This catches cases where data may have been corrupted or partially written
+                      try {
+                          const token = await authUser.getIdToken();
+                          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                          fetch(`${apiUrl}/users/init`, {
+                              method: 'POST',
+                              headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                  'Content-Type': 'application/json'
+                              }
+                          }).catch(err => console.warn('[AuthContext] Backend init call failed:', err));
+                      } catch (initErr) {
+                          console.warn('[AuthContext] Could not call backend init:', initErr);
+                      }
+                      
                       updateUserLastLogin(authUser.uid).catch(console.error);
                       checkMembershipExpiry(authUser.uid).catch(console.error);
                       initialLoadComplete.current = true;

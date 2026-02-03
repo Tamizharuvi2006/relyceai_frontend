@@ -7,7 +7,7 @@
  * Set VITE_API_BASE_URL in your .env file
  */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-console.log("[Debug] API_BASE_URL =", API_BASE_URL); // Log for production debugging
+
 const WS_BASE_URL = API_BASE_URL.startsWith('https')
   ? API_BASE_URL.replace('https', 'wss')
   : API_BASE_URL.replace('http', 'ws');
@@ -198,7 +198,7 @@ export class WebSocketChatManager {
       this.socket = new WebSocket(wsUrl);
       
       this.socket.onopen = () => {
-        console.log('[WS] Connected to chat:', chatId);
+        // console.log('[WS] Connected to chat:', chatId);
         this.reconnectAttempts = 0;
         this.onConnect();
       };
@@ -230,7 +230,7 @@ export class WebSocketChatManager {
       };
       
       this.socket.onclose = (event) => {
-        console.log('[WS] Disconnected:', event.code, event.reason);
+        // console.log('[WS] Disconnected:', event.code, event.reason);
         this.attemptReconnect(token, callbacks);
       };
       
@@ -250,7 +250,7 @@ export class WebSocketChatManager {
       this.reconnectAttempts++;
       if (this.onReconnect) this.onReconnect();
       
-      console.log(`[WS] Reconnecting... attempt ${this.reconnectAttempts}`);
+      // console.log(`[WS] Reconnecting... attempt ${this.reconnectAttempts}`);
       
       this.reconnectTimeout = setTimeout(() => {
         this.connect(this.chatId, token, callbacks);

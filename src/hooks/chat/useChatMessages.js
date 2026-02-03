@@ -32,7 +32,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         ChatService.checkConnection().then(connected => {
             setWsConnected(connected);
             if (!connected) {
-                console.warn('useChatMessages: FastAPI backend not connected.');
+                // Silent failure - will retry
             }
         });
 
@@ -65,29 +65,29 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                      const botMsgId = streamingMessageIdRef.current;
                      if (!botMsgId) return;
 
-                     let isSearching = false;
-                     let displayContent = "";
-                     let searchQuery = "";
+                     setMessages(prev => prev.map(msg => {
+                        if (msg.id !== botMsgId) return msg;
 
-                     if (infoText === "processing") {
-                         // Just started
-                     } else if (infoText === "stopped") {
-                         // Stopped
-                     } else if (infoText.startsWith("Searching with:")) {
-                         isSearching = true;
-                         searchQuery = infoText.replace("Searching with:", "").trim();
-                         tokenBufferRef.current = ""; // Clear buffer on search start
-                     }
+                        // Default to current state to prevent flickering
+                        let isSearching = msg.isSearching;
+                        let searchQuery = msg.searchQuery;
 
-                     setMessages(prev => prev.map(msg => 
-                        msg.id === botMsgId 
-                            ? { 
-                                ...msg, 
-                                isSearching,
-                                searchQuery: isSearching ? searchQuery : msg.searchQuery,
-                              }
-                            : msg
-                    ));
+                        if (infoText === "processing") {
+                            isSearching = false;
+                        } else if (infoText === "stopped") {
+                            isSearching = false;
+                        } else if (infoText.startsWith("Searching with:")) {
+                            isSearching = true;
+                            searchQuery = infoText.replace("Searching with:", "").trim();
+                            tokenBufferRef.current = ""; // Clear buffer on search start
+                        }
+
+                        return { 
+                           ...msg, 
+                           isSearching,
+                           searchQuery
+                        };
+                   }));
                 },
                 onDone: () => {
                     const botMsgId = streamingMessageIdRef.current;
@@ -151,11 +151,16 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
              if (wsManager.current) wsManager.current.ping();
         }, 25000); // 25s heartbeat
 
-        const bufferInterval = setInterval(() => {
+        // Use requestAnimationFrame for smoother 60fps+ updates (syncs with screen refresh)
+        let animationFrameId;
+        const flushBuffer = () => {
             const chunk = tokenBufferRef.current;
             if (chunk && streamingMessageIdRef.current) {
                 tokenBufferRef.current = "";
                 const botMsgId = streamingMessageIdRef.current;
+                
+                // Functional update to ensure we don't depend on stale state
+                // This runs as fast as the browser can paint (typically 60-144 times per second)
                 setMessages(prev => prev.map(msg => 
                     msg.id === botMsgId 
                         ? { 
@@ -168,11 +173,15 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         : msg
                 ));
             }
-        }, 20); // 50fps smooth typing (was 40ms/25fps)
+            animationFrameId = requestAnimationFrame(flushBuffer);
+        };
+        
+        // Start the render loop
+        animationFrameId = requestAnimationFrame(flushBuffer);
 
         return () => {
             clearInterval(pingInterval);
-            clearInterval(bufferInterval);
+            cancelAnimationFrame(animationFrameId);
         };
     }, [setMessages]);
 

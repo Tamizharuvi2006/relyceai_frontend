@@ -148,11 +148,11 @@ const ChatWindowHeader = ({
 
   return (
     <>
-    <div className="sticky top-0 left-0 right-0 z-50 backdrop-blur-md bg-zinc-900/80 transition-colors duration-300 border-b border-emerald-500/20">
+    <div className="sticky top-0 left-0 right-0 z-50 backdrop-blur-md bg-zinc-900/80 transition-colors duration-300 border-b border-emerald-500/20 mobile-sticky-header">
       <div className={`flex items-center justify-between py-3 px-4 transition-all duration-300 ${sidebarExpanded ? 'md:px-4' : 'md:px-8'}`}>
         
         {/* Left side - Menu & Title & Selectors */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3 flex-shrink min-w-0">
           {/* Mobile: Menu button */}
           <button
             onClick={onToggleSidebar}
@@ -167,7 +167,7 @@ const ChatWindowHeader = ({
             <button
               ref={modeButtonRef}
               onClick={() => setModeDropdownOpen(!modeDropdownOpen)}
-              className={`flex items-center gap-2 px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ${modeDropdownOpen ? 'bg-emerald-500/20' : ''}`}
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ${modeDropdownOpen ? 'bg-emerald-500/20' : ''}`}
             >
               <span className="text-emerald-400">
                 {chatMode === 'business' ? 'Business' : 'Generic'}
@@ -215,11 +215,11 @@ const ChatWindowHeader = ({
                     e.stopPropagation(); // Prevent immediate close
                     setPersonalityDropdownOpen(!personalityDropdownOpen);
                 }}
-                className={`flex items-center gap-2 px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ml-2 border border-emerald-500/20 ${personalityDropdownOpen ? 'bg-emerald-500/20' : ''}`}
+                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ml-1 sm:ml-2 border border-emerald-500/20 ${personalityDropdownOpen ? 'bg-emerald-500/20' : ''}`}
                 disabled={!personalities || personalities.length === 0}
                 >
                 <User size={14} className="text-emerald-400" />
-                <span className="text-emerald-400 max-w-[100px] truncate">
+                <span className="text-emerald-400 max-w-[60px] sm:max-w-[100px] truncate text-xs sm:text-sm">
                     {activePersonality ? activePersonality.name : 'Loading...'}
                 </span>
                 <svg
@@ -255,8 +255,8 @@ const ChatWindowHeader = ({
                                 {activePersonality?.id === p.id && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>}
                             </button>
                             
-                            {/* Edit/Delete Menu - Only for custom personalities (not default) */}
-                            {(!p.is_default || p.is_system === false) && (
+                            {/* Edit/Delete Menu - Only for non-system personalities */}
+                            {!p.is_system && (
                                 <div className="relative flex items-center pr-2">
                                     <button
                                         onClick={(e) => {
@@ -293,18 +293,18 @@ const ChatWindowHeader = ({
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {/* Download */}
             <DownloadMenu onDownloadPDF={onDownloadPDF} onDownloadText={onDownloadText} />
 
-            {/* Share */}
+            {/* Share - Hidden on mobile */}
             <button
                 onClick={handleShareClick}
                 disabled={isSharing}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition text-sm hover:bg-white/10 text-white ${isSharing ? 'opacity-50 cursor-wait' : ''}`}
+                className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg transition text-sm hover:bg-white/10 text-white ${isSharing ? 'opacity-50 cursor-wait' : ''}`}
             >
                 <Share size={16} className={isSharing ? 'animate-pulse' : ''} />
-                <span className="hidden sm:inline">{isSharing ? 'Sharing...' : 'Share'}</span>
+                <span>{isSharing ? 'Sharing...' : 'Share'}</span>
             </button>
 
             {/* More Menu */}
