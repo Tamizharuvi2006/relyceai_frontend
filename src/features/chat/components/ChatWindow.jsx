@@ -397,7 +397,7 @@ const ChatWindow = memo(function ChatWindow({
 
       <div
         ref={messagesContainerRef}
-        className={`flex-1 overflow-y-auto overflow-x-hidden smooth-scroll relative pb-40 mobile-messages-container bg-zinc-900 chat-messages-container ${isTransitioning ? 'transitioning' : ''}`}
+        className={`flex-1 overflow-y-auto overflow-x-hidden smooth-scroll relative pb-40 mobile-messages-container pt-[60px] md:pt-0 bg-zinc-900 chat-messages-container ${isTransitioning ? 'transitioning' : ''}`}
       >
         {/* Loading spinner removed - using only the auth loading spinner */}
         {/* Only show empty state when truly empty and not transitioning or switching sessions */}
