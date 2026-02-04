@@ -140,7 +140,7 @@ export default function AuthProvider({ children }) {
                       // This catches cases where data may have been corrupted or partially written
                       try {
                           const token = await authUser.getIdToken();
-                          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                          const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
                           fetch(`${apiUrl}/users/init`, {
                               method: 'POST',
                               headers: {

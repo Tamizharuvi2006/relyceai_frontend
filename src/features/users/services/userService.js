@@ -54,7 +54,7 @@ export async function createUserProfile(userData, membershipPlan = 'free') {
         // Using fetch to avoid circular deps if axios is not set up in this service file alone.
         // We need the API URL. Let's try to get it from env or hardcode fallback relative to where frontend expects.
         // Usually VITE_API_URL.
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
         
         await fetch(`${apiUrl}/users/init`, {
             method: 'POST',
@@ -113,7 +113,7 @@ export async function ensureUserHasId(userId) {
             const token = await auth.currentUser?.getIdToken();
             
             if (token) {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
                 const response = await fetch(`${apiUrl}/users/init`, {
                     method: 'POST',
                     headers: {
