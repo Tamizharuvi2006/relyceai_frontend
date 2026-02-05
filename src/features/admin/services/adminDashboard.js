@@ -1,5 +1,5 @@
-import { collection, getDocs, doc, updateDoc, query, where, orderBy, getDoc, Timestamp, setDoc } from 'firebase/firestore';
-import { db } from '../../../utils/firebaseConfig';
+import { collection, getDocs, doc, query, where, orderBy, getDoc, Timestamp, setDoc } from 'firebase/firestore';
+import { db, auth } from '../../../utils/firebaseConfig';
 import { API_BASE_URL } from '../../../utils/api';
 import { verifyAdminAccess, validateRoleChange } from './adminSecurity';
 import { generateUserId } from '../../users/services/userService';
@@ -77,36 +77,29 @@ export const getUserStatistics = async (requesterId) => {
 };
 
 export const updateUserMembership = async (userId, newPlan, billingCycle = 'monthly', paymentData = null, requesterId) => {
-  // DEPRECATION WARNING: For production, admin membership changes should go through backend API
-  // Frontend direct writes are allowed temporarily for admin panel but should be migrated.
-  console.warn('[adminDashboard] updateUserMembership: Direct Firestore write. Consider backend migration.');
-  
-  const { isAdmin, isSuperAdmin, error } = await verifyAdminAccess(requesterId);
-  if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized access to membership update');
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('Not authenticated');
 
-  const userDocRef = doc(db, 'users', userId);
-  const expiryDate = new Date();
-  billingCycle === 'yearly' ? expiryDate.setFullYear(expiryDate.getFullYear() + 1) : expiryDate.setDate(expiryDate.getDate() + 30);
-
-  const updateData = {
-    membership: {
-      plan: newPlan, planName: newPlan.charAt(0).toUpperCase() + newPlan.slice(1), billingCycle,
-      startDate: Timestamp.fromDate(new Date()), expiryDate: newPlan === 'free' ? null : Timestamp.fromDate(expiryDate),
-      isActive: newPlan !== 'free', updatedAt: Timestamp.fromDate(new Date())
+  const response = await fetch(`${API_BASE_URL}/admin/membership/update`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
-    lastActivity: Timestamp.fromDate(new Date())
-  };
+    body: JSON.stringify({
+      target_uid: userId,
+      plan: newPlan,
+      billing_cycle: billingCycle,
+      payment: paymentData || null
+    })
+  });
 
-  if (paymentData && newPlan !== 'free') {
-    const paymentEntry = { transactionId: paymentData.transactionId, amount: paymentData.amount, currency: paymentData.currency || 'INR', method: paymentData.method, plan: newPlan, billingCycle, timestamp: Timestamp.fromDate(new Date()), date: new Date().toISOString() };
-    const userDoc = await getDoc(userDocRef);
-    const existingHistory = userDoc.exists() ? userDoc.data().membership?.paymentHistory || {} : {};
-    updateData.membership.paymentHistory = { ...existingHistory, [paymentData.transactionId]: paymentEntry };
-    try { await setDoc(doc(collection(db, 'payments')), { userId, ...paymentEntry }); } catch { /* silent */ }
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to update membership');
   }
 
-  await updateDoc(userDocRef, updateData);
-  return { success: true, message: 'Membership updated successfully' };
+  return await response.json();
 };
 
 export const getUsersByPlan = async (planType, requesterId) => {
@@ -198,21 +191,24 @@ export const getPaymentAnalytics = async (requesterId) => {
 };
 
 export const updateUserRole = async (userId, newRole, requesterId) => {
-  // DEPRECATION WARNING: Role changes should go through backend API for audit trail
-  console.warn('[adminDashboard] updateUserRole: Direct Firestore write. Consider backend migration.');
-  
-  const { isAdmin, isSuperAdmin, error: accessError } = await verifyAdminAccess(requesterId);
-  if (accessError || (!isAdmin && !isSuperAdmin)) throw new Error('Insufficient permissions to modify user roles');
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('Not authenticated');
 
-  const userDocRef = doc(db, 'users', userId);
-  const userDoc = await getDoc(userDocRef);
-  if (!userDoc.exists()) throw new Error('User not found');
+  const response = await fetch(`${API_BASE_URL}/admin/change-role`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ target_uid: userId, new_role: newRole })
+  });
 
-  const currentRole = userDoc.data().role || 'user';
-  if (!validateRoleChange(currentRole, newRole, isSuperAdmin ? 'superadmin' : 'admin')) throw new Error('Invalid role change - insufficient permissions');
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to update role');
+  }
 
-  await updateDoc(userDocRef, { role: newRole, lastUpdatedAt: Timestamp.fromDate(new Date()) });
-  return { success: true, message: 'User role updated successfully' };
+  return await response.json();
 };
 
 export const calculateYearlyPrice = (monthlyPrice, discountPercentage) => {
@@ -295,30 +291,20 @@ export const toggleCouponStatus = async (couponId, active, requesterId) => {
 };
 
 export const deleteUser = async (userId, requesterId) => {
-  const { isAdmin, isSuperAdmin, error: accessError } = await verifyAdminAccess(requesterId);
-  if (accessError || (!isAdmin && !isSuperAdmin)) throw new Error('Insufficient permissions to delete users');
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('Not authenticated');
 
-  const { doc, deleteDoc, collection, getDocs, query, where } = await import('firebase/firestore');
+  const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
 
-  await deleteDoc(doc(db, 'users', userId));
-
-  const sessions = await getDocs(collection(db, 'users', userId, 'chatSessions'));
-  for (const session of sessions.docs) {
-    const msgs = await getDocs(collection(db, 'users', userId, 'chatSessions', session.id, 'messages'));
-    await Promise.all(msgs.docs.map(m => deleteDoc(doc(db, 'users', userId, 'chatSessions', session.id, 'messages', m.id))));
-    await deleteDoc(doc(db, 'users', userId, 'chatSessions', session.id));
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to delete user');
   }
 
-  const files = await getDocs(collection(db, 'users', userId, 'files'));
-  await Promise.all(files.docs.map(f => deleteDoc(doc(db, 'users', userId, 'files', f.id))));
-
-  const folders = await getDocs(collection(db, 'users', userId, 'folders'));
-  await Promise.all(folders.docs.map(f => deleteDoc(doc(db, 'users', userId, 'folders', f.id))));
-
-  const shared = await getDocs(query(collection(db, 'sharedChats'), where('userId', '==', userId)));
-  await Promise.all(shared.docs.map(s => deleteDoc(doc(db, 'sharedChats', s.id))));
-
-  return { success: true, message: 'User deleted successfully' };
+  return await response.json();
 };
 
 export const getUsersByMembership = async (membershipType, requesterId) => {
@@ -331,7 +317,8 @@ export const getUsersByMembership = async (membershipType, requesterId) => {
 
 export const checkPaymentStatus = async (paymentId) => {
   try {
-     const token = localStorage.getItem('token');
+     const token = await auth.currentUser?.getIdToken();
+     if (!token) throw new Error('Not authenticated');
      const response = await fetch(`${API_BASE_URL}/payment/admin/check-payment/${paymentId}`, {
         method: 'GET',
         headers: {
@@ -349,7 +336,8 @@ export const checkPaymentStatus = async (paymentId) => {
 
 export const syncPaymentManual = async (paymentId, userId, planId) => {
   try {
-     const token = localStorage.getItem('token');
+     const token = await auth.currentUser?.getIdToken();
+     if (!token) throw new Error('Not authenticated');
      const response = await fetch(`${API_BASE_URL}/payment/admin/sync-payment/${paymentId}`, {
         method: 'POST',
         headers: {

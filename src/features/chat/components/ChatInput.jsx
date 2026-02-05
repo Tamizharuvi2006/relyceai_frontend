@@ -145,10 +145,9 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         const fileToRemove = uploadedFiles.find(file => file.id === fileId);
         if (fileToRemove) {
             setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
-            const userId = userProfile?.uniqueUserId || user?.uid;
-            if (userId) {
+            if (user) {
                 try {
-                    const response = await deleteFile(userId, fileToRemove.name);
+                    const response = await deleteFile(fileToRemove.name);
                     if (response.status === 'success') {
                         console.log(`✅ File ${fileToRemove.name} deleted successfully`);
                     } else {

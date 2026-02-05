@@ -25,11 +25,11 @@ const UserFiles = () => {
       setError(null);
       console.log('=== Loading user files ===');
       console.log('User profile:', userProfile);
-      console.log('Unique user ID:', userProfile?.uniqueUserId);
+      console.log('User ID:', userProfile?.uid);
 
-      if (userProfile?.uniqueUserId) {
-        console.log('Fetching files for user ID:', userProfile.uniqueUserId);
-        const userFiles = await getUserFiles(userProfile.uniqueUserId);
+      if (userProfile?.uid) {
+        console.log('Fetching files for user ID:', userProfile.uid);
+        const userFiles = await getUserFiles(userProfile.uid);
         console.log('Retrieved files:', userFiles);
         console.log('Number of files retrieved:', userFiles.length);
 
@@ -50,7 +50,7 @@ const UserFiles = () => {
         setFiles(userFiles);
         console.log('Files state updated with', userFiles.length, 'files');
       } else {
-        console.log('No unique user ID found for file retrieval');
+        console.log('No user ID found for file retrieval');
         console.log('User profile:', userProfile);
       }
     } catch (err) {
@@ -146,7 +146,7 @@ const UserFiles = () => {
           fileName = pathParts[pathParts.length - 1];
         }
 
-        const deletePromise = deleteFile(userProfile.uniqueUserId, fileName);
+        const deletePromise = deleteFile(fileName);
         deletePromises.push(deletePromise);
       }
 
@@ -161,7 +161,7 @@ const UserFiles = () => {
       } else {
         // Delete Firestore metadata for each file
         const metadataDeletePromises = filesToDelete.map(file =>
-          deleteFileMetadata(userProfile.uniqueUserId, file.id)
+          deleteFileMetadata(userProfile.uid, file.id)
         );
         await Promise.all(metadataDeletePromises);
 
@@ -202,7 +202,7 @@ const UserFiles = () => {
         fileName = pathParts[pathParts.length - 1];
       }
 
-      const result = await deleteFile(userProfile.uniqueUserId, fileName);
+      const result = await deleteFile(fileName);
 
       if (result.error) {
         console.error('Failed to delete file:', result.error);
@@ -211,7 +211,7 @@ const UserFiles = () => {
       }
 
       // Delete Firestore metadata
-      await deleteFileMetadata(userProfile.uniqueUserId, file.id);
+      await deleteFileMetadata(userProfile.uid, file.id);
 
       // Remove file from state
       setFiles(prevFiles => prevFiles.filter(f => f.id !== file.id));

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../../utils/api';
+import { auth } from '../../../utils/firebaseConfig';
 import toast from 'react-hot-toast';
 
 /**
@@ -45,7 +46,8 @@ export const prefetchRazorpay = () => {
 
 export const createOrder = async (amount, currency = 'INR', planId, options = {}) => {
     try {
-        const token = localStorage.getItem('token'); // Get auth token if needed
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error('Not authenticated');
         const headers = {
             'Content-Type': 'application/json',
         };
@@ -83,7 +85,8 @@ export const createOrder = async (amount, currency = 'INR', planId, options = {}
 
 export const verifyPayment = async (response, planDetails) => {
     try {
-        const token = localStorage.getItem('token');
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error('Not authenticated');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -95,8 +98,7 @@ export const verifyPayment = async (response, planDetails) => {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 plan_id: planDetails.id,
-                billing_cycle: planDetails.billingCycle || 'monthly',
-                user_id: planDetails.userId
+                billing_cycle: planDetails.billingCycle || 'monthly'
             })
         });
 

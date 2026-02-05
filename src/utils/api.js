@@ -1,6 +1,7 @@
 // src/utils/api.js
 // FastAPI Backend Integration Layer
 // Production-ready REST API and WebSocket communication
+import { auth } from './firebaseConfig';
 
 /**
  * FastAPI Backend Configuration
@@ -43,6 +44,17 @@ async function apiFetch(endpoint, options = {}) {
   }
 }
 
+async function getAuthHeaders() {
+  const user = auth.currentUser;
+  if (!user) return {};
+  try {
+    const token = await user.getIdToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Chat API - Send message to FastAPI and get response
  */
@@ -64,8 +76,10 @@ export async function sendChatMessage(message, sessionId, userId, chatMode = 'no
       if (id) body.personality_id = id;
     }
 
+    const authHeaders = await getAuthHeaders();
     const result = await apiFetch('/chat', {
       method: 'POST',
+      headers: authHeaders,
       body: JSON.stringify(body),
     });
     
@@ -103,9 +117,10 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
       if (id) body.personality_id = id;
     }
 
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/chat/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       credentials: 'include',
       body: JSON.stringify(body),
     });
@@ -166,15 +181,16 @@ export class WebSocketChatManager {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectTimeout = null;
+    this.tokenProvider = null;
   }
   
   /**
    * Connect to WebSocket chat
    * @param {string} chatId - Chat session ID
-   * @param {string} token - Firebase auth token (optional)
+   * @param {string|function} tokenProvider - Firebase auth token or async provider
    * @param {object} callbacks - {onToken, onDone, onError, onInfo}
    */
-  connect(chatId, token = null, callbacks = {}) {
+  async connect(chatId, tokenProvider = null, callbacks = {}) {
     this.chatId = chatId;
     this.onToken = callbacks.onToken || (() => {});
     this.onDone = callbacks.onDone || (() => {});
@@ -182,6 +198,7 @@ export class WebSocketChatManager {
     this.onInfo = callbacks.onInfo || (() => {});
     this.onConnect = callbacks.onConnect || (() => {});
     this.onReconnect = callbacks.onReconnect || (() => {});
+    this.tokenProvider = tokenProvider;
     
     if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
@@ -189,7 +206,12 @@ export class WebSocketChatManager {
     }
     
     const params = new URLSearchParams();
-    if (token) params.append('token', token);
+    const resolvedToken = await this.resolveToken();
+    if (!resolvedToken) {
+      this.onError('Unauthorized: missing token');
+      return;
+    }
+    params.append('token', resolvedToken);
     params.append('chat_id', chatId);
     
     const wsUrl = `${WS_BASE_URL}/ws/chat?${params.toString()}`;
@@ -231,7 +253,11 @@ export class WebSocketChatManager {
       
       this.socket.onclose = (event) => {
         // console.log('[WS] Disconnected:', event.code, event.reason);
-        this.attemptReconnect(token, callbacks);
+        if (event.code === 1008) {
+          this.onError('Unauthorized: invalid or expired token');
+          return;
+        }
+        this.attemptReconnect(callbacks);
       };
       
       this.socket.onerror = (error) => {
@@ -245,7 +271,18 @@ export class WebSocketChatManager {
     }
   }
   
-  attemptReconnect(token, callbacks) {
+  async resolveToken() {
+    if (typeof this.tokenProvider === 'function') {
+      try {
+        return await this.tokenProvider();
+      } catch {
+        return null;
+      }
+    }
+    return this.tokenProvider;
+  }
+
+  attemptReconnect(callbacks) {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       if (this.onReconnect) this.onReconnect();
@@ -253,7 +290,7 @@ export class WebSocketChatManager {
       // console.log(`[WS] Reconnecting... attempt ${this.reconnectAttempts}`);
       
       this.reconnectTimeout = setTimeout(() => {
-        this.connect(this.chatId, token, callbacks);
+        this.connect(this.chatId, this.tokenProvider, callbacks);
       }, 1000 * this.reconnectAttempts);
     }
   }
@@ -346,14 +383,15 @@ export async function webSearch(query, tools = ['Search']) {
 /**
  * File Upload API
  */
-export async function uploadFile(file, userId) {
+export async function uploadFile(file) {
   try {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('user_id', userId);
+    const authHeaders = await getAuthHeaders();
     
     const response = await fetch(`${API_BASE_URL}/upload`, {
       method: 'POST',
+      headers: authHeaders,
       body: formData,
     });
     
@@ -368,10 +406,13 @@ export async function uploadFile(file, userId) {
 /**
  * File Delete API
  */
-export async function deleteFile(userId, fileName) {
+export async function deleteFile(fileName) {
   try {
-    return await apiFetch(`/delete/${userId}/${encodeURIComponent(fileName)}`, {
+    const authHeaders = await getAuthHeaders();
+    const uid = auth.currentUser?.uid || 'me';
+    return await apiFetch(`/delete/${uid}/${encodeURIComponent(fileName)}`, {
       method: 'DELETE',
+      headers: authHeaders,
     });
   } catch (error) {
     console.error('deleteFile error:', error);
@@ -384,7 +425,10 @@ export async function deleteFile(userId, fileName) {
  */
 export async function getChatHistory(userId, sessionId, limit = 50) {
   try {
-    return await apiFetch(`/history/${userId}/${sessionId}?limit=${limit}`);
+    const authHeaders = await getAuthHeaders();
+    return await apiFetch(`/history/${userId}/${sessionId}?limit=${limit}`, {
+      headers: authHeaders,
+    });
   } catch (error) {
     console.error('getChatHistory error:', error);
     return { success: false, messages: [] };
@@ -396,7 +440,10 @@ export async function getChatHistory(userId, sessionId, limit = 50) {
  */
 export async function fetchPersonalities(userId) {
   try {
-    return await apiFetch(`/personalities/${userId}`);
+    const authHeaders = await getAuthHeaders();
+    return await apiFetch(`/personalities/${userId}`, {
+      headers: authHeaders,
+    });
   } catch (error) {
     console.error('fetchPersonalities error:', error);
     return { success: false, personalities: [] };
@@ -408,8 +455,10 @@ export async function fetchPersonalities(userId) {
  */
 export async function createPersonality(userId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
   try {
-    return await apiFetch(`/personalities?user_id=${userId}`, {
+    const authHeaders = await getAuthHeaders();
+    return await apiFetch(`/personalities`, {
       method: 'POST',
+      headers: authHeaders,
       body: JSON.stringify({
         name,
         description,
@@ -429,8 +478,10 @@ export async function createPersonality(userId, name, description, prompt, conte
  */
 export async function updatePersonality(userId, personalityId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
     try {
-      return await apiFetch(`/personalities/${personalityId}?user_id=${userId}`, {
+      const authHeaders = await getAuthHeaders();
+      return await apiFetch(`/personalities/${personalityId}`, {
         method: 'PUT',
+        headers: authHeaders,
         body: JSON.stringify({
           name,
           description,
@@ -450,8 +501,10 @@ export async function updatePersonality(userId, personalityId, name, description
  */
 export async function deletePersonality(userId, personalityId) {
     try {
-        return await apiFetch(`/personalities/${personalityId}?user_id=${userId}`, {
-            method: 'DELETE'
+        const authHeaders = await getAuthHeaders();
+        return await apiFetch(`/personalities/${personalityId}`, {
+            method: 'DELETE',
+            headers: authHeaders
         });
     } catch (error) {
         console.error('deletePersonality error:', error);

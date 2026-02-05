@@ -1,5 +1,5 @@
 // components/MessageComponent.jsx
-import React, { useState, memo, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, memo, forwardRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -8,68 +8,59 @@ import { Copy, Download, Image, FileText, Globe, ExternalLink, Search, Sparkles,
 import { getFileIcon, formatFileSize } from '../../../utils/chatHelpers';
 
 /**
- * Skeleton loader component for searching state
+ * Animated processing indicator (step-by-step)
  */
-const SearchingSkeleton = ({ query }) => (
-  <div className="animate-pulse space-y-3">
-    {/* Searching status */}
-    <div className="flex items-center gap-2 text-emerald-400 mb-1">
-      <Search size={18} className="animate-pulse" />
-      <span className="text-sm font-medium">Searching the web...</span>
+const LoadingDots = () => (
+  <span className="inline-flex items-center gap-1 ml-2">
+    <span className="relyce-dot" />
+    <span className="relyce-dot relyce-dot-2" />
+    <span className="relyce-dot relyce-dot-3" />
+  </span>
+);
+
+const ProcessingIndicator = ({ query, showSearch, holdFinalStep }) => (
+  <div className="relyce-processing space-y-3">
+    <div className={`relyce-processing-card${holdFinalStep ? " is-hold" : ""}`}>
+      <div className="relyce-step relyce-step-1">
+        <div className="relyce-step-icon">
+          <BrainCircuit size={14} />
+        </div>
+        <div className="relyce-step-text">
+          Analyzing question
+          <LoadingDots />
+        </div>
+      </div>
+      <div className="relyce-step relyce-step-2">
+        <div className="relyce-step-icon">
+          <Search size={14} />
+        </div>
+        <div className="relyce-step-text">
+          Searching for the best answer
+          <LoadingDots />
+        </div>
+      </div>
+      <div className="relyce-step relyce-step-3">
+        <div className="relyce-step-icon">
+          <Sparkles size={14} />
+        </div>
+        <div className="relyce-step-text">
+          Processing information
+          <LoadingDots />
+        </div>
+      </div>
     </div>
-    
-    {/* Query being searched */}
-    {query && (
-      <div className="text-xs text-gray-400 italic truncate">
-        "{query.length > 60 ? query.substring(0, 60) + '...' : query}"
+    {showSearch && query && (
+      <div className="text-xs text-zinc-400/80 italic truncate">
+        “{query.length > 80 ? query.substring(0, 80) + '…' : query}”
       </div>
     )}
-    
-    {/* Skeleton source links */}
-    <div className="border-b border-zinc-700/50 pb-3">
-      <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
-        <Globe size={12} />
-        <span>Finding sources...</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
-            className="h-6 bg-zinc-700/50 rounded-md animate-pulse"
-            style={{ width: `${60 + Math.random() * 40}px` }}
-          />
-        ))}
-      </div>
-    </div>
-    
-    {/* Skeleton text lines */}
-    <div className="space-y-2 mt-2">
-      <div className="h-3 bg-zinc-700/30 rounded w-full"></div>
-      <div className="h-3 bg-zinc-700/30 rounded w-4/5"></div>
-      <div className="h-3 bg-zinc-700/30 rounded w-3/4"></div>
-    </div>
   </div>
 );
 
 /**
  * Generating response indicator
  */
-const GeneratingIndicator = () => (
-  <div className="animate-pulse space-y-3">
-    <div className="flex items-center gap-2 text-emerald-400">
-      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-         <Sparkles size={16} className="animate-pulse" />
-      </div>
-      <span className="text-sm font-medium">Thinking...</span>
-    </div>
-    
-    <div className="space-y-2">
-      <div className="h-3 bg-zinc-700/30 rounded w-full"></div>
-      <div className="h-3 bg-zinc-700/30 rounded w-4/5"></div>
-      <div className="h-3 bg-zinc-700/30 rounded w-3/4"></div>
-    </div>
-  </div>
-);
+const GeneratingIndicator = () => <ProcessingIndicator showSearch={false} />;
 
 /**
  * Sources display component
@@ -115,6 +106,15 @@ const SourcesDisplay = ({ sources }) => (
 const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, isLastMessage, chatMode }, ref) => {
   const [showCopyButton, setShowCopyButton] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showIndicator, setShowIndicator] = useState(false);
+  const [holdFinalStep, setHoldFinalStep] = useState(false);
+  const [indicatorFade, setIndicatorFade] = useState(false);
+  const [ghostSpace, setGhostSpace] = useState(false);
+  const indicatorStartRef = useRef(0);
+  const indicatorTimeoutRef = useRef(null);
+  const holdTimeoutRef = useRef(null);
+  const fadeTimeoutRef = useRef(null);
+  const ghostTimeoutRef = useRef(null);
 
   /**
    * Markdown components for rendering messages - defined inside to access chatMode
@@ -361,6 +361,84 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
   const isGenerating = msg.isGenerating;
   const isStreaming = msg.isStreaming;
   const sources = msg.sources || [];
+  const hasVisibleContent = Boolean(msg.content && msg.content.trim().length > 0);
+  const indicatorActive = Boolean((isSearching || isGenerating) && !hasVisibleContent);
+
+  useEffect(() => {
+    const minDurationMs = 1200;
+    const holdAfterMs = 2000;
+
+    if (indicatorTimeoutRef.current) {
+      clearTimeout(indicatorTimeoutRef.current);
+      indicatorTimeoutRef.current = null;
+    }
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (fadeTimeoutRef.current) {
+      clearTimeout(fadeTimeoutRef.current);
+      fadeTimeoutRef.current = null;
+    }
+    if (ghostTimeoutRef.current) {
+      clearTimeout(ghostTimeoutRef.current);
+      ghostTimeoutRef.current = null;
+    }
+
+    if (indicatorActive) {
+      if (!indicatorStartRef.current) {
+        indicatorStartRef.current = Date.now();
+      }
+      setShowIndicator(true);
+      setHoldFinalStep(false);
+      setIndicatorFade(false);
+      setGhostSpace(false);
+      holdTimeoutRef.current = setTimeout(() => {
+        setHoldFinalStep(true);
+        holdTimeoutRef.current = null;
+      }, holdAfterMs);
+      return;
+    }
+
+    const elapsed = indicatorStartRef.current ? Date.now() - indicatorStartRef.current : minDurationMs;
+    const remaining = Math.max(0, minDurationMs - elapsed);
+
+    indicatorTimeoutRef.current = setTimeout(() => {
+      setIndicatorFade(true);
+      fadeTimeoutRef.current = setTimeout(() => {
+        setShowIndicator(false);
+        setIndicatorFade(false);
+        setGhostSpace(true);
+        indicatorStartRef.current = 0;
+        setHoldFinalStep(false);
+        fadeTimeoutRef.current = null;
+      }, 220);
+      ghostTimeoutRef.current = setTimeout(() => {
+        setGhostSpace(false);
+        ghostTimeoutRef.current = null;
+      }, 520);
+      indicatorTimeoutRef.current = null;
+    }, remaining);
+
+    return () => {
+      if (indicatorTimeoutRef.current) {
+        clearTimeout(indicatorTimeoutRef.current);
+        indicatorTimeoutRef.current = null;
+      }
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
+        holdTimeoutRef.current = null;
+      }
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current);
+        fadeTimeoutRef.current = null;
+      }
+      if (ghostTimeoutRef.current) {
+        clearTimeout(ghostTimeoutRef.current);
+        ghostTimeoutRef.current = null;
+      }
+    };
+  }, [indicatorActive]);
 
   // ChatGPT-style: User messages are simple pills on the right
   if (msg.role === "user") {
@@ -432,14 +510,25 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
       {/* Message content */}
       <div className="flex-1 min-w-0">
         <div className="text-gray-100 leading-relaxed max-w-none">
-          {/* Searching skeleton */}
-          {isSearching && <SearchingSkeleton query={msg.searchQuery} />}
+          {/* Animated processing indicator */}
+          {(showIndicator || indicatorFade || ghostSpace) && (
+            <div
+              className={`relyce-processing-slot${indicatorFade ? " is-fading" : ""}${ghostSpace ? " is-ghost" : ""}`}
+            >
+              <ProcessingIndicator query={msg.searchQuery} showSearch={isSearching} holdFinalStep={holdFinalStep} />
+              {sources.length > 0 && (
+                <div className="mt-3">
+                  <SourcesDisplay sources={sources} />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Sources + generating */}
           {isGenerating && !isSearching && (!msg.content || msg.content.length === 0) && (
             <>
               {sources.length > 0 && <SourcesDisplay sources={sources} />}
-              <GeneratingIndicator />
+              {!showIndicator && <GeneratingIndicator />}
             </>
           )}
 

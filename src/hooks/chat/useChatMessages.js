@@ -40,16 +40,18 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         const initWebSocket = async () => {
             if (!currentSessionId) return;
             
-            let token = null;
-            try {
-                if (auth.currentUser) {
-                    token = await auth.currentUser.getIdToken();
+            const tokenProvider = async () => {
+                try {
+                    if (auth.currentUser) {
+                        return await auth.currentUser.getIdToken(true);
+                    }
+                } catch (e) {
+                    console.warn("Failed to get auth token for WS", e);
                 }
-            } catch (e) {
-                console.warn("Failed to get auth token for WS", e);
-            }
+                return null;
+            };
 
-            wsManager.current.connect(currentSessionId, token, {
+            wsManager.current.connect(currentSessionId, tokenProvider, {
                 onConnect: () => {
                     setWsConnected(true);
                     setIsReconnecting(false);

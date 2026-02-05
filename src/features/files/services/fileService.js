@@ -12,7 +12,7 @@ export async function uploadChatFileToBackend(firebaseUid, uniqueUserId, session
     if (onProgress) onProgress(0);
     
     try {
-        const result = await uploadFile(file, uniqueUserId || firebaseUid);
+        const result = await uploadFile(file);
         
         if (onProgress) onProgress(100);
         
@@ -57,7 +57,7 @@ export async function uploadUserFileToBackendOnly(userId, file) {
         throw new Error(canUpload.reason);
     }
 
-    const result = await uploadFile(file, userId);
+    const result = await uploadFile(file);
     if (result.error) {
         throw new Error(result.error);
     }
