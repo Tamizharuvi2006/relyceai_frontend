@@ -153,6 +153,15 @@ const UserFiles = () => {
       // Wait for all deletions to complete
       const results = await Promise.all(deletePromises);
 
+      // Capture uid locally to prevent null access if logout occurs mid-flight
+      const uid = userProfile?.uid;
+      if (!uid) {
+        console.error('User ID not available during deletion');
+        showNotification('Cannot delete files: user not authenticated', 'error');
+        setIsDeleting(false);
+        return;
+      }
+
       // Check for any errors
       const errors = results.filter(result => result.error);
       if (errors.length > 0) {
@@ -161,7 +170,7 @@ const UserFiles = () => {
       } else {
         // Delete Firestore metadata for each file
         const metadataDeletePromises = filesToDelete.map(file =>
-          deleteFileMetadata(userProfile.uid, file.id)
+          deleteFileMetadata(uid, file.id)
         );
         await Promise.all(metadataDeletePromises);
 

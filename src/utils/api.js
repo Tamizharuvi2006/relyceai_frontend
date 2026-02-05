@@ -408,8 +408,11 @@ export async function uploadFile(file) {
  */
 export async function deleteFile(fileName) {
   try {
+    if (!auth.currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const uid = auth.currentUser.uid;
     const authHeaders = await getAuthHeaders();
-    const uid = auth.currentUser?.uid || 'me';
     return await apiFetch(`/delete/${uid}/${encodeURIComponent(fileName)}`, {
       method: 'DELETE',
       headers: authHeaders,

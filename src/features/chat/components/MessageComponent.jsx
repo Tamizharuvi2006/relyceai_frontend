@@ -60,7 +60,9 @@ const ProcessingIndicator = ({ query, showSearch, holdFinalStep }) => (
 /**
  * Generating response indicator
  */
-const GeneratingIndicator = () => <ProcessingIndicator showSearch={false} />;
+const GeneratingIndicator = ({ query, holdFinalStep }) => (
+  <ProcessingIndicator showSearch={false} query={query} holdFinalStep={holdFinalStep} />
+);
 
 /**
  * Sources display component
@@ -386,9 +388,8 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
     }
 
     if (indicatorActive) {
-      if (!indicatorStartRef.current) {
-        indicatorStartRef.current = Date.now();
-      }
+      // Always reset start time to avoid stale state
+      indicatorStartRef.current = Date.now();
       setShowIndicator(true);
       setHoldFinalStep(false);
       setIndicatorFade(false);
@@ -437,6 +438,12 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
         clearTimeout(ghostTimeoutRef.current);
         ghostTimeoutRef.current = null;
       }
+      // Reset all UI state flags on cleanup to prevent stale state
+      setIndicatorFade(false);
+      setShowIndicator(false);
+      setGhostSpace(false);
+      setHoldFinalStep(false);
+      indicatorStartRef.current = 0;
     };
   }, [indicatorActive]);
 
@@ -516,24 +523,16 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
               className={`relyce-processing-slot${indicatorFade ? " is-fading" : ""}${ghostSpace ? " is-ghost" : ""}`}
             >
               <ProcessingIndicator query={msg.searchQuery} showSearch={isSearching} holdFinalStep={holdFinalStep} />
-              {sources.length > 0 && (
-                <div className="mt-3">
-                  <SourcesDisplay sources={sources} />
-                </div>
-              )}
             </div>
           )}
 
-          {/* Sources + generating */}
-          {isGenerating && !isSearching && (!msg.content || msg.content.length === 0) && (
-            <>
-              {sources.length > 0 && <SourcesDisplay sources={sources} />}
-              {!showIndicator && <GeneratingIndicator />}
-            </>
+          {/* Generating indicator */}
+          {isGenerating && !isSearching && (!msg.content || msg.content.length === 0) && !showIndicator && (
+            <GeneratingIndicator query={msg.searchQuery} holdFinalStep={holdFinalStep} />
           )}
 
-          {/* Sources (final state) */}
-          {!isSearching && !isGenerating && sources.length > 0 && msg.content && (
+          {/* Sources - consolidated single render location */}
+          {sources.length > 0 && !showIndicator && !indicatorFade && !ghostSpace && (
             <SourcesDisplay sources={sources} />
           )}
 

@@ -43,12 +43,13 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
             const tokenProvider = async () => {
                 try {
                     if (auth.currentUser) {
-                        return await auth.currentUser.getIdToken(true);
+                        return await auth.currentUser.getIdToken(false);
                     }
+                    throw new Error('No authenticated user');
                 } catch (e) {
-                    console.warn("Failed to get auth token for WS", e);
+                    console.error("Failed to get auth token for WS", e);
+                    throw e;
                 }
-                return null;
             };
 
             wsManager.current.connect(currentSessionId, tokenProvider, {
