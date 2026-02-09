@@ -351,21 +351,15 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Pinned chats - stored in localStorage
-  const [pinnedIds, setPinnedIds] = useState(() => {
-    try {
-      const stored = localStorage.getItem(`pinnedChats_${user?.uid}`);
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  });
-  
-  // Custom order for unpinned chats - stored in localStorage
-  const [customOrder, setCustomOrder] = useState(() => {
-    try {
-      const stored = localStorage.getItem(`chatOrder_${user?.uid}`);
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  });
+  // Auth-bound UI state kept in memory only (no localStorage leakage)
+  const [pinnedIds, setPinnedIds] = useState([]);
+  const [customOrder, setCustomOrder] = useState([]);
+
+  // Reset per-user to avoid cross-user leakage
+  useEffect(() => {
+    setPinnedIds([]);
+    setCustomOrder([]);
+  }, [user?.uid]);
   
   // Drag state
   const [draggedSessionId, setDraggedSessionId] = useState(null);
@@ -491,7 +485,6 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
       const newPinned = prev.includes(sessionId)
         ? prev.filter(id => id !== sessionId)
         : [...prev, sessionId];
-      localStorage.setItem(`pinnedChats_${user?.uid}`, JSON.stringify(newPinned));
       return newPinned;
     });
     setMenuSession(null);
@@ -528,7 +521,6 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
       newOrder.splice(fromIdx, 1);
       newOrder.splice(toIdx, 0, draggedSessionId);
       setCustomOrder(newOrder);
-      localStorage.setItem(`chatOrder_${user?.uid}`, JSON.stringify(newOrder));
     }
     
     setDraggedSessionId(null);

@@ -26,7 +26,7 @@ export async function createUserProfile(userData, membershipPlan = 'free') {
     const userProfile = {
         email: userEmail,
         displayName: userName,
-        userId, uniqueUserId,
+        userId,
         // role: 'user', // <--- REMOVED: Managed by Backend
         accountCreatedAt: serverTimestamp(),
         accountCreatedDate: now.toISOString(),
@@ -43,6 +43,9 @@ export async function createUserProfile(userData, membershipPlan = 'free') {
         },
         settings: { notifications: true, emailUpdates: true, dataRetention: true }
     };
+    if (uniqueUserId) {
+        userProfile.uniqueUserId = uniqueUserId;
+    }
 
     await setDoc(doc(db, 'users', userId), userProfile);
     await createUserFolderStructure(userId, userName);
@@ -123,6 +126,11 @@ export async function ensureUserHasId(userId) {
                 });
                 
                 if (response.ok) {
+                    const payload = await response.json().catch(() => null);
+                    if (payload?.uniqueUserId) {
+                        console.log('[ensureUserHasId] Backend returned uniqueUserId:', payload.uniqueUserId);
+                        return payload.uniqueUserId;
+                    }
                     console.log('[ensureUserHasId] Backend init successful, re-fetching user...');
                     // Re-fetch to get the new ID
                     const updatedDoc = await getDoc(userDocRef);
@@ -149,15 +157,26 @@ export async function ensureUserHasId(userId) {
 export async function getUserRole(userId) {
     try {
         const userData = await getUserData(userId);
-        if (!userData) return 'user';
-        const role = userData.role || 'user';
-        return role === 'super_admin' ? 'superadmin' : role;
-    } catch { return 'user'; }
+        const rawRole = userData?.role;
+
+        if (!rawRole) {
+            throw new Error('Role missing for user');
+        }
+
+        const normalizedRole = rawRole === 'super_admin' ? 'superadmin' : rawRole;
+        return normalizedRole;
+    } catch (error) {
+        console.error('[getUserRole] Failed to resolve role:', error);
+        throw error;
+    }
 }
 
 export async function getUserData(userId) {
-    try {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        return userDoc.exists() ? userDoc.data() : null;
-    } catch { return null; }
+    const userDoc = await getDoc(doc(db, 'users', userId));
+
+    if (!userDoc.exists()) {
+        throw new Error('User profile not found');
+    }
+
+    return userDoc.data();
 }

@@ -48,14 +48,14 @@ const VisualizeData = memo(() => {
     const chartRef = useRef(null);
     const fileRef = useRef(null);
 
-    // Load data from localStorage on mount
+    // Load data from sessionStorage on mount (avoid localStorage to honor isolation rule)
     useEffect(() => {
-        const savedData = localStorage.getItem('visualize_data');
-        const savedFileName = localStorage.getItem('visualize_fileName');
-        const savedColumns = localStorage.getItem('visualize_columns');
-        const savedCols = localStorage.getItem('visualize_availableCols');
-        const savedXAxis = localStorage.getItem('visualize_xAxisKey');
-        const savedYAxis = localStorage.getItem('visualize_yAxisKey');
+        const savedData = sessionStorage.getItem('visualize_data');
+        const savedFileName = sessionStorage.getItem('visualize_fileName');
+        const savedColumns = sessionStorage.getItem('visualize_columns');
+        const savedCols = sessionStorage.getItem('visualize_availableCols');
+        const savedXAxis = sessionStorage.getItem('visualize_xAxisKey');
+        const savedYAxis = sessionStorage.getItem('visualize_yAxisKey');
 
         if (savedData && savedFileName) {
             try {
@@ -73,15 +73,15 @@ const VisualizeData = memo(() => {
         }
     }, []);
 
-    // Save data to localStorage when it changes
+    // Save data to sessionStorage when it changes
     useEffect(() => {
         if (data && fileName) {
-            localStorage.setItem('visualize_data', JSON.stringify(data));
-            localStorage.setItem('visualize_fileName', fileName);
-            localStorage.setItem('visualize_columns', JSON.stringify(columns));
-            localStorage.setItem('visualize_availableCols', JSON.stringify(availableCols));
-            localStorage.setItem('visualize_xAxisKey', xAxisKey);
-            localStorage.setItem('visualize_yAxisKey', yAxisKey);
+            sessionStorage.setItem('visualize_data', JSON.stringify(data));
+            sessionStorage.setItem('visualize_fileName', fileName);
+            sessionStorage.setItem('visualize_columns', JSON.stringify(columns));
+            sessionStorage.setItem('visualize_availableCols', JSON.stringify(availableCols));
+            sessionStorage.setItem('visualize_xAxisKey', xAxisKey);
+            sessionStorage.setItem('visualize_yAxisKey', yAxisKey);
         }
     }, [data, fileName, columns, availableCols, xAxisKey, yAxisKey]);
 
@@ -268,12 +268,12 @@ const VisualizeData = memo(() => {
 
     // Clear Data
     const clearData = useCallback(() => {
-        localStorage.removeItem('visualize_data');
-        localStorage.removeItem('visualize_fileName');
-        localStorage.removeItem('visualize_columns');
-        localStorage.removeItem('visualize_availableCols');
-        localStorage.removeItem('visualize_xAxisKey');
-        localStorage.removeItem('visualize_yAxisKey');
+        sessionStorage.removeItem('visualize_data');
+        sessionStorage.removeItem('visualize_fileName');
+        sessionStorage.removeItem('visualize_columns');
+        sessionStorage.removeItem('visualize_availableCols');
+        sessionStorage.removeItem('visualize_xAxisKey');
+        sessionStorage.removeItem('visualize_yAxisKey');
 
         setData(null);
         setOriginalData(null);

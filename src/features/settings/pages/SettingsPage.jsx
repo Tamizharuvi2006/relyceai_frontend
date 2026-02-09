@@ -597,7 +597,7 @@ const SettingsRow = ({ icon, title, description, control }) => {
         <div className="text-zinc-400 p-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50">{icon}</div>
         <div>
           <h3 className="text-sm font-medium text-zinc-200">{title}</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
+          <div className="text-xs text-zinc-500 mt-0.5">{description}</div>
         </div>
       </div>
       <div>{control}</div>

@@ -111,10 +111,17 @@ export async function checkUploadLimits(userId, fileSize) {
         if (!userDoc.exists()) return { allowed: true, unlimited: false, defaultLimits: true };
 
         const userData = userDoc.data();
-        const userRole = userData.role || 'user';
-        if (userRole === 'admin' || userRole === 'superadmin') return { allowed: true, unlimited: true };
+        const userRole = userData.role;
+        if (!userRole) return { allowed: false, reason: 'User role unavailable' };
 
-        const planDetails = MEMBERSHIP_PLANS[userData.membership.plan.toUpperCase()];
+        const normalizedRole = userRole === 'super_admin' ? 'superadmin' : userRole;
+        if (normalizedRole === 'admin' || normalizedRole === 'superadmin') return { allowed: true, unlimited: true };
+
+        const planId = userData.membership?.plan?.toUpperCase();
+        if (!planId || !MEMBERSHIP_PLANS[planId]) {
+            return { allowed: false, reason: 'Membership plan not configured' };
+        }
+        const planDetails = MEMBERSHIP_PLANS[planId];
         const fileSizeMB = fileSize / (1024 * 1024);
 
         if (fileSizeMB > planDetails.features.fileSizeLimitMB) {

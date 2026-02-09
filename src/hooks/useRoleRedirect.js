@@ -15,13 +15,14 @@ export const useRoleRedirect = () => {
       const isAuthPage = ['/login', '/Signup', '/signup'].includes(location.pathname);
       if (!isAuthPage) return;
 
-      try {
+    try {
         const role = await getUserRole(user.uid);
         if (role === 'admin') navigate('/super');
         else if (role === 'superadmin') navigate('/boss');
         else navigate('/chat');
-      } catch {
-        navigate('/chat');
+      } catch (err) {
+        console.error('[useRoleRedirect] Failed to resolve role during redirect:', err);
+        navigate('/error');
       }
     };
 

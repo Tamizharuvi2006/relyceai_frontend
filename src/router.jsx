@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
 import React, { Suspense, memo, useEffect } from "react";
 import { useTheme } from "./context/ThemeContext";
+import { useAuth } from "./context/AuthContext";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import AdminProtectedRoute from "./features/auth/components/AdminProtectedRoute";
@@ -59,6 +60,7 @@ LazyWrapper.displayName = 'LazyWrapper';
 const AppLayoutContent = memo(() => {
   const location = useLocation();
   const { isChatPage, setIsChatPage } = useTheme();
+  const { roleError } = useAuth();
 
   useEffect(() => window.scrollTo(0, 0), [location.pathname]);
   
@@ -77,9 +79,17 @@ const AppLayoutContent = memo(() => {
       setIsChatPage(!!isAppPage);
   }, [isAppPage, setIsChatPage]);
 
+  const roleErrorBanner = roleError ? (
+    <div className="bg-amber-500/20 border border-amber-400 text-amber-100 px-4 py-3 text-sm">
+      <p className="font-semibold">Role verification failed</p>
+      <p className="text-amber-100/80">{roleError.message || 'Unable to verify your role. Please refresh or contact support.'}</p>
+    </div>
+  ) : null;
+
   if (isAppPage) {
     return (
         <div className="flex flex-col h-screen bg-black text-slate-100">
+          {roleErrorBanner}
           <main className="flex-1 overflow-hidden"><Outlet /></main>
         </div>
     );
@@ -89,6 +99,7 @@ const AppLayoutContent = memo(() => {
   return (
       <div className="min-h-screen bg-black text-slate-100">
         <Header />
+        {roleErrorBanner}
         <main><Outlet /></main>
         <Footer />
       </div>

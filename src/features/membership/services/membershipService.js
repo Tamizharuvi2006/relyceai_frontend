@@ -4,7 +4,8 @@ import {
     updateDoc,
     addDoc,
     collection,
-    serverTimestamp
+    serverTimestamp,
+    Timestamp
 } from 'firebase/firestore';
 import { db } from '../../../utils/firebaseConfig';
 import { getCurrentPricing } from '../../admin/services/adminDashboard';
@@ -85,6 +86,15 @@ export const MEMBERSHIP_PLANS = {
     }
 };
 
+export function isMembershipExpired(membership) {
+    if (!membership || !membership.expiresAt) return false;
+    try {
+        return Timestamp.now().toMillis() > membership.expiresAt.toMillis();
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Updates user membership plan
  */
@@ -126,11 +136,38 @@ export async function updateUserMembership(userId, newPlan, billingCycle = 'mont
  * Checks if user's membership has expired and updates status
  */
 export async function checkMembershipExpiry(userId) {
-    // START_DEPRECATION_NOTICE
-    // Logic moved to Backend (/users/init) for security.
-    // Frontend should NOT update membership status directly.
-    // END_DEPRECATION_NOTICE
-    return false;
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (!userDoc.exists()) return false;
+        const data = userDoc.data();
+        const membership = data.membership;
+
+        const expired = isMembershipExpired(membership);
+        if (!expired) return false;
+
+        // Only persist and log when we transition into expired
+        if (membership?.status !== 'expired') {
+            const membershipPlan = membership?.plan || membership?.planName || 'unknown';
+            try {
+                await updateDoc(doc(db, 'users', userId), {
+                    'membership.status': 'expired',
+                    'membership.expiredAt': serverTimestamp()
+                });
+            } catch (persistError) {
+                console.warn('[membershipService] Failed to persist expired status:', persistError);
+            }
+
+            await addMembershipLog(userId, membershipPlan, 'expired').catch(err =>
+                console.warn('[membershipService] Failed to log expiry:', err)
+            );
+            console.warn(`[membershipService] Marked membership expired for ${userId}`);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('[membershipService] checkMembershipExpiry error:', error);
+        return false;
+    }
 }
 
 /**
@@ -142,11 +179,11 @@ export async function getUserMembership(userId) {
         if (!userDoc.exists()) return null;
 
         const userData = userDoc.data();
-
-        // Check for expiry
-        await checkMembershipExpiry(userId);
-
-        return userData.membership;
+        const membership = userData.membership || { status: 'inactive' };
+        if (isMembershipExpired(membership)) {
+            return { ...membership, status: 'expired' };
+        }
+        return membership;
     } catch (error) {
         console.error('❌ Error getting user membership:', error);
         return null;

@@ -158,7 +158,7 @@ const UserFiles = () => {
       if (!uid) {
         console.error('User ID not available during deletion');
         showNotification('Cannot delete files: user not authenticated', 'error');
-        setIsDeleting(false);
+        setDeleting(false);
         return;
       }
 

@@ -207,17 +207,25 @@ const AdminDashboard = () => {
   useEffect(() => {
     const checkUserRole = async () => {
       if (user?.uid) {
-        const userRole = await getUserRole(user.uid);
-        const isSA = checkIsSuperAdmin(userRole);
-        const roleLevel = getUserRoleLevel(userRole);
+        try {
+          const userRole = await getUserRole(user.uid);
+          const isSA = checkIsSuperAdmin(userRole);
+          const roleLevel = getUserRoleLevel(userRole);
 
-        setIsSuperAdmin(isSA);
-        setUserRoleLevel(roleLevel);
+          setIsSuperAdmin(isSA);
+          setUserRoleLevel(roleLevel);
 
-        if (isSA) {
-          setAccessLevel('superadmin');
-        } else if (roleLevel === ROLE_HIERARCHY.admin) {
-          setAccessLevel('admin');
+          if (isSA) {
+            setAccessLevel('superadmin');
+          } else if (roleLevel === ROLE_HIERARCHY.admin) {
+            setAccessLevel('admin');
+          } else {
+            setAccessLevel(null);
+          }
+        } catch (err) {
+          console.error('[AdminDashboard] Unable to load user role:', err);
+          toast.error('Unable to verify your admin role.');
+          setAccessLevel(null);
         }
       }
     };

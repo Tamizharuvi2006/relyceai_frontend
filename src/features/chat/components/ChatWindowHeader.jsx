@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, MoreVertical, Settings, Share, Copy, Trash2, Database, User, Plus, Download, FileText, Settings as Gear, Users } from 'lucide-react';
 import ChatService from '../../../services/chatService';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../../utils/firebaseConfig';
+import { useAuth } from '../../../context/AuthContext';
 
 
 // Download component for the header
@@ -74,6 +77,7 @@ const ChatWindowHeader = ({
   setPersonalities,
   userUniqueId
 }) => {
+  const { currentUser: user, userProfile } = useAuth();
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const headerMenuButtonRef = useRef(null);
@@ -87,12 +91,18 @@ const ChatWindowHeader = ({
   // Personality Dropdown State
   const [personalityDropdownOpen, setPersonalityDropdownOpen] = useState(false);
   const personalityButtonRef = useRef(null);
+
+  // Relyce AI Behavior Mode (Only for default_relyce)
+  const [behaviorDropdownOpen, setBehaviorDropdownOpen] = useState(false);
+  const behaviorButtonRef = useRef(null);
+  const [behaviorMode, setBehaviorMode] = useState('hybrid');
+  const [savingBehaviorMode, setSavingBehaviorMode] = useState(false);
   
 
 
   // Close menus on outside click - centralized
   useEffect(() => {
-    if (!headerMenuOpen && !modeDropdownOpen && !personalityDropdownOpen) return;
+    if (!headerMenuOpen && !modeDropdownOpen && !personalityDropdownOpen && !behaviorDropdownOpen) return;
     
     const handler = (e) => {
       // Header Menu check
@@ -109,11 +119,53 @@ const ChatWindowHeader = ({
       if (personalityDropdownOpen && personalityButtonRef.current && !personalityButtonRef.current.contains(e.target) && !e.target.closest('.personality-dropdown-content')) {
         setPersonalityDropdownOpen(false);
       }
+
+      // Behavior Mode Menu check
+      if (behaviorDropdownOpen && behaviorButtonRef.current && !behaviorButtonRef.current.contains(e.target) && !e.target.closest('.behavior-dropdown-content')) {
+        setBehaviorDropdownOpen(false);
+      }
     };
     
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [headerMenuOpen, modeDropdownOpen, personalityDropdownOpen]);
+  }, [headerMenuOpen, modeDropdownOpen, personalityDropdownOpen, behaviorDropdownOpen]);
+
+  useEffect(() => {
+    const mode = userProfile?.settings?.personalization?.behaviorMode;
+    if (mode && mode !== behaviorMode) {
+      setBehaviorMode(mode);
+    }
+  }, [userProfile?.settings?.personalization?.behaviorMode, behaviorMode]);
+
+  useEffect(() => {
+    if (!activePersonality || activePersonality.id !== 'default_relyce') return;
+    if (activePersonality.content_mode !== behaviorMode) {
+      setActivePersonality({ ...activePersonality, content_mode: behaviorMode });
+    }
+  }, [activePersonality, behaviorMode, setActivePersonality]);
+
+  const handleBehaviorModeChange = async (mode) => {
+    if (mode === behaviorMode) {
+      setBehaviorDropdownOpen(false);
+      return;
+    }
+    setBehaviorMode(mode);
+    setBehaviorDropdownOpen(false);
+    if (activePersonality?.id === 'default_relyce') {
+      setActivePersonality({ ...activePersonality, content_mode: mode });
+    }
+    if (!user?.uid) return;
+    try {
+      setSavingBehaviorMode(true);
+      await updateDoc(doc(db, 'users', user.uid), {
+        'settings.personalization.behaviorMode': mode
+      });
+    } catch (err) {
+      console.error('[BehaviorMode] Failed to save setting:', err);
+    } finally {
+      setSavingBehaviorMode(false);
+    }
+  };
 
   // Handler helpers
   const handleShareClick = async () => {
@@ -289,6 +341,68 @@ const ChatWindowHeader = ({
             </div>
           )}
 
+          {/* Relyce AI Behavior Mode (only for default_relyce) */}
+          {chatMode === 'normal' && activePersonality?.id === 'default_relyce' && (
+            <div className="relative">
+              <button
+                ref={behaviorButtonRef}
+                onClick={() => setBehaviorDropdownOpen(!behaviorDropdownOpen)}
+                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ml-1 sm:ml-2 border border-emerald-500/20 ${behaviorDropdownOpen ? 'bg-emerald-500/20' : ''}`}
+                disabled={savingBehaviorMode}
+                title="Behavior mode"
+              >
+                <span className="text-emerald-400 text-xs sm:text-sm">
+                  {behaviorMode === 'web_search' ? 'Web Search' : behaviorMode === 'llm_only' ? 'LLM Only' : 'Smart Hybrid'}
+                </span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${behaviorDropdownOpen ? 'rotate-180' : ''} text-emerald-400`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {behaviorDropdownOpen && (
+                <div
+                  className="behavior-dropdown-content absolute top-full left-0 mt-2 border rounded-lg shadow-xl py-1 w-48 z-50 bg-zinc-800 border-emerald-500/30 animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Behavior Mode
+                  </div>
+                  <button
+                    onClick={() => handleBehaviorModeChange('hybrid')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${behaviorMode === 'hybrid'
+                      ? 'bg-emerald-600 text-white'
+                      : 'hover:bg-emerald-500/20 text-emerald-100'
+                      }`}
+                  >
+                    Smart Hybrid
+                  </button>
+                  <button
+                    onClick={() => handleBehaviorModeChange('web_search')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${behaviorMode === 'web_search'
+                      ? 'bg-emerald-600 text-white'
+                      : 'hover:bg-emerald-500/20 text-emerald-100'
+                      }`}
+                  >
+                    Web Search
+                  </button>
+                  <button
+                    onClick={() => handleBehaviorModeChange('llm_only')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${behaviorMode === 'llm_only'
+                      ? 'bg-emerald-600 text-white'
+                      : 'hover:bg-emerald-500/20 text-emerald-100'
+                      }`}
+                  >
+                    LLM Only
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
 

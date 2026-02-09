@@ -8,13 +8,16 @@ export async function verifyAdminAccess(userId) {
     const userDoc = await getDoc(doc(db, 'users', userId));
     if (!userDoc.exists()) return { isAdmin: false, isSuperAdmin: false, error: 'User not found' };
 
-    const userRole = userDoc.data().role || 'user';
-    const validRoles = ['user', 'admin', 'superadmin'];
-    if (!validRoles.includes(userRole)) return { isAdmin: false, isSuperAdmin: false, error: 'Invalid role' };
+    const userRole = userDoc.data().role;
+    if (!userRole) return { isAdmin: false, isSuperAdmin: false, error: 'Role missing' };
+
+    const normalizedRole = userRole === 'super_admin' ? 'superadmin' : userRole;
+    const validRoles = ['user', 'admin', 'superadmin', 'premium'];
+    if (!validRoles.includes(normalizedRole)) return { isAdmin: false, isSuperAdmin: false, error: 'Invalid role' };
 
     return {
-      isAdmin: userRole === 'admin' || userRole === 'superadmin',
-      isSuperAdmin: userRole === 'superadmin',
+      isAdmin: normalizedRole === 'admin' || normalizedRole === 'superadmin',
+      isSuperAdmin: normalizedRole === 'superadmin',
       error: null
     };
   } catch { return { isAdmin: false, isSuperAdmin: false, error: 'Verification failed' }; }

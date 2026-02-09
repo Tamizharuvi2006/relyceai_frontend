@@ -135,7 +135,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
             } catch (error) {
                 console.error('❌ File upload error:', error.message);
                 if (onFileUploadComplete) {
-                    onFileUploadComplete(id, false);
+                    onFileUploadComplete(previewId, false);
                 }
             }
         }
@@ -148,10 +148,10 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
             if (user) {
                 try {
                     const response = await deleteFile(fileToRemove.name);
-                    if (response.status === 'success') {
+                    if (response && response.success) {
                         console.log(`✅ File ${fileToRemove.name} deleted successfully`);
                     } else {
-                        console.warn(`⚠️ Failed to delete file ${fileToRemove.name}:`, response.message);
+                        console.warn(`⚠️ Failed to delete file ${fileToRemove.name}:`, response?.message);
                     }
                 } catch (error) {
                     console.error(`❌ Error deleting file ${fileToRemove.name}:`, error);

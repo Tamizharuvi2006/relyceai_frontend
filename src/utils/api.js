@@ -58,6 +58,59 @@ async function getAuthHeaders() {
 /**
  * Chat API - Send message to FastAPI and get response
  */
+const SPECIALTY_TEMPERATURES = {
+  general: 0.65,
+  coding: 0.2,
+  business: 0.4,
+  ecommerce: 0.55,
+  creative: 0.9,
+  music: 0.95,
+  legal: 0.15,
+  health: 0.3,
+  education: 0.5,
+};
+
+function normalizePersonalityForSend(personality) {
+  if (!personality) return null;
+  const {
+    id,
+    name,
+    prompt,
+    description,
+    content_mode,
+    specialty = 'general',
+    temperature,
+  } = personality;
+
+  const rawTemp = typeof temperature === 'number'
+    ? temperature
+    : SPECIALTY_TEMPERATURES[specialty] ?? SPECIALTY_TEMPERATURES.general;
+
+  const temp = Math.max(0, Math.min(1, rawTemp));
+
+  // Specialty-based sampling tweaks (frontend hints; backend should still enforce)
+  const sampling = {};
+  if (specialty === 'coding') {
+    sampling.top_p = 0.9;
+    sampling.frequency_penalty = 0;
+    sampling.presence_penalty = 0;
+  } else if (specialty === 'creative') {
+    sampling.top_p = 1;
+    sampling.presence_penalty = 0.6;
+  }
+
+  return {
+    id,
+    name,
+    prompt,
+    description,
+    content_mode,
+    specialty,
+    temperature: temp,
+    ...sampling,
+  };
+}
+
 export async function sendChatMessage(message, sessionId, userId, chatMode = 'normal', fileIds = [], personality = null, userSettings = null) {
   try {
     const body = {
@@ -69,11 +122,10 @@ export async function sendChatMessage(message, sessionId, userId, chatMode = 'no
       user_settings: userSettings
     };
 
-    if (personality) {
-      // Sanitize personality to avoid sending large data (e.g. base64 avatars)
-      const { id, name, prompt, description, content_mode } = personality;
-      body.personality = { id, name, prompt, description, content_mode };
-      if (id) body.personality_id = id;
+    const normalizedPersonality = normalizePersonalityForSend(personality);
+    if (normalizedPersonality) {
+      body.personality = normalizedPersonality;
+      if (normalizedPersonality.id) body.personality_id = normalizedPersonality.id;
     }
 
     const authHeaders = await getAuthHeaders();
@@ -110,11 +162,10 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
       user_settings: userSettings
     };
 
-    if (personality) {
-      // Sanitize personality to avoid sending large data
-      const { id, name, prompt, description, content_mode } = personality;
-      body.personality = { id, name, prompt, description, content_mode };
-      if (id) body.personality_id = id;
+    const normalizedPersonality = normalizePersonalityForSend(personality);
+    if (normalizedPersonality) {
+      body.personality = normalizedPersonality;
+      if (normalizedPersonality.id) body.personality_id = normalizedPersonality.id;
     }
 
     const authHeaders = await getAuthHeaders();

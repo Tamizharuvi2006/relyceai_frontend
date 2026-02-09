@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../utils/firebaseConfig';
 import ErrorPage from '../../../pages/ErrorPage';
 
 const AdminProtectedRoute = ({ children }) => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, role, roleError, refreshUserProfile } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
@@ -26,27 +24,34 @@ const AdminProtectedRoute = ({ children }) => {
 
       try {
         setRoleLoading(true);
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
+        if (roleError) {
+          throw roleError;
+        }
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const userRole = userData.role || 'user';
+        // Ensure we have the latest profile if role is still missing
+        if (!role) {
+          await refreshUserProfile?.();
+        }
 
-          if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'super_admin') {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-            setError('Page not found or you don\'t have permission to access this area.');
-          }
+        const normalizedRole = role === 'super_admin' ? 'superadmin' : role;
+
+        if (!normalizedRole) {
+          setIsAdmin(false);
+          setError('Unable to verify your role. Please refresh or contact support.');
+          return;
+        }
+
+        if (normalizedRole === 'admin' || normalizedRole === 'superadmin') {
+          setIsAdmin(true);
+          setError(null);
         } else {
           setIsAdmin(false);
-          setError('Page not found.');
+          setError('Page not found or you don\'t have permission to access this area.');
         }
       } catch (error) {
         console.error('Error checking admin role:', error);
         setIsAdmin(false);
-        setError('Page not found.');
+        setError(error?.message || 'Page not found.');
       } finally {
         setRoleLoading(false);
       }

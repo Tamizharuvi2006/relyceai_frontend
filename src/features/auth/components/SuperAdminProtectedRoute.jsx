@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../utils/firebaseConfig';
 import ErrorPage from '../../../pages/ErrorPage';
 
 const SuperAdminProtectedRoute = ({ children, requireSuperAdmin = false }) => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, role, roleError, refreshUserProfile } = useAuth();
   const navigate = useNavigate();
   const [hasAccess, setHasAccess] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
@@ -28,50 +26,53 @@ const SuperAdminProtectedRoute = ({ children, requireSuperAdmin = false }) => {
       try {
         setRoleLoading(true);
 
-        // Check user role in users collection only
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
+        if (roleError) {
+          throw roleError;
+        }
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const role = userData.role || 'user';
-          setUserRole(role);
+        if (!role) {
+          await refreshUserProfile?.();
+        }
 
-          // If route requires super admin (/boss routes)
-          if (requireSuperAdmin) {
-            if (role === 'superadmin') {
-              setHasAccess(true);
-            } else {
-              setHasAccess(false);
-              setError('Access denied. Super admin privileges required.');
-            }
-          }
-          // For /super routes - allow both admin and superadmin
-          else {
-            if (role === 'admin' || role === 'superadmin') {
-              setHasAccess(true);
-            } else {
-              setHasAccess(false);
-              setError('Access denied. Admin privileges required.');
-            }
-          }
-        } else {
+        const normalizedRole = role === 'super_admin' ? 'superadmin' : role;
+        setUserRole(normalizedRole);
+
+        if (!normalizedRole) {
           setHasAccess(false);
-          setUserRole('user');
-          setError('User not found.');
+          setError('Unable to verify your role. Please refresh or contact support.');
+          return;
+        }
+
+        // If route requires super admin (/boss routes)
+        if (requireSuperAdmin) {
+          if (normalizedRole === 'superadmin') {
+            setHasAccess(true);
+          } else {
+            setHasAccess(false);
+            setError('Access denied. Super admin privileges required.');
+          }
+        }
+        // For /super routes - allow both admin and superadmin
+        else {
+          if (normalizedRole === 'admin' || normalizedRole === 'superadmin') {
+            setHasAccess(true);
+          } else {
+            setHasAccess(false);
+            setError('Access denied. Admin privileges required.');
+          }
         }
       } catch (error) {
         console.error('Error checking user role:', error);
         setHasAccess(false);
-        setUserRole('user');
-        setError('Access denied.');
+        setUserRole(null);
+        setError(error?.message || 'Access denied.');
       } finally {
         setRoleLoading(false);
       }
     };
 
     checkUserRole();
-  }, [currentUser, loading, requireSuperAdmin]);
+  }, [currentUser, loading, requireSuperAdmin, role, roleError, refreshUserProfile]);
 
   // Handle navigation in useEffect to avoid React warning
   useEffect(() => {
