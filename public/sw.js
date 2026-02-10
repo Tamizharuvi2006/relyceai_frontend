@@ -1,4 +1,4 @@
-const CACHE_NAME = 'relyce-ai-v1';
+const CACHE_NAME = 'relyce-ai-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

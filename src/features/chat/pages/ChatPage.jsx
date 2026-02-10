@@ -55,8 +55,8 @@ function AppContent() {
 
   // Fetch Personalities
   useEffect(() => {
-    if (user?.uid) {
-        const uid = user.uid;
+    const uid = userProfile?.uniqueUserId;
+    if (uid) {
         ChatService.getPersonalities(uid).then(result => {
             if (result.success && result.personalities) {
                 setPersonalities(result.personalities);
@@ -101,7 +101,7 @@ function AppContent() {
             }
         });
     }
-  }, [user?.uid]); // Fetch once per user (avoid refetch loops)
+  }, [userProfile?.uniqueUserId]); // Fetch once per unique user ID
 
   // Persist personality change to the current session
   const handleSetActivePersonality = useCallback((persona) => {

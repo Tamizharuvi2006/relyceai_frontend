@@ -106,12 +106,7 @@ export default function useChatCore({
         }
     }, [userUniqueId, externalPersonalities]);
 
-    // Check backend connection on mount
-    useEffect(() => {
-        ChatService.checkConnection().then(connected => {
-            setBackendConnected(connected);
-        });
-    }, []);
+    // Backend connection is tracked via WebSocket events
 
     return {
         messages, setMessages,

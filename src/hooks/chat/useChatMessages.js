@@ -1,7 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../utils/firebaseConfig';
-import ChatService from '../../services/chatService';
 import ShareService from '../../services/shareService';
 import PDFService from '../../services/pdfService';
 import { WebSocketChatManager } from '../../utils/api';
@@ -28,18 +27,11 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     const streamingMessageIdRef = useRef(null);
     const wsManagerRef = useRef(getWsManager()); // Use singleton
     const tokenBufferRef = useRef('');
-    const wsRetryTimerRef = useRef(null);
-    const wsRetryAttemptRef = useRef(0);
+    const wsCallbacksRef = useRef(null);
+    const tokenProviderRef = useRef(null);
 
     useEffect(() => {
         let isActive = true;
-
-        const clearWsRetry = () => {
-            if (wsRetryTimerRef.current) {
-                clearTimeout(wsRetryTimerRef.current);
-                wsRetryTimerRef.current = null;
-            }
-        };
 
         if (!userId || typeof userId !== 'string' || userId.length < 10) return;
 
@@ -47,14 +39,6 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         if (lastSessionIdRef.current !== currentSessionId) {
             lastSessionIdRef.current = currentSessionId;
         }
-
-        // Check backend connection status
-        ChatService.checkConnection().then(connected => {
-            setWsConnected(connected);
-            if (!connected) {
-                // Silent failure - will retry
-            }
-        });
 
         // Initialize WebSocket Connection
         const initWebSocket = async () => {
@@ -65,22 +49,6 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
             if (manager?.chatId === currentSessionId && (manager?.isConnected() || manager?.isConnecting())) {
                 return;
             }
-
-            const backendOk = await ChatService.checkConnection();
-            if (!isActive) return;
-            setWsConnected(backendOk);
-            if (!backendOk) {
-                wsRetryAttemptRef.current += 1;
-                const delayMs = Math.min(1000 * (2 ** wsRetryAttemptRef.current), 15000);
-                clearWsRetry();
-                wsRetryTimerRef.current = setTimeout(() => {
-                    if (isActive) initWebSocket();
-                }, delayMs);
-                return;
-            }
-
-            wsRetryAttemptRef.current = 0;
-            clearWsRetry();
             
             const tokenProvider = async () => {
                 try {
@@ -93,14 +61,16 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                     throw e;
                 }
             };
+            tokenProviderRef.current = tokenProvider;
 
-            wsManagerRef.current.connect(currentSessionId, tokenProvider, {
+            const callbacks = {
                 onConnect: () => {
                     setWsConnected(true);
                     setIsReconnecting(false);
                 },
                 onReconnect: () => {
                      setIsReconnecting(true);
+                     setWsConnected(false);
                 },
                 onToken: (token) => {
                      // Buffer the token
@@ -160,6 +130,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                 },
                 onError: (err) => {
                     console.error("WS Error:", err);
+                    setWsConnected(false);
                     const botMsgId = streamingMessageIdRef.current;
                     if (botMsgId) {
                         setMessages(prev => prev.map(msg => 
@@ -176,7 +147,11 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         streamingMessageIdRef.current = null;
                     }
                 }
-            });
+            };
+            wsCallbacksRef.current = callbacks;
+
+            if (!isActive) return;
+            wsManagerRef.current.connect(currentSessionId, tokenProvider, callbacks);
         };
 
         if (currentSessionId) {
@@ -185,10 +160,10 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
 
         return () => {
             isActive = false;
-            clearWsRetry();
             if (wsManagerRef.current) {
                 wsManagerRef.current.disconnect();
             }
+            setWsConnected(false);
         };
     }, [currentSessionId, userId, setWsConnected, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
 
@@ -234,8 +209,9 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         if (isReconnecting) return;
         setIsReconnecting(true);
         try {
-            const connected = await ChatService.checkConnection();
-            setWsConnected(connected);
+            if (currentSessionId && tokenProviderRef.current && wsCallbacksRef.current) {
+                wsManagerRef.current.connect(currentSessionId, tokenProviderRef.current, wsCallbacksRef.current);
+            }
         } catch { /* silent */ }
         finally { setIsReconnecting(false); }
     };
