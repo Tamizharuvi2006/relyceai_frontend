@@ -24,15 +24,17 @@ async function apiFetch(endpoint, options = {}) {
   const defaultHeaders = {
     'Content-Type': 'application/json',
   };
+  const mergedHeaders = { ...defaultHeaders, ...options.headers };
+  const authHeader = mergedHeaders.Authorization || mergedHeaders.authorization;
   
   try {
     const response = await fetch(url, {
       ...options,
-      headers: { ...defaultHeaders, ...options.headers },
+      headers: mergedHeaders,
     });
     
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      if ((response.status === 401 || response.status === 403) && authHeader) {
         // Dispatch unauthorized event for AuthContext to handle (Auto-Logout)
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
       }
@@ -237,6 +239,9 @@ export class WebSocketChatManager {
     this.reconnectTimeout = null;
     this.tokenProvider = null;
     this._isConnecting = false; // Sync flag for async token resolution gap
+    this._pendingMessages = [];
+    this._callbacks = null;
+    this._connectionSeq = 0;
   }
   
   /**
@@ -253,7 +258,10 @@ export class WebSocketChatManager {
 
     this.chatId = chatId;
     this._isConnecting = true; // Mark as connecting immediately
-    
+
+    this._callbacks = callbacks;
+    const connectionSeq = ++this._connectionSeq;
+
     this.onToken = callbacks.onToken || (() => {});
     this.onDone = callbacks.onDone || (() => {});
     this.onError = callbacks.onError || (() => {});
@@ -271,6 +279,9 @@ export class WebSocketChatManager {
     
     try {
         const resolvedToken = await this.resolveToken();
+        if (this._connectionSeq !== connectionSeq) {
+            return;
+        }
         if (!resolvedToken) {
             this.onError('Unauthorized: missing token');
             this._isConnecting = false;
@@ -281,23 +292,27 @@ export class WebSocketChatManager {
         
         const wsUrl = `${WS_BASE_URL}/ws/chat?${params.toString()}`;
         
-        // Close existing connection if any (checks are now safe due to early return above)
-        if (this.socket) {
+        // Close existing connection if any (only if this attempt is still current)
+        if (this._connectionSeq === connectionSeq && this.socket) {
             this.socket.onclose = null;
             this.socket.close();
             this.socket = null;
         }
 
         this.socket = new WebSocket(wsUrl);
+        const activeSocket = this.socket;
       
       this.socket.onopen = () => {
+        if (this._connectionSeq !== connectionSeq || this.socket !== activeSocket) return;
         // console.log('[WS] Connected to chat:', chatId);
         this._isConnecting = false;
         this.reconnectAttempts = 0;
         this.onConnect();
+        this.flushPendingMessages();
       };
       
       this.socket.onmessage = (event) => {
+        if (this._connectionSeq !== connectionSeq || this.socket !== activeSocket) return;
         try {
           const data = JSON.parse(event.data);
           
@@ -324,8 +339,10 @@ export class WebSocketChatManager {
       };
       
       this.socket.onclose = (event) => {
+        if (this._connectionSeq !== connectionSeq || this.socket !== activeSocket) return;
         // console.log('[WS] Disconnected:', event.code, event.reason);
         this._isConnecting = false; // Reset flag
+        this.socket = null;
         if (event.code === 1008) {
           this.onError('Unauthorized: invalid or expired token');
           return;
@@ -334,8 +351,10 @@ export class WebSocketChatManager {
       };
       
       this.socket.onerror = (error) => {
+        if (this._connectionSeq !== connectionSeq || this.socket !== activeSocket) return;
         console.error('[WS] Error:', error);
         this._isConnecting = false; // Reset flag
+        this.socket = null;
         this.onError('WebSocket connection error');
       };
       
@@ -370,6 +389,10 @@ export class WebSocketChatManager {
       }, 1000 * this.reconnectAttempts);
     } else {
         this._isConnecting = false;
+        if (this._pendingMessages.length) {
+          this._pendingMessages = [];
+          this.onError('Not connected to server');
+        }
     }
   }
   
@@ -381,24 +404,37 @@ export class WebSocketChatManager {
    * @param {object|null} userSettings - User preference settings
    */
   sendMessage(content, chatMode = 'normal', personality = null, userSettings = null) {
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      const payload = {
-        type: 'message',
-        content,
-        chat_mode: chatMode,
-        user_settings: userSettings
-      };
+    const payload = {
+      type: 'message',
+      content,
+      chat_mode: chatMode,
+      user_settings: userSettings
+    };
 
-      if (personality) {
-         // Pass ID if available, otherwise backend might not resolve it
-         if (personality.id) payload.personality_id = personality.id;
-      }
-
-      this.socket.send(JSON.stringify(payload));
-    } else {
-      console.error('[WS] Socket not connected');
-      this.onError('Not connected to server');
+    if (personality) {
+       // Pass ID if available, otherwise backend might not resolve it
+       if (personality.id) payload.personality_id = personality.id;
     }
+
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(payload));
+      return;
+    }
+
+    if (this.isConnecting()) {
+      this._pendingMessages.push(payload);
+      return;
+    }
+
+    // Attempt reconnect if we have enough context
+    if (this.chatId && this.tokenProvider) {
+      this._pendingMessages.push(payload);
+      this.connect(this.chatId, this.tokenProvider, this._callbacks || {});
+      return;
+    }
+
+    console.error('[WS] Socket not connected');
+    this.onError('Not connected to server');
   }
   
   /**
@@ -424,6 +460,8 @@ export class WebSocketChatManager {
    */
   disconnect() {
     this._isConnecting = false;
+    this._connectionSeq += 1; // Invalidate any in-flight connection attempts
+    this._pendingMessages = [];
     if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
@@ -447,6 +485,16 @@ export class WebSocketChatManager {
    */
   isConnecting() {
     return this._isConnecting || (this.socket && this.socket.readyState === WebSocket.CONNECTING);
+  }
+
+  flushPendingMessages() {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+    if (!this._pendingMessages.length) return;
+
+    const queued = this._pendingMessages.splice(0, this._pendingMessages.length);
+    for (const payload of queued) {
+      this.socket.send(JSON.stringify(payload));
+    }
   }
 }
 
