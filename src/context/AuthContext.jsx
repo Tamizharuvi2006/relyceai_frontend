@@ -37,6 +37,7 @@ export default function AuthProvider({ children }) {
   const backendInitAttempt = useRef(0);
   const backendInitRetryTimer = useRef(null);
   const backendInitUserId = useRef(null);
+  const tokenCheckInFlight = useRef(false);
 
   const fetchUserProfile = async (uid, skipExpensiveOperations = false) => {
     try {
@@ -255,13 +256,18 @@ export default function AuthProvider({ children }) {
         setUser(authUser);
         if (authUser) {
           try {
-            await authUser.getIdToken(true);
+            if (!tokenCheckInFlight.current) {
+              tokenCheckInFlight.current = true;
+              await authUser.getIdToken();
+            }
           } catch (tokenErr) {
             console.error('[Auth] Token refresh failed:', tokenErr);
             setRoleError(tokenErr);
             setLoading(false);
             auth.signOut();
             return;
+          } finally {
+            tokenCheckInFlight.current = false;
           }
         }
         attachProfileListener(authUser);
