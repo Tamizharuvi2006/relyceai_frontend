@@ -3,6 +3,8 @@ import { Mail, Lock } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
 import { InputWithIcon } from './AuthInput';
 import { PrimaryButton, GoogleButton } from './AuthButtons';
+import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
+import { LockoutCountdown } from './LockoutCountdown';
 
 /**
  * Mobile view with tab switching
@@ -24,6 +26,11 @@ export function MobileAuthView({
     handleLogin,
     handleSignUp,
     handleGoogleSignIn,
+    // Security props
+    isLocked,
+    lockoutSeconds,
+    isSubmitting,
+    onLockoutExpire,
 }) {
     return (
         <div className="sm:hidden w-full max-w-md mx-auto">
@@ -61,6 +68,7 @@ export function MobileAuthView({
                             required
                             autoComplete="username"
                             name="email"
+                            disabled={isSubmitting}
                         />
                         <InputWithIcon
                             icon={<Lock size={18} className="text-zinc-400" />}
@@ -71,7 +79,11 @@ export function MobileAuthView({
                             required
                             autoComplete="new-password"
                             name="password"
+                            disabled={isSubmitting}
                         />
+                        {/* Password Strength Indicator */}
+                        <PasswordStrengthIndicator password={signUpPassword} />
+
                         <InputWithIcon
                             icon={<Lock size={18} className="text-zinc-400" />}
                             type="password"
@@ -81,10 +93,11 @@ export function MobileAuthView({
                             required
                             autoComplete="new-password"
                             name="confirm-password"
+                            disabled={isSubmitting}
                         />
                         {error && <p className="text-sm mb-4 text-red-400">{error}</p>}
-                        <PrimaryButton type="submit" className="mb-4">
-                            Sign Up
+                        <PrimaryButton type="submit" className="mb-4" disabled={isSubmitting}>
+                            {isSubmitting ? 'Creating Account...' : 'Sign Up'}
                         </PrimaryButton>
                         <div className="relative my-6">
                             <div className="absolute inset-0 flex items-center">
@@ -94,12 +107,21 @@ export function MobileAuthView({
                                 <span className="px-2 bg-zinc-900/50 text-zinc-400">or</span>
                             </div>
                         </div>
-                        <GoogleButton type="button" onClick={handleGoogleSignIn}>
+                        <GoogleButton type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
                             <FaGoogle /> Sign up with Google
                         </GoogleButton>
                     </form>
                 ) : (
                     <form onSubmit={handleLogin} className="w-full mobile-form-enter" key="login-form" noValidate>
+                        {/* Lockout Warning */}
+                        {isLocked && lockoutSeconds > 0 && (
+                            <LockoutCountdown 
+                                waitSeconds={lockoutSeconds} 
+                                onExpire={onLockoutExpire}
+                                email={loginEmail}
+                            />
+                        )}
+
                         <InputWithIcon
                             icon={<Mail size={18} className="text-zinc-400" />}
                             type="email"
@@ -109,6 +131,7 @@ export function MobileAuthView({
                             required
                             autoComplete="username"
                             name="email"
+                            disabled={isSubmitting}
                         />
                         <InputWithIcon
                             icon={<Lock size={18} className="text-zinc-400" />}
@@ -119,10 +142,11 @@ export function MobileAuthView({
                             required
                             autoComplete="current-password"
                             name="password"
+                            disabled={isSubmitting || isLocked}
                         />
                         {error && <p className="text-sm mb-4 text-red-400">{error}</p>}
-                        <PrimaryButton type="submit" className="mb-4">
-                            Sign In
+                        <PrimaryButton type="submit" className="mb-4" disabled={isSubmitting || isLocked}>
+                            {isSubmitting ? 'Signing In...' : isLocked ? 'Locked' : 'Sign In'}
                         </PrimaryButton>
                         <div className="relative my-6">
                             <div className="absolute inset-0 flex items-center">
@@ -132,7 +156,7 @@ export function MobileAuthView({
                                 <span className="px-2 bg-zinc-900/50 text-zinc-400">or</span>
                             </div>
                         </div>
-                        <GoogleButton type="button" onClick={handleGoogleSignIn}>
+                        <GoogleButton type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
                             <FaGoogle /> Sign in with Google
                         </GoogleButton>
                     </form>

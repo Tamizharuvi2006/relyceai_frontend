@@ -102,8 +102,10 @@ body::-webkit-scrollbar-thumb:hover {
 }
 .relyce-processing-slot {
   overflow: hidden;
-  transition: opacity 200ms ease, max-height 200ms ease;
-  max-height: 180px;
+  transition:
+    opacity 150ms ease,
+    max-height 150ms ease;
+  max-height: 50px;
   opacity: 1;
 }
 .relyce-processing-slot.is-fading {
@@ -112,7 +114,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 .relyce-processing-slot.is-ghost {
   opacity: 0;
-  max-height: 140px;
+  max-height: 50px;
 }
 .relyce-processing-card {
   background: rgba(15, 23, 42, 0.4);
@@ -129,7 +131,12 @@ body::-webkit-scrollbar-thumb:hover {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, transparent, rgba(148, 163, 184, 0.08), transparent);
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(148, 163, 184, 0.08),
+    transparent
+  );
   transform: translateX(-100%);
   animation: relyceSheen 3.2s infinite;
 }
@@ -219,7 +226,9 @@ body::-webkit-scrollbar-thumb:hover {
   }
 }
 @keyframes relyceDots {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0.7);
     opacity: 0.35;
   }

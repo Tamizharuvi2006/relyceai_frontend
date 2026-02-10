@@ -3,6 +3,8 @@ import { Mail, Lock } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
 import { InputWithIcon } from './AuthInput';
 import { PrimaryButton, GoogleButton, GradientButton } from './AuthButtons';
+import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
+import { LockoutCountdown } from './LockoutCountdown';
 
 /**
  * Desktop view with sliding overlay panels
@@ -24,13 +26,18 @@ export function DesktopAuthView({
     handleLogin,
     handleSignUp,
     handleGoogleSignIn,
+    // Security props
+    isLocked,
+    lockoutSeconds,
+    isSubmitting,
+    onLockoutExpire,
 }) {
     return (
         <div className="relative overflow-hidden backdrop-blur-lg rounded-2xl shadow-2xl w-full max-w-4xl min-h-[600px] hidden sm:grid grid-cols-2 bg-zinc-900/50 border border-zinc-800 shadow-emerald-500/10 shimmer-border">
             {/* Sign In Form Panel */}
             <div className={`form-panel flex flex-col items-center justify-center p-8 text-center absolute top-0 left-0 h-full w-1/2 ${rightPanelActive ? 'inactive z-0' : 'active z-20'}`}>
                 <h1 className="text-4xl font-extrabold mb-6 text-white">Sign In</h1>
-                <GoogleButton type="button" onClick={handleGoogleSignIn}>
+                <GoogleButton type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
                     <FaGoogle /> Sign in with Google
                 </GoogleButton>
                 <div className="relative my-4 w-full max-w-xs">
@@ -41,6 +48,16 @@ export function DesktopAuthView({
                         <span className="px-2 bg-zinc-900/50 text-zinc-400">or use your account</span>
                     </div>
                 </div>
+
+                {/* Lockout Warning */}
+                {isLocked && lockoutSeconds > 0 && (
+                    <LockoutCountdown 
+                        waitSeconds={lockoutSeconds} 
+                        onExpire={onLockoutExpire}
+                        email={loginEmail}
+                    />
+                )}
+
                 <form onSubmit={handleLogin} className="w-full max-w-sm" noValidate>
                     <InputWithIcon
                         icon={<Mail size={18} className="text-zinc-400" />}
@@ -51,6 +68,7 @@ export function DesktopAuthView({
                         required
                         autoComplete="username"
                         name="email"
+                        disabled={isSubmitting}
                     />
                     <InputWithIcon
                         icon={<Lock size={18} className="text-zinc-400" />}
@@ -61,16 +79,19 @@ export function DesktopAuthView({
                         required
                         autoComplete="current-password"
                         name="password"
+                        disabled={isSubmitting || isLocked}
                     />
                     {error && !rightPanelActive && <p className="text-sm mb-4 text-red-400">{error}</p>}
-                    <PrimaryButton type="submit">Sign In</PrimaryButton>
+                    <PrimaryButton type="submit" disabled={isSubmitting || isLocked}>
+                        {isSubmitting ? 'Signing In...' : isLocked ? 'Locked' : 'Sign In'}
+                    </PrimaryButton>
                 </form>
             </div>
 
             {/* Sign Up Form Panel */}
             <div className={`form-panel flex flex-col items-center justify-center p-8 text-center absolute top-0 right-0 h-full w-1/2 ${rightPanelActive ? 'active z-20' : 'inactive z-0'}`}>
                 <h1 className="text-4xl font-extrabold mb-6 text-white">Create Account</h1>
-                <GoogleButton type="button" onClick={handleGoogleSignIn}>
+                <GoogleButton type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
                     <FaGoogle /> Sign up with Google
                 </GoogleButton>
                 <div className="relative my-4 w-full max-w-xs">
@@ -91,6 +112,7 @@ export function DesktopAuthView({
                         required
                         autoComplete="username"
                         name="email"
+                        disabled={isSubmitting}
                     />
                     <InputWithIcon
                         icon={<Lock size={18} className="text-zinc-400" />}
@@ -101,7 +123,11 @@ export function DesktopAuthView({
                         required
                         autoComplete="new-password"
                         name="password"
+                        disabled={isSubmitting}
                     />
+                    {/* Password Strength Indicator */}
+                    <PasswordStrengthIndicator password={signUpPassword} />
+
                     <InputWithIcon
                         icon={<Lock size={18} className="text-zinc-400" />}
                         type="password"
@@ -111,9 +137,12 @@ export function DesktopAuthView({
                         required
                         autoComplete="new-password"
                         name="confirm-password"
+                        disabled={isSubmitting}
                     />
                     {error && rightPanelActive && <p className="text-sm mb-4 text-red-400">{error}</p>}
-                    <PrimaryButton type="submit">Sign Up</PrimaryButton>
+                    <PrimaryButton type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Creating Account...' : 'Sign Up'}
+                    </PrimaryButton>
                 </form>
             </div>
 

@@ -23,4 +23,3 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.databaseId || "relyceinfotech");
 export const storage = getStorage(app);
-

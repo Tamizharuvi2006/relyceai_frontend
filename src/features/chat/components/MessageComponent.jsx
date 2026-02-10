@@ -4,64 +4,45 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Download, Image, FileText, Globe, ExternalLink, Search, Sparkles, BrainCircuit } from 'lucide-react';
+import { Copy, Download, Image, FileText, Globe, ExternalLink, Search, Sparkles, BrainCircuit, ChevronDown, ChevronRight } from 'lucide-react';
 import { getFileIcon, formatFileSize } from '../../../utils/chatHelpers';
 
 /**
- * Animated processing indicator (step-by-step)
+ * Premium animated thinking indicator - sleek and minimal
  */
-const LoadingDots = () => (
-  <span className="inline-flex items-center gap-1 ml-2">
-    <span className="relyce-dot" />
-    <span className="relyce-dot relyce-dot-2" />
-    <span className="relyce-dot relyce-dot-3" />
-  </span>
+const ThinkingLoader = () => (
+  <div className="flex items-center gap-3 py-2 min-h-[36px]">
+    <div className="relative">
+      <div className="w-5 h-5 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+    </div>
+    <span className="text-sm text-zinc-400 animate-pulse">Generating...</span>
+  </div>
 );
 
+
+
 const ProcessingIndicator = ({ query, showSearch, holdFinalStep }) => (
-  <div className="relyce-processing space-y-3">
-    <div className={`relyce-processing-card${holdFinalStep ? " is-hold" : ""}`}>
-      <div className="relyce-step relyce-step-1">
-        <div className="relyce-step-icon">
-          <BrainCircuit size={14} />
-        </div>
-        <div className="relyce-step-text">
-          Analyzing question
-          <LoadingDots />
-        </div>
+  <div className="py-1">
+    {showSearch ? (
+      <div className="flex items-center gap-3 py-2">
+        <Search size={14} className="text-emerald-500 animate-bounce" />
+        <span className="text-sm text-zinc-400">Searching</span>
       </div>
-      <div className="relyce-step relyce-step-2">
-        <div className="relyce-step-icon">
-          <Search size={14} />
-        </div>
-        <div className="relyce-step-text">
-          Searching for the best answer
-          <LoadingDots />
-        </div>
-      </div>
-      <div className="relyce-step relyce-step-3">
-        <div className="relyce-step-icon">
-          <Sparkles size={14} />
-        </div>
-        <div className="relyce-step-text">
-          Processing information
-          <LoadingDots />
-        </div>
-      </div>
-    </div>
-    {showSearch && query && (
-      <div className="text-xs text-zinc-400/80 italic truncate">
-        “{query.length > 80 ? query.substring(0, 80) + '…' : query}”
-      </div>
+    ) : (
+      <ThinkingLoader />
     )}
   </div>
 );
+
+
+
+
 
 /**
  * Generating response indicator
  */
 const GeneratingIndicator = ({ query, holdFinalStep }) => (
-  <ProcessingIndicator showSearch={false} query={query} holdFinalStep={holdFinalStep} />
+  <ThinkingLoader />
 );
 
 /**
@@ -98,6 +79,34 @@ const SourcesDisplay = ({ sources }) => (
     </div>
   </div>
 );
+
+/**
+ * Thinking Dropdown Component
+ */
+const ThinkingDropdown = ({ content }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!content) return null;
+
+  return (
+    <div className="mb-4 rounded-lg border border-zinc-700/50 bg-zinc-800/30 overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors text-left"
+      >
+        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <BrainCircuit size={14} className="text-emerald-500/70" />
+        <span className="font-medium">Thinking Process</span>
+      </button>
+      
+      {isOpen && (
+        <div className="px-4 py-3 border-t border-zinc-700/50 bg-zinc-900/30 text-zinc-400 text-sm leading-relaxed whitespace-pre-wrap animate-fade-in-down">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /**
  * Markdown components for rendering messages
@@ -234,26 +243,26 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
         </code>
       );
     },
-    h1: ({ _node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4 pb-2 border-b border-gray-700" {...props} />,
-    h2: ({ _node, ...props }) => <h2 className="text-xl font-semibold mt-5 mb-3 pb-1 border-b border-gray-700/50" {...props} />,
-    h3: ({ _node, ...props }) => <h3 className="text-lg font-semibold mt-4 mb-2" {...props} />,
-    h4: ({ _node, ...props }) => <h4 className="text-base font-medium mt-3 mb-2" {...props} />,
-    h5: ({ _node, ...props }) => <h5 className="text-sm font-medium mt-2 mb-1" {...props} />,
-    h6: ({ _node, ...props }) => <h6 className="text-xs font-medium mt-2 mb-1 uppercase tracking-wide" {...props} />,
-    ul: ({ _node, ...props }) => <ul className="list-disc list-inside space-y-1 my-3 ml-4" {...props} />,
-    ol: ({ _node, ...props }) => <ol className="list-decimal list-inside space-y-1 my-3 ml-4" {...props} />,
-    li: ({ _node, ...props }) => <li className="my-1 pl-1" {...props} />,
-    hr: ({ _node, ...props }) => <hr className="my-6 border-gray-700" {...props} />,
-    p: ({ _node, ...props }) => <p className="leading-relaxed my-3" {...props} />,
+    h1: ({ _node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4 pb-2 border-b border-emerald-500/30 text-emerald-400" {...props} />,
+    h2: ({ _node, ...props }) => <h2 className="text-xl font-semibold mt-5 mb-3 pb-1 border-b border-emerald-500/20 text-emerald-300" {...props} />,
+    h3: ({ _node, ...props }) => <h3 className="text-lg font-semibold mt-4 mb-2 text-emerald-200" {...props} />,
+    h4: ({ _node, ...props }) => <h4 className="text-base font-medium mt-3 mb-2 text-emerald-100" {...props} />,
+    h5: ({ _node, ...props }) => <h5 className="text-sm font-medium mt-2 mb-1 text-emerald-50" {...props} />,
+    h6: ({ _node, ...props }) => <h6 className="text-xs font-medium mt-2 mb-1 uppercase tracking-wide text-emerald-500/70" {...props} />,
+    ul: ({ _node, ...props }) => <ul className="list-disc list-outside space-y-1 my-3 ml-4 marker:text-emerald-500" {...props} />,
+    ol: ({ _node, ...props }) => <ol className="list-decimal list-outside space-y-1 my-3 ml-4 marker:text-emerald-500" {...props} />,
+    li: ({ _node, ...props }) => <li className="my-1 pl-1 leading-relaxed" {...props} />,
+    hr: ({ _node, ...props }) => <hr className="my-6 border-emerald-500/20" {...props} />,
+    p: ({ _node, ...props }) => <div className="leading-relaxed my-3 text-gray-200" {...props} />,
     blockquote: ({ _node, ...props }) => (
       <blockquote
-        className="border-l-4 border-gray-500 pl-4 py-1 my-3 italic text-gray-300"
+        className="border-l-4 border-emerald-500 pl-4 py-1 my-3 italic text-gray-300 bg-emerald-900/10 rounded-r"
         {...props}
       />
     ),
     a: ({ _node, href, children, ...props }) => (
       <a
-        className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline bg-emerald-900/20 px-2 py-0.5 rounded-md text-sm transition-all"
+        className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline transition-all"
         target="_blank"
         rel="noopener noreferrer"
         href={href}
@@ -266,39 +275,36 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
       </a>
     ),
     table: ({ _node, ...props }) => (
-      <div className="my-4 w-full overflow-x-auto rounded-md" style={{
-        scrollbarWidth: 'thin',
-        scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
-      }}>
-        <table className="w-full border-collapse border border-emerald-600/50 rounded-lg" {...props} />
+      <div className="my-4 w-full overflow-x-auto rounded-md border border-emerald-500/20">
+        <table className="w-full border-collapse" {...props} />
       </div>
     ),
-    thead: ({ _node, ...props }) => <thead className="bg-emerald-800/70" {...props} />,
+    thead: ({ _node, ...props }) => <thead className="bg-emerald-900/30 text-emerald-200" {...props} />,
     th: ({ _node, ...props }) => (
       <th
-        className="border border-emerald-600/50 px-4 py-2 text-left font-semibold text-emerald-100"
+        className="border-b border-emerald-500/30 px-4 py-2 text-left font-semibold"
         {...props}
       />
     ),
     td: ({ _node, ...props }) => (
       <td
-        className="border border-emerald-600/50 px-4 py-2"
+        className="border-b border-emerald-500/10 px-4 py-2 text-gray-300"
         {...props}
       />
     ),
     tr: ({ _node, ...props }) => (
       <tr
-        className="even:bg-emerald-800/20 hover:bg-emerald-700/30"
+        className="hover:bg-emerald-500/5 transition-colors"
         {...props}
       />
     ),
     img: ({ _node, ...props }) => (
       <img
-        className="rounded-lg my-4 max-w-full h-auto"
+        className="rounded-lg my-4 max-w-full h-auto border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
         {...props}
       />
     ),
-    strong: ({ _node, ...props }) => <strong className="font-bold" {...props} />,
+    strong: ({ _node, ...props }) => <strong className="font-bold text-emerald-400" {...props} />,
     em: ({ _node, ...props }) => <em className="italic" {...props} />,
   };
 
@@ -363,8 +369,23 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
   const isGenerating = msg.isGenerating;
   const isStreaming = msg.isStreaming;
   const sources = msg.sources || [];
-  const hasVisibleContent = Boolean(msg.content && msg.content.trim().length > 0);
-  const indicatorActive = Boolean((isSearching || isGenerating) && !hasVisibleContent);
+  
+  // Extract thinking content
+  let thinkingContent = "";
+  let displayContent = msg.content;
+  
+  // Parse [THINKING] tags
+  const thinkingMatch = msg.content && msg.content.match(/\[THINKING\]([\s\S]*?)(?:\[\/THINKING\]|$)/);
+  if (thinkingMatch) {
+    thinkingContent = thinkingMatch[1].trim();
+    // Remove entire thinking block from display content
+    const fullMatch = thinkingMatch[0];
+    displayContent = msg.content.replace(fullMatch, "").trim();
+  }
+  
+  const hasVisibleContent = Boolean(displayContent && displayContent.trim().length > 0);
+  // Show indicator if we have thinking content but no final content yet, OR if searching/generating and no content at all
+  const indicatorActive = Boolean((isSearching || isGenerating) && !hasVisibleContent && !thinkingContent);
 
   useEffect(() => {
     const minDurationMs = 1200;
@@ -517,18 +538,9 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
       {/* Message content */}
       <div className="flex-1 min-w-0">
         <div className="text-gray-100 leading-relaxed max-w-none">
-          {/* Animated processing indicator */}
-          {(showIndicator || indicatorFade || ghostSpace) && (
-            <div
-              className={`relyce-processing-slot${indicatorFade ? " is-fading" : ""}${ghostSpace ? " is-ghost" : ""}`}
-            >
-              <ProcessingIndicator query={msg.searchQuery} showSearch={isSearching} holdFinalStep={holdFinalStep} />
-            </div>
-          )}
-
-          {/* Generating indicator */}
-          {isGenerating && !isSearching && (!msg.content || msg.content.length === 0) && !showIndicator && (
-            <GeneratingIndicator query={msg.searchQuery} holdFinalStep={holdFinalStep} />
+          {/* Loader - only shows when NO content yet, hides immediately when first token arrives */}
+          {(!displayContent && !thinkingContent) && (isSearching || isGenerating) && (
+            <ProcessingIndicator query={msg.searchQuery} showSearch={isSearching} holdFinalStep={holdFinalStep} />
           )}
 
           {/* Sources - consolidated single render location */}
@@ -536,14 +548,17 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
             <SourcesDisplay sources={sources} />
           )}
 
+          {/* Thinking Dropdown */}
+          <ThinkingDropdown content={thinkingContent} />
+
           {/* Message text */}
-          {msg.content && (
+          {displayContent && (
             <div className="relative">
               <ReactMarkdown
                 components={MarkdownComponents}
                 remarkPlugins={[remarkGfm]}
               >
-                {preprocessContent(msg.content)}
+                {preprocessContent(displayContent)}
               </ReactMarkdown>
               {/* Streaming cursor */}
               {isStreaming && (
@@ -554,7 +569,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, is
         </div>
         
         {/* Copy and Download buttons - always visible, below message */}
-        {msg.content && !isSearching && !isGenerating && !isStreaming && (
+        {displayContent && !isSearching && !isGenerating && !isStreaming && (
           <div className="mt-2 flex gap-1">
             <button
               onClick={handleCopy}
