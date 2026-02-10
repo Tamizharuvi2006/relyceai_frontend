@@ -652,13 +652,24 @@ export async function deletePersonality(userId, personalityId) {
 /**
  * Check backend connection status
  */
+let lastHealthCheckAt = 0;
+let lastHealthPromise = null;
+
 export async function checkBackendHealth() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/health`, { method: 'GET' });
-    return response.ok;
-  } catch {
-    return false;
+  const now = Date.now();
+  if (lastHealthPromise && (now - lastHealthCheckAt) < 5000) {
+    return lastHealthPromise;
   }
+  lastHealthCheckAt = now;
+  lastHealthPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health`, { method: 'GET' });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  })();
+  return lastHealthPromise;
 }
 
 // Export API base URL for other modules

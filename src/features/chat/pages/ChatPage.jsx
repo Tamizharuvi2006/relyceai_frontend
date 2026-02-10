@@ -101,7 +101,7 @@ function AppContent() {
             }
         });
     }
-  }, [user?.uid, location.key]); // Refetch on navigation (location.key changes)
+  }, [user?.uid]); // Fetch once per user (avoid refetch loops)
 
   // Persist personality change to the current session
   const handleSetActivePersonality = useCallback((persona) => {
@@ -501,6 +501,8 @@ function AppContent() {
               chatMode={chatMode}
               onChatModeChange={setChatMode}
               activePersonality={activePersonality}
+              setActivePersonality={handleSetActivePersonality}
+              personalities={personalities}
               showHeader={false} 
             />
           )}
