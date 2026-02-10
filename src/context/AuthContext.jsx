@@ -4,7 +4,6 @@ import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../utils/firebaseConfig';
 import {
   createUserProfile,
-  updateUserLastLogin,
   ensureUserHasId
 } from '../features/users/services/userService';
 import {
@@ -33,6 +32,11 @@ export default function AuthProvider({ children }) {
   const [roleError, setRoleError] = useState(null);
   // Use Ref to track initialization within the closure
   const initialLoadComplete = useRef(false);
+  const backendInitDone = useRef(false);
+  const backendInitInFlight = useRef(false);
+  const backendInitAttempt = useRef(0);
+  const backendInitRetryTimer = useRef(null);
+  const backendInitUserId = useRef(null);
 
   const fetchUserProfile = async (uid, skipExpensiveOperations = false) => {
     try {
@@ -57,9 +61,6 @@ export default function AuthProvider({ children }) {
         if (!skipExpensiveOperations) {
           // Check membership expiry (run in background)
           checkMembershipExpiry(uid).catch(console.error);
-
-          // Update last login (run in background)
-          updateUserLastLogin(uid).catch(console.error);
         }
 
         // Get membership data (lightweight operation)
@@ -103,6 +104,58 @@ export default function AuthProvider({ children }) {
   useEffect(() => {
     let profileUnsubscribe = null;
 
+    const clearBackendInitRetry = () => {
+      if (backendInitRetryTimer.current) {
+        clearTimeout(backendInitRetryTimer.current);
+        backendInitRetryTimer.current = null;
+      }
+    };
+
+    const callBackendInit = async (authUser) => {
+      if (!authUser) return;
+
+      if (backendInitUserId.current !== authUser.uid) {
+        backendInitUserId.current = authUser.uid;
+        backendInitDone.current = false;
+        backendInitInFlight.current = false;
+        backendInitAttempt.current = 0;
+        clearBackendInitRetry();
+      }
+
+      if (backendInitDone.current || backendInitInFlight.current) return;
+      backendInitInFlight.current = true;
+      backendInitAttempt.current += 1;
+
+      try {
+        const token = await authUser.getIdToken();
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+        const response = await fetch(`${apiUrl}/users/init`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        backendInitDone.current = true;
+        clearBackendInitRetry();
+      } catch (initErr) {
+        console.warn('[AuthContext] Backend init call failed, will retry:', initErr);
+        const cappedAttempt = Math.min(backendInitAttempt.current, 5);
+        const delayMs = Math.min(1000 * (2 ** cappedAttempt), 15000);
+        clearBackendInitRetry();
+        backendInitRetryTimer.current = setTimeout(() => {
+          callBackendInit(authUser);
+        }, delayMs);
+      } finally {
+        backendInitInFlight.current = false;
+      }
+    };
+
     const attachProfileListener = (authUser) => {
       if (profileUnsubscribe) {
         profileUnsubscribe();
@@ -110,6 +163,11 @@ export default function AuthProvider({ children }) {
       }
 
       if (!authUser) {
+        backendInitUserId.current = null;
+        backendInitDone.current = false;
+        backendInitInFlight.current = false;
+        backendInitAttempt.current = 0;
+        clearBackendInitRetry();
         setUserProfile(null);
         setMembership(null);
         setRoleError(null);
@@ -157,22 +215,9 @@ export default function AuthProvider({ children }) {
                 timestamp: Date.now()
               });
 
-              if (!initialLoadComplete.current) {
-                try {
-                  const token = await authUser.getIdToken();
-                  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-                  fetch(`${apiUrl}/users/init`, {
-                    method: 'POST',
-                    headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json'
-                    }
-                  }).catch(err => console.warn('[AuthContext] Backend init call failed:', err));
-                } catch (initErr) {
-                  console.warn('[AuthContext] Could not call backend init:', initErr);
-                }
+              callBackendInit(authUser);
 
-                updateUserLastLogin(authUser.uid).catch(console.error);
+              if (!initialLoadComplete.current) {
                 checkMembershipExpiry(authUser.uid).catch(console.error);
                 initialLoadComplete.current = true;
               }
@@ -237,6 +282,7 @@ export default function AuthProvider({ children }) {
     return () => {
       if (profileUnsubscribe) profileUnsubscribe();
       authUnsubscribe();
+      clearBackendInitRetry();
       window.removeEventListener('auth:unauthorized', handleUnauthorized);
     };
   }, []); // Remove dependency on initialLoadComplete to avoid re-subscribing loop

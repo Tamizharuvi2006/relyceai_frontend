@@ -7,7 +7,10 @@ import { auth } from './firebaseConfig';
  * FastAPI Backend Configuration
  * Set VITE_API_BASE_URL in your .env file
  */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const normalizeLocalhost = (url) => url.replace(/:\/\/localhost(?=[:/]|$)/, '://127.0.0.1');
+const API_BASE_URL = normalizeLocalhost(
+  import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080'
+);
 
 const WS_BASE_URL = API_BASE_URL.startsWith('https')
   ? API_BASE_URL.replace('https', 'wss')
@@ -233,6 +236,7 @@ export class WebSocketChatManager {
     this.maxReconnectAttempts = 5;
     this.reconnectTimeout = null;
     this.tokenProvider = null;
+    this._isConnecting = false; // Sync flag for async token resolution gap
   }
   
   /**
@@ -242,7 +246,14 @@ export class WebSocketChatManager {
    * @param {object} callbacks - {onToken, onDone, onError, onInfo}
    */
   async connect(chatId, tokenProvider = null, callbacks = {}) {
+    // Prevent duplicate connection attempts to same chat
+    if (this.chatId === chatId && (this.isConnected() || this.isConnecting())) {
+        return;
+    }
+
     this.chatId = chatId;
+    this._isConnecting = true; // Mark as connecting immediately
+    
     this.onToken = callbacks.onToken || (() => {});
     this.onDone = callbacks.onDone || (() => {});
     this.onError = callbacks.onError || (() => {});
@@ -257,21 +268,31 @@ export class WebSocketChatManager {
     }
     
     const params = new URLSearchParams();
-    const resolvedToken = await this.resolveToken();
-    if (!resolvedToken) {
-      this.onError('Unauthorized: missing token');
-      return;
-    }
-    params.append('token', resolvedToken);
-    params.append('chat_id', chatId);
-    
-    const wsUrl = `${WS_BASE_URL}/ws/chat?${params.toString()}`;
     
     try {
-      this.socket = new WebSocket(wsUrl);
+        const resolvedToken = await this.resolveToken();
+        if (!resolvedToken) {
+            this.onError('Unauthorized: missing token');
+            this._isConnecting = false;
+            return;
+        }
+        params.append('token', resolvedToken);
+        params.append('chat_id', chatId);
+        
+        const wsUrl = `${WS_BASE_URL}/ws/chat?${params.toString()}`;
+        
+        // Close existing connection if any (checks are now safe due to early return above)
+        if (this.socket) {
+            this.socket.onclose = null;
+            this.socket.close();
+            this.socket = null;
+        }
+
+        this.socket = new WebSocket(wsUrl);
       
       this.socket.onopen = () => {
         // console.log('[WS] Connected to chat:', chatId);
+        this._isConnecting = false;
         this.reconnectAttempts = 0;
         this.onConnect();
       };
@@ -304,6 +325,7 @@ export class WebSocketChatManager {
       
       this.socket.onclose = (event) => {
         // console.log('[WS] Disconnected:', event.code, event.reason);
+        this._isConnecting = false; // Reset flag
         if (event.code === 1008) {
           this.onError('Unauthorized: invalid or expired token');
           return;
@@ -313,11 +335,13 @@ export class WebSocketChatManager {
       
       this.socket.onerror = (error) => {
         console.error('[WS] Error:', error);
+        this._isConnecting = false; // Reset flag
         this.onError('WebSocket connection error');
       };
       
     } catch (error) {
       console.error('[WS] Connection failed:', error);
+      this._isConnecting = false;
       this.onError('Failed to connect');
     }
   }
@@ -336,6 +360,7 @@ export class WebSocketChatManager {
   attemptReconnect(callbacks) {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
+      this._isConnecting = true; // Mark as connecting during reconnect wait
       if (this.onReconnect) this.onReconnect();
       
       // console.log(`[WS] Reconnecting... attempt ${this.reconnectAttempts}`);
@@ -343,6 +368,8 @@ export class WebSocketChatManager {
       this.reconnectTimeout = setTimeout(() => {
         this.connect(this.chatId, this.tokenProvider, callbacks);
       }, 1000 * this.reconnectAttempts);
+    } else {
+        this._isConnecting = false;
     }
   }
   
@@ -396,6 +423,7 @@ export class WebSocketChatManager {
    * Disconnect from WebSocket
    */
   disconnect() {
+    this._isConnecting = false;
     if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
@@ -412,6 +440,13 @@ export class WebSocketChatManager {
    */
   isConnected() {
     return this.socket && this.socket.readyState === WebSocket.OPEN;
+  }
+
+  /**
+   * Check if connecting
+   */
+  isConnecting() {
+    return this._isConnecting || (this.socket && this.socket.readyState === WebSocket.CONNECTING);
   }
 }
 

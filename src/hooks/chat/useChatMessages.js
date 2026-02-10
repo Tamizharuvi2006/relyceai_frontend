@@ -6,6 +6,15 @@ import ShareService from '../../services/shareService';
 import PDFService from '../../services/pdfService';
 import { WebSocketChatManager } from '../../utils/api';
 
+// Module-level singleton to prevent React StrictMode from creating duplicate connections
+let sharedWsManager = null;
+const getWsManager = () => {
+    if (!sharedWsManager) {
+        sharedWsManager = new WebSocketChatManager();
+    }
+    return sharedWsManager;
+};
+
 export default function useChatMessages({ core, currentSessionId, userId, onMessagesUpdate }) {
     const {
         messagesRef, setMessages, setBotTyping, setCurrentMessageId,
@@ -17,10 +26,21 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     // Refs for tracking messages
     const lastSessionIdRef = useRef(null);
     const streamingMessageIdRef = useRef(null);
-    const wsManager = useRef(new WebSocketChatManager());
+    const wsManagerRef = useRef(getWsManager()); // Use singleton
     const tokenBufferRef = useRef('');
+    const wsRetryTimerRef = useRef(null);
+    const wsRetryAttemptRef = useRef(0);
 
     useEffect(() => {
+        let isActive = true;
+
+        const clearWsRetry = () => {
+            if (wsRetryTimerRef.current) {
+                clearTimeout(wsRetryTimerRef.current);
+                wsRetryTimerRef.current = null;
+            }
+        };
+
         if (!userId || typeof userId !== 'string' || userId.length < 10) return;
 
         // Clear message tracking when session changes
@@ -40,6 +60,28 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         const initWebSocket = async () => {
             if (!currentSessionId) return;
             
+            // Skip if already connected to this session or currently connecting
+            const manager = wsManagerRef.current;
+            if (manager?.chatId === currentSessionId && (manager?.isConnected() || manager?.isConnecting())) {
+                return;
+            }
+
+            const backendOk = await ChatService.checkConnection();
+            if (!isActive) return;
+            setWsConnected(backendOk);
+            if (!backendOk) {
+                wsRetryAttemptRef.current += 1;
+                const delayMs = Math.min(1000 * (2 ** wsRetryAttemptRef.current), 15000);
+                clearWsRetry();
+                wsRetryTimerRef.current = setTimeout(() => {
+                    if (isActive) initWebSocket();
+                }, delayMs);
+                return;
+            }
+
+            wsRetryAttemptRef.current = 0;
+            clearWsRetry();
+            
             const tokenProvider = async () => {
                 try {
                     if (auth.currentUser) {
@@ -52,7 +94,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                 }
             };
 
-            wsManager.current.connect(currentSessionId, tokenProvider, {
+            wsManagerRef.current.connect(currentSessionId, tokenProvider, {
                 onConnect: () => {
                     setWsConnected(true);
                     setIsReconnecting(false);
@@ -142,8 +184,10 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         }
 
         return () => {
-            if (wsManager.current) {
-                wsManager.current.disconnect();
+            isActive = false;
+            clearWsRetry();
+            if (wsManagerRef.current) {
+                wsManagerRef.current.disconnect();
             }
         };
     }, [currentSessionId, userId, setWsConnected, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
@@ -151,7 +195,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     // Heartbeat & Buffer Flush Effect
     useEffect(() => {
         const pingInterval = setInterval(() => {
-             if (wsManager.current) wsManager.current.ping();
+             if (wsManagerRef.current) wsManagerRef.current.ping();
         }, 25000); // 25s heartbeat
 
         // Use requestAnimationFrame for smoother 60fps+ updates (syncs with screen refresh)
@@ -169,8 +213,6 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         ? { 
                             ...msg, 
                             content: (msg.content || '') + chunk,
-                            isSearching: false,
-                            isGenerating: false,
                             isStreaming: true
                           }
                         : msg
@@ -199,8 +241,8 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     };
 
     const handleStop = useCallback(() => {
-        if (wsManager.current) {
-            wsManager.current.stopGeneration();
+        if (wsManagerRef.current) {
+            wsManagerRef.current.stopGeneration();
         }
         tokenBufferRef.current = ""; // Clear buffer
         setBotTyping(false);
@@ -315,7 +357,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                 // For now, follow "User Request": "Use WebSocket ONLY for chat". Users likely know files might be limited or handled via text context.
                 // Actually, let's just send the text.
                 
-                wsManager.current.sendMessage(text, effectiveMode, personalityToSend, userSettings);
+                wsManagerRef.current.sendMessage(text, effectiveMode, personalityToSend, userSettings);
 
                 // Note: We REMOVED explicit Firestore saving here because the backend WebSocket handler 
                 // does it: save_message_to_firebase(user_id, chat_id, "user", content)
