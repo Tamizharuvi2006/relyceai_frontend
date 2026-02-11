@@ -1,14 +1,13 @@
 import {
     doc,
     getDoc,
-    updateDoc,
     addDoc,
     collection,
     serverTimestamp,
     Timestamp
 } from 'firebase/firestore';
-import { db } from '../../../utils/firebaseConfig';
-import { getCurrentPricing } from '../../admin/services/adminDashboard';
+import { db, auth } from '../../../utils/firebaseConfig';
+import { API_BASE_URL } from '../../../utils/api';
 
 /**
  * Membership Plans Configuration
@@ -32,7 +31,7 @@ export const MEMBERSHIP_PLANS = {
         name: 'Starter Plan',
         monthlyPrice: 199,
         yearlyPrice: 1999,
-        duration: 'unlimited', 
+        duration: 'unlimited',
         features: {
             chatLimit: 150,
             fileUploadLimit: 25,
@@ -87,12 +86,24 @@ export const MEMBERSHIP_PLANS = {
 };
 
 export function isMembershipExpired(membership) {
-    if (!membership || !membership.expiresAt) return false;
+    if (!membership) return false;
+    const expiryValue = membership.expiryDate || membership.expiresAt;
+    if (!expiryValue) return false;
     try {
-        return Timestamp.now().toMillis() > membership.expiresAt.toMillis();
+        if (expiryValue.toDate) {
+            return Timestamp.now().toMillis() > expiryValue.toDate().getTime();
+        }
+        if (expiryValue.toMillis) {
+            return Timestamp.now().toMillis() > expiryValue.toMillis();
+        }
+        const parsed = new Date(expiryValue);
+        if (!Number.isNaN(parsed.getTime())) {
+            return Date.now() > parsed.getTime();
+        }
     } catch {
         return false;
     }
+    return false;
 }
 
 /**
@@ -108,26 +119,27 @@ export async function updateUserMembership(userId, newPlan, billingCycle = 'mont
     }
 
     try {
-        // Only allow free plan downgrades from frontend
-        const planDetails = MEMBERSHIP_PLANS['FREE'];
-        const now = new Date();
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error('Not authenticated');
 
-        const updateData = {
-            'membership.plan': 'free',
-            'membership.planName': planDetails.name,
-            'membership.status': 'active',
-            'membership.billingCycle': null,
-            'membership.autoRenew': false,
-            'membership.paymentStatus': 'free',
-            'membership.updatedAt': serverTimestamp()
-        };
+        const response = await fetch(`${API_BASE_URL}/users/membership/downgrade`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
-        await updateDoc(doc(db, 'users', userId), updateData);
-        console.log(`✅ User ${userId} downgraded to Free plan`);
-        return { success: true, message: 'Downgraded to Free plan' };
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.detail || 'Failed to downgrade membership');
+        }
+
+        console.log(`User ${userId} downgraded to Free plan`);
+        return await response.json();
 
     } catch (error) {
-        console.error('❌ Error updating membership:', error);
+        console.error('Error updating membership:', error);
         throw error;
     }
 }
@@ -145,22 +157,13 @@ export async function checkMembershipExpiry(userId) {
         const expired = isMembershipExpired(membership);
         if (!expired) return false;
 
-        // Only persist and log when we transition into expired
+        // Client should not write membership status. Backend cron handles expiry.
         if (membership?.status !== 'expired') {
             const membershipPlan = membership?.plan || membership?.planName || 'unknown';
-            try {
-                await updateDoc(doc(db, 'users', userId), {
-                    'membership.status': 'expired',
-                    'membership.expiredAt': serverTimestamp()
-                });
-            } catch (persistError) {
-                console.warn('[membershipService] Failed to persist expired status:', persistError);
-            }
-
             await addMembershipLog(userId, membershipPlan, 'expired').catch(err =>
                 console.warn('[membershipService] Failed to log expiry:', err)
             );
-            console.warn(`[membershipService] Marked membership expired for ${userId}`);
+            console.warn(`[membershipService] Detected expired membership for ${userId}`);
         }
 
         return true;
@@ -185,7 +188,7 @@ export async function getUserMembership(userId) {
         }
         return membership;
     } catch (error) {
-        console.error('❌ Error getting user membership:', error);
+        console.error('Error getting user membership:', error);
         return null;
     }
 }
@@ -206,7 +209,6 @@ export async function addMembershipLog(userId, plan, action, paymentData = null)
 
         await addDoc(collection(db, 'membershipLogs'), logData);
     } catch (error) {
-        console.error('❌ Error logging membership change:', error);
+        console.error('Error logging membership change:', error);
     }
 }
-

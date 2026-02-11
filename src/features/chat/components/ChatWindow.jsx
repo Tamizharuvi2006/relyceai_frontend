@@ -26,7 +26,7 @@ const ChatWindow = memo(function ChatWindow({
 }) {
   // Enforce dark theme
   const theme = 'dark';
-  const { currentUser: user, loading: authLoading } = useAuth();
+  const { currentUser: user, userProfile, loading: authLoading } = useAuth();
 
   // Use the custom chat hook for all logic
   const {
@@ -73,6 +73,50 @@ const ChatWindow = memo(function ChatWindow({
     setActivePersonality: externalSetActivePersonality,
     personalities: externalPersonalities,
   });
+
+  const extractContinueMeta = (content) => {
+    if (!content) return null;
+    const match = content.match(/CONTINUE_AVAILABLE\s*(\{[\s\S]*?\})/i);
+    if (!match) return null;
+    try {
+      const meta = JSON.parse(match[1]);
+      if (!meta || typeof meta.file !== 'string' || typeof meta.mode !== 'string') return null;
+      const allowedModes = new Set(['ui_demo_html', 'ui_react', 'ui_implementation']);
+      if (!allowedModes.has(meta.mode)) return null;
+      return {
+        file: meta.file,
+        mode: meta.mode,
+        lines: Number.isFinite(meta.lines) ? meta.lines : undefined,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const buildContinuePrompt = (meta, content) => {
+    return [
+      "Continue generating UI code.",
+      `Mode: ${meta.mode}`,
+      `File: ${meta.file}`,
+      "Rules:",
+      "- Continue from the exact last line of the previous output.",
+      "- Do not repeat any previous content.",
+      "- Continue the same file only.",
+      "- Do not output any explanations or extra text.",
+      "- If you must stop again, append a CONTINUE_AVAILABLE comment with updated metadata.",
+      "",
+      "<PREVIOUS_OUTPUT>",
+      content || "",
+      "</PREVIOUS_OUTPUT>",
+    ].join("\n");
+  };
+
+  const handleContinue = (msg, meta) => {
+    if (!msg || !meta) return;
+    if (chatMode !== 'normal') return;
+    const prompt = buildContinuePrompt(meta, msg.content);
+    handleSend({ text: prompt });
+  };
 
   // ... (refs) ... 
   // (skipping unchanged code) since this is a view-replace tool, I need to be careful. 
@@ -435,7 +479,10 @@ const ChatWindow = memo(function ChatWindow({
         {/* Always show messages if they exist - prevents flash during loading/transitions */}
         {messages.length > 0 && (
           <div className="max-w-4xl mx-auto w-full px-4 py-6 overflow-x-hidden">
-            {messages.map((msg, index) => (
+            {messages.map((msg, index) => {
+              const continueMeta = chatMode === 'normal' ? extractContinueMeta(msg.content) : null;
+              const thinkingVisibility = userProfile?.settings?.personalization?.thinkingVisibility || 'auto';
+              return (
               <MessageComponent
                 key={msg.id}
                 ref={(el) => {
@@ -449,9 +496,13 @@ const ChatWindow = memo(function ChatWindow({
                 theme={theme}
                 chatMode={chatMode}
                 onCopyMessage={copyMessageToClipboard}
+                onContinue={handleContinue}
+                continueMeta={continueMeta}
                 isLastMessage={index === messages.length - 1}
+                thinkingVisibility={thinkingVisibility}
               />
-            ))}
+              );
+            })}
             
           </div>
         )}
@@ -487,6 +538,7 @@ const ChatWindow = memo(function ChatWindow({
             onReconnect={handleReconnect}
             onStop={handleStop}
             sessionId={currentSessionId}
+            chatMode={chatMode}
           />
         </div>
       </div>

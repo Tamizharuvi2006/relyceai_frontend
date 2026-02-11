@@ -38,6 +38,9 @@ async function apiFetch(endpoint, options = {}) {
         // Dispatch unauthorized event for AuthContext to handle (Auto-Logout)
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
       }
+      if (response.status === 429) {
+        throw new Error('Rate limited. Please wait a minute and try again.');
+      }
       const error = await response.json().catch(() => ({ detail: 'Request failed' }));
       throw new Error(error.detail || `HTTP ${response.status}`);
     }
@@ -182,6 +185,9 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
     });
     
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limited. Please wait a minute and try again.');
+      }
       throw new Error(`HTTP ${response.status}`);
     }
     
@@ -218,7 +224,7 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
     }
   } catch (error) {
     console.error('streamChatMessage error:', error);
-    yield `⚠️ Error: ${error.message}`;
+    yield `Error: ${error.message}`;
   }
 }
 

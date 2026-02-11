@@ -3,7 +3,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../utils/firebaseConfig';
 import ShareService from '../../services/shareService';
 import PDFService from '../../services/pdfService';
-import { WebSocketChatManager } from '../../utils/api';
+import ChatService from '../../services/chatService';
+import { WebSocketChatManager, streamChatMessage } from '../../utils/api';
 
 // Module-level singleton to prevent React StrictMode from creating duplicate connections
 let sharedWsManager = null;
@@ -29,6 +30,52 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     const tokenBufferRef = useRef('');
     const wsCallbacksRef = useRef(null);
     const tokenProviderRef = useRef(null);
+
+    const finalizeStream = useCallback(() => {
+        const botMsgId = streamingMessageIdRef.current;
+        if (!botMsgId) return;
+        const chunk = tokenBufferRef.current;
+        tokenBufferRef.current = "";
+
+        setMessages(prev => prev.map(msg =>
+            msg.id === botMsgId
+                ? {
+                    ...msg,
+                    content: (msg.content || '') + chunk,
+                    isStreaming: false,
+                    isGenerating: false,
+                    isSearching: false
+                  }
+                : msg
+        ));
+        setBotTyping(false);
+        setIsDeepSearchActive(false);
+        setCurrentMessageId(null);
+        streamingMessageIdRef.current = null;
+    }, [setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
+
+    const failStream = useCallback((err) => {
+        const botMsgId = streamingMessageIdRef.current;
+        if (botMsgId) {
+            setMessages(prev => prev.map(msg =>
+                msg.id === botMsgId
+                    ? {
+                        ...msg,
+                        content: (msg.content || '') + `\nError: ${err}`,
+                        isError: true,
+                        isStreaming: false,
+                        isGenerating: false,
+                        isSearching: false
+                      }
+                    : msg
+            ));
+        }
+        setBotTyping(false);
+        setIsDeepSearchActive(false);
+        setCurrentMessageId(null);
+        streamingMessageIdRef.current = null;
+    }, [setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
+
 
     useEffect(() => {
         let isActive = true;
@@ -69,18 +116,18 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                     setIsReconnecting(false);
                 },
                 onReconnect: () => {
-                     setIsReconnecting(true);
-                     setWsConnected(false);
+                    setIsReconnecting(true);
+                    setWsConnected(false);
                 },
                 onToken: (token) => {
-                     // Buffer the token
-                     tokenBufferRef.current += token;
+                    // Buffer the token
+                    tokenBufferRef.current += token;
                 },
                 onInfo: (infoText) => {
-                     const botMsgId = streamingMessageIdRef.current;
-                     if (!botMsgId) return;
+                    const botMsgId = streamingMessageIdRef.current;
+                    if (!botMsgId) return;
 
-                     setMessages(prev => prev.map(msg => {
+                    setMessages(prev => prev.map(msg => {
                         if (msg.id !== botMsgId) return msg;
 
                         // Default to current state to prevent flickering
@@ -97,55 +144,20 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                             tokenBufferRef.current = ""; // Clear buffer on search start
                         }
 
-                        return { 
-                           ...msg, 
-                           isSearching,
-                           searchQuery
+                        return {
+                            ...msg,
+                            isSearching,
+                            searchQuery
                         };
-                   }));
+                    }));
                 },
                 onDone: () => {
-                    const botMsgId = streamingMessageIdRef.current;
-                    if (botMsgId) {
-                        // Flush remaining buffer
-                         const chunk = tokenBufferRef.current;
-                         tokenBufferRef.current = "";
-
-                         setMessages(prev => prev.map(msg => 
-                            msg.id === botMsgId 
-                                ? { 
-                                    ...msg, 
-                                    content: (msg.content || '') + chunk,
-                                    isStreaming: false, 
-                                    isGenerating: false, 
-                                    isSearching: false 
-                                  }
-                                : msg
-                        ));
-                        setBotTyping(false);
-                        setIsDeepSearchActive(false);
-                        setCurrentMessageId(null);
-                        streamingMessageIdRef.current = null;
-                    }
+                    finalizeStream();
                 },
                 onError: (err) => {
                     console.error("WS Error:", err);
                     setWsConnected(false);
-                    const botMsgId = streamingMessageIdRef.current;
-                    if (botMsgId) {
-                        setMessages(prev => prev.map(msg => 
-                            msg.id === botMsgId 
-                                ? { 
-                                    ...msg, 
-                                    content: (msg.content || '') + `\n⚠️ Error: ${err}`,
-                                    isError: true,
-                                    isStreaming: false
-                                  }
-                                : msg
-                        ));
-                        setBotTyping(false);
-                        streamingMessageIdRef.current = null;
-                    }
+                    failStream(err);
                 }
             };
             wsCallbacksRef.current = callbacks;
@@ -165,7 +177,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
             }
             setWsConnected(false);
         };
-    }, [currentSessionId, userId, setWsConnected, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
+    }, [currentSessionId, userId, setWsConnected, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId, setIsReconnecting, finalizeStream, failStream]);
 
     // Heartbeat & Buffer Flush Effect
     useEffect(() => {
@@ -249,6 +261,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         });
     }, [setFileUploads]);
 
+
     const handleSend = useCallback(async (messageData) => {
         if (!userId || typeof userId !== 'string' || userId.length < 10) return;
         if (!currentSessionId || typeof currentSessionId !== 'string') return;
@@ -316,39 +329,40 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                 } catch { /* silent */ }
             }
 
-            // Send via WebSocket
+            // Send via WebSocket (preferred), fallback to SSE if not connected
             try {
-                // Ensure unique user ID is set if available
-                // Backend handles saving to Firestore, so we don't need to double-save here
-                // But we optimistically show the user message
-
                 const effectiveMode = isWebSearch ? 'deepsearch' : chatMode;
                 const personalityToSend = (effectiveMode === 'normal' || chatMode === 'normal') ? activePersonality : null;
                 const userSettings = userProfile?.settings || null;
-                
-                // If files are present, we might need to handle them differently.
-                // Currently WS sendMessage doesn't support file_ids args in the signature of the class method properly unless we passed it.
-                // The WebSocketChatManager.sendMessage signature: (content, chatMode, personality, userSettings)
-                // It misses file_ids. We should probably update the manager or just append file info to content if needed?
-                // For now, follow "User Request": "Use WebSocket ONLY for chat". Users likely know files might be limited or handled via text context.
-                // Actually, let's just send the text.
-                
-                wsManagerRef.current.sendMessage(text, effectiveMode, personalityToSend, userSettings);
+                const fileIds = files.map((f) => f.fileId).filter(Boolean);
 
-                // Note: We REMOVED explicit Firestore saving here because the backend WebSocket handler 
-                // does it: save_message_to_firebase(user_id, chat_id, "user", content)
-                // This prevents duplicates.
-                
+                if (wsManagerRef.current && wsManagerRef.current.isConnected()) {
+                    wsManagerRef.current.sendMessage(text, effectiveMode, personalityToSend, userSettings);
+                    return;
+                }
+
+                setWsConnected(false);
+
+                for await (const token of streamChatMessage(
+                    text,
+                    currentSessionId,
+                    userId,
+                    effectiveMode,
+                    fileIds,
+                    personalityToSend,
+                    userSettings
+                )) {
+                    tokenBufferRef.current += token;
+                }
+
+                finalizeStream();
+
             } catch (error) {
-                console.error('Error sending message via WS:', error);
-                setMessages(prev => prev.map(msg => 
-                    msg.id === botMessageId 
-                        ? { ...msg, content: "⚠️ Failed to send message.", isError: true, isStreaming: false }
-                        : msg
-                ));
+                console.error('Error sending message via WS/SSE:', error);
+                failStream(error?.message || 'Failed to send message.');
             }
         }
-    }, [userId, currentSessionId, chatMode, userUniqueId, setMessages, setBotTyping, setCurrentMessageId, setIsDeepSearchActive, activePersonality, userProfile]);
+    }, [userId, currentSessionId, chatMode, userUniqueId, setMessages, setBotTyping, setCurrentMessageId, setIsDeepSearchActive, activePersonality, userProfile, setWsConnected, finalizeStream, failStream]);
 
     const handleDownloadPDF = async (msgs) => {
         if (!msgs?.length) return alert('No chat to download!');

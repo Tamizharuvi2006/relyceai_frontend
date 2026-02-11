@@ -1,5 +1,5 @@
 import { doc, setDoc, getDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../utils/firebaseConfig';
+import { db, auth } from '../../../utils/firebaseConfig';
 import { createUserFolderStructure } from '../../files/services/fileService';
 import { MEMBERSHIP_PLANS } from '../../membership/services/membershipService';
 
@@ -154,8 +154,21 @@ export async function ensureUserHasId(userId) {
     }
 }
 
+async function getRoleFromClaims(userId) {
+    const current = auth.currentUser;
+    if (!current || current.uid !== userId) return '';
+    const tokenResult = await current.getIdTokenResult(true);
+    const claims = tokenResult?.claims || {};
+    const role = claims.role || (claims.superadmin ? 'superadmin' : claims.admin ? 'admin' : '');
+    return role === 'super_admin' ? 'superadmin' : (role || '');
+}
+
 export async function getUserRole(userId) {
     try {
+        const claimRole = await getRoleFromClaims(userId);
+        if (claimRole) {
+            return claimRole;
+        }
         const userData = await getUserData(userId);
         const rawRole = userData?.role;
 

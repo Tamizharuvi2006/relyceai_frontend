@@ -1,26 +1,37 @@
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../utils/firebaseConfig';
+import { auth } from '../../../utils/firebaseConfig';
+
+function normalizeRole(roleValue) {
+  if (!roleValue) return '';
+  const role = String(roleValue).trim().toLowerCase();
+  return role === 'super_admin' ? 'superadmin' : role;
+}
+
+async function getClaimsRole(forceRefresh = false) {
+  const user = auth.currentUser;
+  if (!user) return { role: '', claims: {} };
+  const tokenResult = await user.getIdTokenResult(forceRefresh);
+  const claims = tokenResult?.claims || {};
+  const roleFromClaim = normalizeRole(claims.role);
+  const role = roleFromClaim || (claims.superadmin ? 'superadmin' : claims.admin ? 'admin' : '');
+  return { role, claims };
+}
 
 export async function verifyAdminAccess(userId) {
-  if (!userId) return { isAdmin: false, isSuperAdmin: false, error: 'Invalid user ID' };
+  if (!auth.currentUser) return { isAdmin: false, isSuperAdmin: false, error: 'Not authenticated' };
 
   try {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (!userDoc.exists()) return { isAdmin: false, isSuperAdmin: false, error: 'User not found' };
+    const { role, claims } = await getClaimsRole(true);
+    const isSuperAdmin = role === 'superadmin' || claims.superadmin === true;
+    const isAdmin = isSuperAdmin || role === 'admin' || claims.admin === true;
 
-    const userRole = userDoc.data().role;
-    if (!userRole) return { isAdmin: false, isSuperAdmin: false, error: 'Role missing' };
+    if (!isAdmin) {
+      return { isAdmin: false, isSuperAdmin: false, error: 'Unauthorized' };
+    }
 
-    const normalizedRole = userRole === 'super_admin' ? 'superadmin' : userRole;
-    const validRoles = ['user', 'admin', 'superadmin', 'premium'];
-    if (!validRoles.includes(normalizedRole)) return { isAdmin: false, isSuperAdmin: false, error: 'Invalid role' };
-
-    return {
-      isAdmin: normalizedRole === 'admin' || normalizedRole === 'superadmin',
-      isSuperAdmin: normalizedRole === 'superadmin',
-      error: null
-    };
-  } catch { return { isAdmin: false, isSuperAdmin: false, error: 'Verification failed' }; }
+    return { isAdmin, isSuperAdmin, error: null };
+  } catch {
+    return { isAdmin: false, isSuperAdmin: false, error: 'Verification failed' };
+  }
 }
 
 export async function canAccessAdminDashboard(userId) {

@@ -4,7 +4,7 @@ import { uploadFile, deleteFile } from '../../../utils/api.js';
 import { uploadChatFileToFirebase } from '../../files/services/fileService.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 
-export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, botTyping, onStop, sessionId }) {
+export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, botTyping, onStop, sessionId, chatMode }) {
     // Enforce dark theme
     const theme = 'dark';
     const { currentUser: user, userProfile, loading } = useAuth();
@@ -16,6 +16,14 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
     const [isExpanded, setIsExpanded] = useState(false); // New state for expansion
     const [showExpandButton, setShowExpandButton] = useState(false); // New state to control button visibility
     const [skipAutoResize, setSkipAutoResize] = useState(false); // Flag to skip auto-resize
+    const [showReactChecklist, setShowReactChecklist] = useState(false);
+    const [pendingSend, setPendingSend] = useState(null);
+    const [reactChecklist, setReactChecklist] = useState({
+        product: '',
+        audience: '',
+        sections: '',
+        theme: ''
+    });
     const fileInputRef = useRef(null);
     const recognitionRef = useRef(null);
     const dropdownRef = useRef(null);
@@ -57,6 +65,54 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         };
     }, [dropdownOpen]);
 
+    const isReactRequest = (value) => {
+        if (!value) return false;
+        return /\b(react|next\.?js|nextjs|jsx|tsx)\b/i.test(value);
+    };
+
+    const isContinuationPayload = (value) => {
+        if (!value) return false;
+        return /CONTINUE_AVAILABLE|Continue generating UI code|<PREVIOUS_OUTPUT>/i.test(value);
+    };
+
+    const shouldPromptReactChecklist = (value) => {
+        if (chatMode !== 'normal') return false;
+        if (isContinuationPayload(value)) return false;
+        return isReactRequest(value);
+    };
+
+    const buildChecklistBlock = (useDefaults) => {
+        if (useDefaults) {
+            return "Proceed with sensible assumptions and dummy data.";
+        }
+        const lines = [
+            "React Requirements:",
+            reactChecklist.product ? `- Product: ${reactChecklist.product}` : null,
+            reactChecklist.audience ? `- Audience: ${reactChecklist.audience}` : null,
+            reactChecklist.sections ? `- Sections: ${reactChecklist.sections}` : null,
+            reactChecklist.theme ? `- Theme: ${reactChecklist.theme}` : null
+        ].filter(Boolean);
+        if (lines.length === 1) {
+            return "Proceed with sensible assumptions and dummy data.";
+        }
+        return lines.join("\n");
+    };
+
+    const finalizeSend = (payload, { includeChecklist = false, useDefaults = false } = {}) => {
+        const checklistBlock = includeChecklist ? buildChecklistBlock(useDefaults) : '';
+        const nextText = checklistBlock ? `${payload.text}\n\n${checklistBlock}` : payload.text;
+        onSend({
+            ...payload,
+            text: nextText
+        });
+        setIsWebSearchActive(false);
+        setText('');
+        setUploadedFiles([]);
+        setShowReactChecklist(false);
+        setPendingSend(null);
+        setReactChecklist({ product: '', audience: '', sections: '', theme: '' });
+    };
+
     const handleSend = () => {
         if (!text.trim() && uploadedFiles.length === 0) return;
         if (botTyping) return; // Prevent double submit while streaming
@@ -75,14 +131,19 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
             console.log('📁 Sending message with fileIds:', fileIds);
         }
         
-        onSend({
+        const payload = {
             text: text.trim(),
             files: uploadedFiles,
             isWebSearch: isWebSearchActive
-        });
-        setIsWebSearchActive(false);
-        setText('');
-        setUploadedFiles([]);
+        };
+
+        if (shouldPromptReactChecklist(payload.text) && !showReactChecklist) {
+            setPendingSend(payload);
+            setShowReactChecklist(true);
+            return;
+        }
+
+        finalizeSend(payload);
     };
 
     const handleStop = () => {
@@ -384,6 +445,64 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
 
             <div className="relative w-full max-w-[1200px] mx-auto backdrop-blur-xl rounded-2xl p-2.5 shadow-lg transition-all duration-300 chat-input-container bg-zinc-900 border border-emerald-500/30">
 
+                {showReactChecklist && (
+                    <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <div className="text-sm font-semibold text-emerald-300">React Requirements Checklist</div>
+                                <div className="text-xs text-zinc-400">Fill quick details or proceed with dummy data</div>
+                            </div>
+                            <button
+                                onClick={() => { setShowReactChecklist(false); setPendingSend(null); }}
+                                className="text-zinc-400 hover:text-zinc-200"
+                                title="Close"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <input
+                                value={reactChecklist.product}
+                                onChange={(e) => setReactChecklist(prev => ({ ...prev, product: e.target.value }))}
+                                placeholder="Product or app name"
+                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            />
+                            <input
+                                value={reactChecklist.audience}
+                                onChange={(e) => setReactChecklist(prev => ({ ...prev, audience: e.target.value }))}
+                                placeholder="Target audience"
+                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            />
+                            <input
+                                value={reactChecklist.sections}
+                                onChange={(e) => setReactChecklist(prev => ({ ...prev, sections: e.target.value }))}
+                                placeholder="Key sections (hero, features, pricing...)"
+                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            />
+                            <input
+                                value={reactChecklist.theme}
+                                onChange={(e) => setReactChecklist(prev => ({ ...prev, theme: e.target.value }))}
+                                placeholder="Theme or vibe (dark, minimal, neon...)"
+                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            />
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                                onClick={() => pendingSend && finalizeSend(pendingSend, { includeChecklist: true, useDefaults: true })}
+                                className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                            >
+                                Skip and use dummy data
+                            </button>
+                            <button
+                                onClick={() => pendingSend && finalizeSend(pendingSend, { includeChecklist: true, useDefaults: false })}
+                                className="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                            >
+                                Send with details
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="w-full">
                     <textarea
                         ref={textareaRef}
@@ -391,7 +510,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                         onChange={handleTextareaChange}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                         placeholder="Ask Relyce"
-                        className="w-full text-[15px] outline-none border-none custom-textarea-scrollbar leading-6 no-resize-handle bg-transparent text-white placeholder-zinc-400"
+                        className="w-full text-[15px] outline-none border-none custom-textarea-scrollbar leading-6 no-resize-handle bg-transparent text-white placeholder-zinc-400 disabled:opacity-60"
                         style={{
                             minHeight: '40px',
                             height: '40px',
@@ -401,6 +520,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                             boxSizing: 'border-box',
                             padding: '8px 0' // Add vertical padding
                         }}
+                        disabled={showReactChecklist}
                     />
                 </div>
 
@@ -457,7 +577,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                         <button onClick={toggleRecording} title={isRecording ? 'Stop Recording' : 'Start Voice Input'} className={`p-2 rounded-full transition-all ${isRecording ? 'bg-red-500 text-white hover:bg-red-600' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60'}`}>
                             {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                         </button>
-                        <button onClick={botTyping ? handleStop : handleSend} disabled={!text.trim() && uploadedFiles.length === 0 && !botTyping} className={`p-2 rounded-full transition-all ${(text.trim() || uploadedFiles.length > 0 || botTyping) ? 'bg-[#003925] hover:bg-emerald-900 text-white' : 'bg-zinc-700/50 text-zinc-500 cursor-not-allowed'}`}>
+                        <button onClick={botTyping ? handleStop : handleSend} disabled={showReactChecklist || (!text.trim() && uploadedFiles.length === 0 && !botTyping)} className={`p-2 rounded-full transition-all ${(text.trim() || uploadedFiles.length > 0 || botTyping) && !showReactChecklist ? 'bg-[#003925] hover:bg-emerald-900 text-white' : 'bg-zinc-700/50 text-zinc-500 cursor-not-allowed'}`}>
                             {botTyping ? <Square size={18} className="fill-current" /> : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                                 <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
                             </svg>}

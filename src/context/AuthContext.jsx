@@ -30,6 +30,7 @@ export default function AuthProvider({ children }) {
   const [membership, setMembership] = useState(null);
   const [loading, setLoading] = useState(true);
   const [roleError, setRoleError] = useState(null);
+  const [claimsRole, setClaimsRole] = useState(null);
   // Use Ref to track initialization within the closure
   const initialLoadComplete = useRef(false);
   const backendInitDone = useRef(false);
@@ -172,6 +173,7 @@ export default function AuthProvider({ children }) {
         setUserProfile(null);
         setMembership(null);
         setRoleError(null);
+        setClaimsRole(null);
         setLoading(false);
         return;
       }
@@ -199,12 +201,6 @@ export default function AuthProvider({ children }) {
                   rawMembership.plan || rawMembership.planName || membershipStatus.plan || 'unknown',
                   'expired'
                 ).catch(err => console.warn('[AuthContext] Failed to log membership expiry:', err));
-              }
-
-              if (!userData.role) {
-                setRoleError(new Error('Role missing in user profile'));
-              } else {
-                setRoleError(null);
               }
 
               setUserProfile(userData);
@@ -260,9 +256,15 @@ export default function AuthProvider({ children }) {
               tokenCheckInFlight.current = true;
               await authUser.getIdToken();
             }
+            const tokenResult = await authUser.getIdTokenResult(true);
+            const claims = tokenResult?.claims || {};
+            const roleFromClaims = claims.role || (claims.superadmin ? 'superadmin' : claims.admin ? 'admin' : '');
+            const normalizedRole = roleFromClaims === 'super_admin' ? 'superadmin' : roleFromClaims;
+            setClaimsRole(normalizedRole || 'user');
           } catch (tokenErr) {
             console.error('[Auth] Token refresh failed:', tokenErr);
             setRoleError(tokenErr);
+            setClaimsRole(null);
             setLoading(false);
             auth.signOut();
             return;
@@ -301,13 +303,13 @@ export default function AuthProvider({ children }) {
     }
   };
 
-  const role = userProfile?.role ?? null;
+  const role = user ? (claimsRole || 'user') : null;
 
   const value = React.useMemo(() => ({
     currentUser: user,
     userProfile,
     membership,
-    role, // Secure role from backend database
+    role, // Role derived from token claims
     roleError,
     auth,
     loading,

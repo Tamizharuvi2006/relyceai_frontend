@@ -16,10 +16,9 @@ import {
   Library
 } from "lucide-react";
 import gsap from "gsap";
-import useUserRole from "../../hooks/useUserRole";
 
 export default function Header() {
-  const { currentUser: user, userProfile, membership, loading } = useAuth();
+  const { currentUser: user, userProfile, membership, loading, role } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userPlan, setUserPlan] = useState('free');
@@ -169,7 +168,7 @@ export default function Header() {
                 <div className="text-left">
                   <p className="font-semibold text-white truncate max-w-[150px]">{user.displayName || user.email}</p>
                   <p className="text-xs text-emerald-400 capitalize">
-                    {(userProfile?.role === 'admin' || userProfile?.role === 'superadmin') ? 'Unlimited Access' : `${userPlan} Plan`}
+                    {(role === 'admin' || role === 'superadmin') ? 'Unlimited Access' : `${userPlan} Plan`}
                   </p>
                 </div>
                 <ChevronDown size={20} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -186,15 +185,15 @@ export default function Header() {
                     <p className="text-sm text-zinc-400 truncate">{user.email}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">
-                        {(userProfile?.role === 'admin' || userProfile?.role === 'superadmin') ? 'Unlimited Access' : userPlan.charAt(0).toUpperCase() + userPlan.slice(1)}
+                        {(role === 'admin' || role === 'superadmin') ? 'Unlimited Access' : userPlan.charAt(0).toUpperCase() + userPlan.slice(1)}
                       </span>
-                      {userProfile?.role === 'superadmin' && (
+                      {role === 'superadmin' && (
                         <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded-full flex items-center gap-1">
                           <Crown className="w-3 h-3" />
                           {loading ? '...' : 'Super Admin'}
                         </span>
                       )}
-                      {userProfile?.role === 'admin' && (
+                      {role === 'admin' && (
                         <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full flex items-center gap-1">
                           <Shield className="w-3 h-3" />
                           {loading ? '...' : 'Admin'}
@@ -215,12 +214,12 @@ export default function Header() {
                     <Link to="/membership" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
                       <CreditCard size={18} /><span>Change Plan</span>
                     </Link>
-                    {(userProfile?.role === 'admin' || userProfile?.role === 'superadmin') && (
+                    {(role === 'admin' || role === 'superadmin') && (
                       <Link to="/super" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200 rounded-md transition-colors">
                         <Shield size={18} /><span>Admin Dashboard</span>
                       </Link>
                     )}
-                    {userProfile?.role === 'superadmin' && (
+                    {role === 'superadmin' && (
                       <Link to="/boss" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-200 rounded-md transition-colors">
                         <Crown size={18} /><span>Super Admin Panel</span>
                       </Link>
@@ -317,7 +316,7 @@ export default function Header() {
                 )}
                 <div>
                   <p className="text-sm font-semibold truncate max-w-[140px]">{user.displayName || user.email}</p>
-                  <p className="text-xs text-emerald-400 capitalize">{(userProfile?.role === 'admin' || userProfile?.role === 'superadmin') ? 'Unlimited Access' : `${userPlan} Plan`}</p>
+                  <p className="text-xs text-emerald-400 capitalize">{(role === 'admin' || role === 'superadmin') ? 'Unlimited Access' : `${userPlan} Plan`}</p>
                 </div>
               </div>
               <button onClick={handleLogout} className="text-red-400 hover:text-red-300" aria-label="Logout">

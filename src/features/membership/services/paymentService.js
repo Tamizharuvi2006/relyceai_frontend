@@ -44,7 +44,7 @@ export const prefetchRazorpay = () => {
     });
 };
 
-export const createOrder = async (amount, currency = 'INR', planId, options = {}) => {
+export const createOrder = async (planId, billingCycle = 'monthly', currency = 'INR') => {
     try {
         const token = await auth.currentUser?.getIdToken();
         if (!token) throw new Error('Not authenticated');
@@ -53,21 +53,13 @@ export const createOrder = async (amount, currency = 'INR', planId, options = {}
         };
         if (token) headers['Authorization'] = `Bearer ${token}` ;
 
-        // Construct notes with all necessary metadata for webhook
-        const notes = {
-            plan_id: planId,
-            user_id: options.userId,
-            billing_cycle: options.billingCycle,
-            ...options.notes // Allow overriding/adding more notes
-        };
-
         const response = await fetch(`${API_BASE_URL}/payment/create-order`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
-                amount: amount * 100, // Convert to subunits (paise)
-                currency,
-                notes: notes
+                plan_id: planId,
+                billing_cycle: billingCycle,
+                currency
             })
         });
 
@@ -83,7 +75,7 @@ export const createOrder = async (amount, currency = 'INR', planId, options = {}
     }
 };
 
-export const verifyPayment = async (response, planDetails) => {
+export const verifyPayment = async (response) => {
     try {
         const token = await auth.currentUser?.getIdToken();
         if (!token) throw new Error('Not authenticated');
@@ -96,9 +88,7 @@ export const verifyPayment = async (response, planDetails) => {
             body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                plan_id: planDetails.id,
-                billing_cycle: planDetails.billingCycle || 'monthly'
+                razorpay_signature: response.razorpay_signature
             })
         });
 
@@ -126,10 +116,7 @@ export const handleRazorpayPayment = async (plan, amount, user, billingCycle, on
     try {
         // 1. Create Order
         // Pass userId and billingCycle for webhook handling
-        const orderData = await createOrder(amount, 'INR', plan.id, {
-            userId: user.uid,
-            billingCycle: billingCycle
-        });
+        const orderData = await createOrder(plan.id, billingCycle, 'INR');
         
         if (!orderData.success) throw new Error('Order creation failed');
 
@@ -147,17 +134,14 @@ export const handleRazorpayPayment = async (plan, amount, user, billingCycle, on
             handler: async function (response) {
                 try {
                     // 3. Verify Payment
-                    await verifyPayment(response, {
-                        id: plan.id,
-                        billingCycle: billingCycle, 
-                        userId: user.uid
-                    });
+                    await verifyPayment(response);
                     
                     // 4. Update Database (via callback)
+                    const orderAmount = orderData?.amount ?? amount;
                     if (onSuccess) onSuccess({
                         transactionId: response.razorpay_payment_id,
                         orderId: response.razorpay_order_id,
-                        amount: amount,
+                        amount: orderAmount,
                         currency: 'INR',
                         method: 'razorpay'
                     });
