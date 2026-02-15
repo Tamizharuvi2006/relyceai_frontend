@@ -1,17 +1,18 @@
-import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
-import { onIdTokenChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '../utils/firebaseConfig';
-import {
-  createUserProfile,
-  ensureUserHasId
-} from '../features/users/services/userService';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useRef,
+} from "react";
+import { onIdTokenChanged } from "firebase/auth";
+import { auth } from "../utils/firebaseConfig";
+import { fetchUserProfile as fetchUserProfileApi } from "../utils/api";
+import { createUserProfile } from "../features/users/services/userService";
 import {
   getUserMembership,
   checkMembershipExpiry,
-  isMembershipExpired,
-  addMembershipLog
-} from '../features/membership/services/membershipService';
+} from "../features/membership/services/membershipService";
 
 const AuthContext = createContext();
 
@@ -42,75 +43,139 @@ export default function AuthProvider({ children }) {
 
   const fetchUserProfile = async (uid, skipExpensiveOperations = false) => {
     try {
-      // Check cache first, but allow force refresh
       const cacheKey = `${uid}_${skipExpensiveOperations}`;
-      const cached = userProfileCache.get(cacheKey);
 
-      // Always fetch fresh data from Firestore, don't rely on cache for critical operations
-      const docSnap = await getDoc(doc(db, 'users', uid));
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
+      const payload = await fetchUserProfileApi();
+      if (payload?.user) {
+        const userData = payload.user;
 
-        // Ensure user has a uniqueUserId assigned
         if (!userData.uniqueUserId) {
-          const assignedId = await ensureUserHasId(uid);
-          if (assignedId) {
-            userData.uniqueUserId = assignedId;
+          console.log(
+            "[AuthContext] uniqueUserId missing, triggering backend init...",
+          );
+          try {
+            const token = await auth.currentUser?.getIdToken(true);
+            const apiUrl =
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+            const initResponse = await fetch(`${apiUrl}/users/init`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (initResponse.ok) {
+              const initData = await initResponse.json().catch(() => null);
+              if (initData?.uniqueUserId) {
+                userData.uniqueUserId = initData.uniqueUserId;
+                console.log(
+                  "[AuthContext] Assigned uniqueUserId:",
+                  initData.uniqueUserId,
+                );
+              }
+            }
+          } catch (initErr) {
+            console.warn("[AuthContext] Backend init call failed:", initErr);
           }
         }
 
-        // Only run expensive operations if not skipping
         if (!skipExpensiveOperations) {
-          // Check membership expiry (run in background)
-          checkMembershipExpiry(uid).catch(console.error);
+          checkMembershipExpiry(uid, userData).catch(console.error);
         }
 
-        // Get membership data (lightweight operation)
         let membershipData;
         try {
-          membershipData = await getUserMembership(uid);
+          membershipData = await getUserMembership(uid, userData);
         } catch (err) {
-          console.warn('Failed to get membership data:', err);
+          console.warn("Failed to get membership data:", err);
           membershipData = userData.membership || null;
         }
 
-        // Cache the result
         userProfileCache.set(cacheKey, {
           userProfile: userData,
           membership: membershipData,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         setUserProfile(userData);
         setMembership(membershipData);
 
         return userData;
-      } else {
-        // Create new user profile if doesn't exist
-        try {
-          const newProfile = await createUserProfile({ uid, email: auth.currentUser?.email });
-          setUserProfile(newProfile);
-          setMembership(newProfile.membership);
-          return newProfile;
-        } catch (err) {
-          console.error('Failed to create user profile:', err);
-          return null;
-        }
+      }
+
+      try {
+        const newProfile = await createUserProfile({
+          uid,
+          email: auth.currentUser?.email,
+        });
+        setUserProfile(newProfile);
+        setMembership(newProfile.membership);
+        return newProfile;
+      } catch (err) {
+        console.error("Failed to create user profile:", err);
+        return null;
       }
     } catch (err) {
-      console.error('Error fetching user profile:', err);
+      console.error("Error fetching user profile:", err);
       return null;
     }
   };
 
   useEffect(() => {
-    let profileUnsubscribe = null;
+    let profileRefreshTimer = null;
 
     const clearBackendInitRetry = () => {
       if (backendInitRetryTimer.current) {
         clearTimeout(backendInitRetryTimer.current);
         backendInitRetryTimer.current = null;
       }
+    };
+
+    const clearProfileRefresh = () => {
+      if (profileRefreshTimer) {
+        clearInterval(profileRefreshTimer);
+        profileRefreshTimer = null;
+      }
+    };
+
+    const startProfileRefresh = (authUser) => {
+      clearProfileRefresh();
+      if (!authUser) return;
+
+      // Initial fetch with retry logic
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      const tryFetch = async () => {
+        // Checking expiry is now cheap due to optimization, so pass false
+        const profile = await fetchUserProfile(authUser.uid, false);
+        if (profile) {
+          // Success, start interval
+          profileRefreshTimer = setInterval(() => {
+            fetchUserProfile(authUser.uid, false);
+          }, 60000);
+        } else {
+          // Failed, retry if attempts remain
+          attempts++;
+          if (attempts < maxAttempts) {
+            console.log(
+              `[AuthContext] Profile fetch failed, retrying (attempt ${attempts})...`,
+            );
+            setTimeout(tryFetch, 2000 * attempts); // Backoff: 2s, 4s
+          } else {
+            console.warn(
+              "[AuthContext] Profile fetch failed after retries, falling back to interval",
+            );
+            // Fallback to interval anyway, maybe network comes back later
+            profileRefreshTimer = setInterval(() => {
+              fetchUserProfile(authUser.uid, false);
+            }, 60000);
+          }
+        }
+      };
+
+      tryFetch();
     };
 
     const callBackendInit = async (authUser) => {
@@ -130,13 +195,14 @@ export default function AuthProvider({ children }) {
 
       try {
         const token = await authUser.getIdToken();
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+        const apiUrl =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
         const response = await fetch(`${apiUrl}/users/init`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
 
         if (!response.ok) {
@@ -146,9 +212,12 @@ export default function AuthProvider({ children }) {
         backendInitDone.current = true;
         clearBackendInitRetry();
       } catch (initErr) {
-        console.warn('[AuthContext] Backend init call failed, will retry:', initErr);
+        console.warn(
+          "[AuthContext] Backend init call failed, will retry:",
+          initErr,
+        );
         const cappedAttempt = Math.min(backendInitAttempt.current, 5);
-        const delayMs = Math.min(1000 * (2 ** cappedAttempt), 15000);
+        const delayMs = Math.min(1000 * 2 ** cappedAttempt, 15000);
         clearBackendInitRetry();
         backendInitRetryTimer.current = setTimeout(() => {
           callBackendInit(authUser);
@@ -158,140 +227,80 @@ export default function AuthProvider({ children }) {
       }
     };
 
-    const attachProfileListener = (authUser) => {
-      if (profileUnsubscribe) {
-        profileUnsubscribe();
-        profileUnsubscribe = null;
-      }
+    const authUnsubscribe = onIdTokenChanged(auth, async (authUser) => {
+      setLoading(true);
+      setUser(authUser);
+      if (authUser) {
+        try {
+          if (!tokenCheckInFlight.current) {
+            tokenCheckInFlight.current = true;
+            await authUser.getIdToken();
+          }
+          const tokenResult = await authUser.getIdTokenResult(true);
+          const claims = tokenResult?.claims || {};
+          const roleFromClaims =
+            claims.role ||
+            (claims.superadmin ? "superadmin" : claims.admin ? "admin" : "");
+          const normalizedRole =
+            roleFromClaims === "super_admin" ? "superadmin" : roleFromClaims;
+          setClaimsRole(normalizedRole || "user");
+        } catch (tokenErr) {
+          console.error("[Auth] Token refresh failed:", tokenErr);
+          setRoleError(tokenErr);
+          setClaimsRole(null);
+          setLoading(false);
+          auth.signOut();
+          return;
+        } finally {
+          tokenCheckInFlight.current = false;
+        }
+        if (!authUser) {
+          backendInitUserId.current = null;
+          backendInitDone.current = false;
+          backendInitInFlight.current = false;
+          backendInitAttempt.current = 0;
+          clearBackendInitRetry();
+          clearProfileRefresh();
+          setUserProfile(null);
+          setMembership(null);
+          setRoleError(null);
+          setClaimsRole(null);
+          setLoading(false);
+          return;
+        }
 
-      if (!authUser) {
+        callBackendInit(authUser);
+        startProfileRefresh(authUser);
+        if (!initialLoadComplete.current) {
+          initialLoadComplete.current = true;
+        }
+        setLoading(false);
+      } else {
         backendInitUserId.current = null;
         backendInitDone.current = false;
         backendInitInFlight.current = false;
         backendInitAttempt.current = 0;
         clearBackendInitRetry();
+        clearProfileRefresh();
         setUserProfile(null);
         setMembership(null);
         setRoleError(null);
         setClaimsRole(null);
         setLoading(false);
-        return;
       }
-
-      profileUnsubscribe = onSnapshot(
-        doc(db, 'users', authUser.uid),
-        async (docSnap) => {
-          try {
-            if (docSnap.exists()) {
-              const userData = docSnap.data();
-
-              if (!userData.uniqueUserId) {
-                await ensureUserHasId(authUser.uid);
-              }
-
-              const rawMembership = userData.membership || { status: 'inactive' };
-              const membershipStatus = isMembershipExpired(rawMembership)
-                ? { ...rawMembership, status: 'expired' }
-                : rawMembership;
-
-              if (membershipStatus.status === 'expired' && rawMembership.status !== 'expired') {
-                console.warn(`[AuthContext] Membership expired for ${authUser.uid}`);
-                addMembershipLog(
-                  authUser.uid,
-                  rawMembership.plan || rawMembership.planName || membershipStatus.plan || 'unknown',
-                  'expired'
-                ).catch(err => console.warn('[AuthContext] Failed to log membership expiry:', err));
-              }
-
-              setUserProfile(userData);
-              setMembership(membershipStatus);
-
-              userProfileCache.set(authUser.uid, {
-                userProfile: userData,
-                membership: membershipStatus,
-                timestamp: Date.now()
-              });
-
-              callBackendInit(authUser);
-
-              if (!initialLoadComplete.current) {
-                checkMembershipExpiry(authUser.uid).catch(console.error);
-                initialLoadComplete.current = true;
-              }
-            } else {
-              if (!initialLoadComplete.current) {
-                try {
-                  await createUserProfile({ uid: authUser.uid, email: authUser.email });
-                  initialLoadComplete.current = true;
-                } catch (e) {
-                  console.error("Error creating profile on snapshot missing:", e);
-                  setRoleError(e);
-                }
-              }
-            }
-          } catch (snapErr) {
-            console.error('[AuthContext] Snapshot handling failed:', snapErr);
-            setRoleError(snapErr);
-          } finally {
-            setLoading(false);
-          }
-        },
-        (error) => {
-          console.error("Profile snapshot error:", error);
-          setRoleError(error);
-          setLoading(false);
-        }
-      );
-    };
-
-    const authUnsubscribe = onIdTokenChanged(
-      auth,
-      async (authUser) => {
-        console.log('[Auth] onIdTokenChanged fired', authUser ? authUser.uid : 'null');
-        setLoading(true);
-        setUser(authUser);
-        if (authUser) {
-          try {
-            if (!tokenCheckInFlight.current) {
-              tokenCheckInFlight.current = true;
-              await authUser.getIdToken();
-            }
-            const tokenResult = await authUser.getIdTokenResult(true);
-            const claims = tokenResult?.claims || {};
-            const roleFromClaims = claims.role || (claims.superadmin ? 'superadmin' : claims.admin ? 'admin' : '');
-            const normalizedRole = roleFromClaims === 'super_admin' ? 'superadmin' : roleFromClaims;
-            setClaimsRole(normalizedRole || 'user');
-          } catch (tokenErr) {
-            console.error('[Auth] Token refresh failed:', tokenErr);
-            setRoleError(tokenErr);
-            setClaimsRole(null);
-            setLoading(false);
-            auth.signOut();
-            return;
-          } finally {
-            tokenCheckInFlight.current = false;
-          }
-        }
-        attachProfileListener(authUser);
-      },
-      (error) => {
-        console.error('[Auth] onIdTokenChanged error:', error);
-        setRoleError(error);
-        setLoading(false);
-      }
-    );
+    });
 
     const handleUnauthorized = () => {
-      console.warn('[Auth] Session expired or unauthorized. Logging out...');
+      console.warn("[Auth] Session expired or unauthorized. Logging out...");
       auth.signOut();
     };
-    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
 
     return () => {
-      if (profileUnsubscribe) profileUnsubscribe();
       authUnsubscribe();
       clearBackendInitRetry();
-      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+      clearProfileRefresh();
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
     };
   }, []); // Remove dependency on initialLoadComplete to avoid re-subscribing loop
 
@@ -303,23 +312,30 @@ export default function AuthProvider({ children }) {
     }
   };
 
-  const role = user ? (claimsRole || 'user') : null;
+  const role = user ? claimsRole || "user" : null;
 
-  const value = React.useMemo(() => ({
-    currentUser: user,
-    userProfile,
-    membership,
-    role, // Role derived from token claims
-    roleError,
-    auth,
-    loading,
-    refreshUserProfile,
-    refreshUserRole: refreshUserProfile, // Alias for backward compatibility
-  }), [user, userProfile, membership, role, loading, roleError, refreshUserProfile]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  const value = React.useMemo(
+    () => ({
+      currentUser: user,
+      userProfile,
+      membership,
+      role, // Role derived from token claims
+      roleError,
+      auth,
+      loading,
+      refreshUserProfile,
+      refreshUserRole: refreshUserProfile, // Alias for backward compatibility
+    }),
+    [
+      user,
+      userProfile,
+      membership,
+      role,
+      loading,
+      roleError,
+      refreshUserProfile,
+    ],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

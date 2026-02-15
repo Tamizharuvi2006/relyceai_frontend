@@ -1,6 +1,6 @@
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
-import { sendChatMessage, checkBackendHealth, fetchPersonalities, createPersonality, updatePersonality, deletePersonality } from '../utils/api';
+import { sendChatMessage, checkBackendHealth, fetchPersonalities, createPersonality, updatePersonality, deletePersonality, fetchUserProfile } from '../utils/api';
 
 class ChatService {
   static async addMessage(userId, sessionId, role, content, files = []) {
@@ -54,8 +54,8 @@ class ChatService {
   static async getUserUniqueId(userId) {
     try {
       if (userId) {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (userDoc.exists()) return userDoc.data().uniqueUserId || null;
+        const payload = await fetchUserProfile();
+        return payload?.user?.uniqueUserId || null;
       }
       return null;
     } catch {

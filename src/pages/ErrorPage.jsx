@@ -3,18 +3,21 @@ import { useNavigate, useRouteError } from 'react-router-dom';
 import { AlertTriangle, Home, LogIn, ArrowLeft } from 'lucide-react';
 
 const ErrorPage = ({ 
-  title = "Page Not Found", 
-  message = "The page you're looking for doesn't exist or has been moved.",
+  title = "Something went wrong", 
+  message = "Please try again in a moment.",
   showLoginButton = true,
   showHomeButton = true,
   showBackButton = false
 }) => {
   const navigate = useNavigate();
   const error = useRouteError();
+  const status = error?.status;
+  const isNotFound = status === 404 || title === "Page Not Found";
   
-  const displayTitle = error?.status === 404 ? "Page Not Found" : error?.statusText || title;
-  const displayMessage = error?.error?.message || error?.message || message;
-  const displayCode = error?.status || 404;
+  // Do not surface raw route errors to the UI.
+  const displayTitle = isNotFound ? "Page Not Found" : title;
+  const displayMessage = message;
+  const displayCode = typeof status === 'number' ? status : (isNotFound ? 404 : 500);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center px-4">

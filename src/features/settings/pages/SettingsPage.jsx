@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteUser, updatePassword, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, deleteDoc, collection, getDocs, query, where, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject, getStorage } from 'firebase/storage';
 import { db, auth, storage } from '../../../utils/firebaseConfig.js';
 import toast from 'react-hot-toast';
 
@@ -39,9 +39,32 @@ const DeleteAccountModal = ({ isOpen, onClose, user }) => {
     setError('');
 
     try {
-      // Delete user's chat sessions
+      const storage = getStorage();
+      
+      const filesRef = collection(db, 'users', user.uid, 'files');
+      const filesSnapshot = await getDocs(filesRef);
+      
+      const deleteFilePromises = filesSnapshot.docs.map(async (fileDoc) => {
+        const fileData = fileDoc.data();
+        if (fileData.storagePath) {
+          try {
+            const fileRef = ref(storage, fileData.storagePath);
+            await deleteObject(fileRef);
+          } catch (e) {
+            console.log('Could not delete file from storage:', e);
+          }
+        }
+      });
+      await Promise.all(deleteFilePromises);
+
+      const personalitiesRef = collection(db, 'users', user.uid, 'personalities');
+      const personalitiesSnapshot = await getDocs(personalitiesRef);
+      const deletePersonalitiesPromises = personalitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePersonalitiesPromises);
+
       const chatSessionsRef = collection(db, 'users', user.uid, 'chatSessions');
       const chatSessions = await getDocs(chatSessionsRef);
+      
       const deletePromises = chatSessions.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
 

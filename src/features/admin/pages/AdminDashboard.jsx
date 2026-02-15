@@ -354,13 +354,13 @@ const AdminDashboard = () => {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      const user = users.find(u => u.id === userId);
-      if (!user) {
+      const targetUser = users.find(u => u.id === userId);
+      if (!targetUser) {
         toast.error('User not found');
         return;
       }
 
-      if (!canModifyUserRole(accessLevel, user.role, newRole)) {
+      if (!canModifyUserRole(accessLevel, targetUser.role, newRole)) {
         toast.error('Insufficient permissions to modify user role');
         return;
       }

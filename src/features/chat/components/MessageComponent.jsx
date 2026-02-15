@@ -1,11 +1,219 @@
 // components/MessageComponent.jsx
-import React, { useState, useEffect, useRef, memo, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Download, Image, FileText, Globe, ExternalLink, Search, Sparkles, BrainCircuit, ChevronDown, ChevronUp } from 'lucide-react';
 import { getFileIcon, formatFileSize } from '../../../utils/chatHelpers';
+import './MessageComponent.css';
+
+const THINKING_START = "[THINKING]";
+const THINKING_END = "[/THINKING]";
+
+const parseThinkingContent = (content) => {
+  if (!content) return { thinkingContent: "", displayContent: "" };
+
+  const thinkingParts = [];
+  const displayParts = [];
+  let cursor = 0;
+
+  while (cursor < content.length) {
+    const start = content.indexOf(THINKING_START, cursor);
+    if (start === -1) {
+      displayParts.push(content.slice(cursor));
+      break;
+    }
+
+    displayParts.push(content.slice(cursor, start));
+    const end = content.indexOf(THINKING_END, start + THINKING_START.length);
+    if (end === -1) {
+      thinkingParts.push(content.slice(start + THINKING_START.length));
+      cursor = content.length;
+      break;
+    }
+
+    thinkingParts.push(content.slice(start + THINKING_START.length, end));
+    cursor = end + THINKING_END.length;
+  }
+
+  return {
+    thinkingContent: thinkingParts.join("\n").trim(),
+    displayContent: displayParts.join("").trim()
+  };
+};
+
+const normalizeThinkingContent = (text) => {
+  if (!text) return "";
+  let cleaned = text.replace(/\r\n/g, "\n");
+  cleaned = cleaned.replace(/\[\/?THINKING\]/gi, "");
+  cleaned = cleaned.replace(/^(Thinking Process:|Thinking:|Reasoning:)\s*/i, "");
+
+  cleaned = cleaned.replace(/\b(\w+):\s*\1:/gi, "$1:");
+  cleaned = cleaned.replace(/\b([A-Z][a-z]+)\s+\1\b/g, "$1");
+  cleaned = cleaned.replace(/^(\w+)\s+\1:/gim, "$1:");
+  cleaned = cleaned.replace(/(\w+\s+\w+):\s*\1:/gi, "$1:");
+  cleaned = cleaned.replace(/\b([a-zA-Z]{3,})([a-z]{3,})\2\b/g, "$1$2");
+  cleaned = cleaned.replace(/\b([A-Za-z]{2,})\1\b/g, "$1");
+  cleaned = cleaned.replace(/\b([A-Za-z]{2,})\b([,:;!?])\s*\1\b/gi, "$1$2");
+  cleaned = cleaned.replace(/\b([A-Za-z]{2,})\b(?:\s+\1\b)+/gi, "$1");
+  cleaned = cleaned.replace(/\b([A-Za-z]+(?:'s|'re|'ve|'d|n't))\b(?:\s+\1\b)+/gi, "$1");
+  cleaned = cleaned.replace(/'s\s*'s\b/gi, "'s");
+
+  cleaned = cleaned.replace(/::+/g, ":");
+  cleaned = cleaned.replace(/\.{2,}/g, ".");
+  cleaned = cleaned.replace(/--+/g, "-");
+  cleaned = cleaned.replace(/\s{2,}/g, " ");
+  cleaned = cleaned.replace(/\b([A-Za-z]{2,}\s+[A-Za-z]{2,})\s+\1\b/gi, "$1");
+  cleaned = cleaned.replace(/\*\*\s*\*\*/g, "");
+  cleaned = cleaned.replace(/(\n|^)\s*\*\s*Option\s+(\d+)\s*(.*?):/gi, "$1- **Option $2$3:**");
+  cleaned = cleaned.replace(/\*\*\s*:\s*\*\*/g, ":");
+
+  const lines = cleaned.split("\n");
+  const deduped = [];
+  let lastLine = "";
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed === lastLine) continue;
+    deduped.push(line);
+    lastLine = trimmed;
+  }
+
+  return deduped.join("\n").trim();
+};
+
+const formatThinkingForDisplay = (text) => {
+  if (!text) return text;
+  let cleaned = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*\*/g, "")
+    .replace(/[â€¢]/g, "*")
+    .replace(/\s*\*\s*\*\s*/g, "\n")
+    .replace(/([^\n])\s*(\d+(?:\.\d+)*)(?:\.){1,}\s+/g, "$1\n$2. ")
+    .replace(/\n{3,}/g, "\n\n");
+
+  const normalizeSectionNumber = (value) => {
+    const first = value.split(".")[0];
+    if (/^(\d)\1+$/.test(first)) {
+      return first[0];
+    }
+    return first;
+  };
+
+  const cleanTitle = (value) =>
+    value
+      .replace(/\*+/g, "")
+      .replace(/[:\-]\s*$/, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
+  const splitIntoItems = (value) => {
+    if (!value) return [];
+    let working = value;
+    working = working.replace(
+      /\s+(?=(?:Input|Context|Persona|Preferences|Intent|Tone|Constraints|Option|Safety|Final|Response|Strategy|Plan|Drafting|Refining)\b\s*:)/gi,
+      "\n"
+    );
+    working = working.replace(/\s+(?=Option\s+\d+\b)/gi, "\n");
+    working = working.replace(/\s+(?=Final Output Generation\b)/gi, "\n");
+    working = working.replace(/\s+(?=Final Polish\b)/gi, "\n");
+    working = working.replace(/\s+(?=Safety Check\b)/gi, "\n");
+    working = working.replace(/\s+(?=Response Strategy\b)/gi, "\n");
+    working = working.replace(/\s*\*\s*\*\s*/g, "\n");
+
+    const chunks = working.split("\n");
+    const items = [];
+    for (const chunk of chunks) {
+      if (!chunk) continue;
+      let trimmed = chunk.trim();
+      if (!trimmed) continue;
+      trimmed = trimmed.replace(/^\s*[*â€¢-]\s*/, "");
+      trimmed = trimmed.replace(/\s{2,}/g, " ");
+      const subparts = trimmed
+        .split(/\s+\*\s+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (subparts.length > 1) {
+        items.push(...subparts);
+      } else {
+        items.push(trimmed);
+      }
+    }
+    return items;
+  };
+
+  const lines = cleaned.split("\n");
+  const output = [];
+  let currentSection = null;
+  let buffer = [];
+
+  const flushSection = () => {
+    if (!currentSection && buffer.length === 0) return;
+    if (currentSection) {
+      output.push(`### ${currentSection}`);
+    }
+    if (buffer.length > 0) {
+      buffer.forEach((item) => output.push(`- ${item}`));
+    }
+    buffer = [];
+  };
+
+  const pushLine = (value) => {
+    splitIntoItems(value).forEach((item) => {
+      if (item) buffer.push(item);
+    });
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    const sectionMatch = line.match(/^\s*(\d+(?:\.\d+)*)(?:\.)+\s*(.+)$/);
+    if (sectionMatch) {
+      flushSection();
+      const number = normalizeSectionNumber(sectionMatch[1]);
+      const remainder = sectionMatch[2].trim();
+      const parts = splitIntoItems(remainder);
+      const titleRaw = parts.shift() || remainder;
+      const title = cleanTitle(titleRaw);
+      currentSection = title ? `${number}. ${title}` : `${number}.`;
+      parts.forEach((item) => buffer.push(item));
+      continue;
+    }
+
+    pushLine(line);
+  }
+
+  flushSection();
+  return output.join("\n");
+};
+
+const cleanHeading = (value) => {
+  if (!value) return "";
+  return value
+    .replace(/^[#*\s]+/, "")
+    .replace(/\s+[*#:]+$/, "")
+    .trim();
+};
+
+const extractCurrentHeading = (text) => {
+  if (!text) return "";
+  const isNoiseHeading = (value) =>
+    /final output generation|safety check/i.test(value);
+  const lines = text.split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (/^#{1,6}\s+.+$/.test(line) || /^\d+\.\s+.+$/.test(line)) {
+      const cleaned = cleanHeading(line.replace(/^\d+\.\s*/, ""));
+      if (cleaned && cleaned.length < 60 && !isNoiseHeading(cleaned)) {
+         return cleaned;
+      }
+    }
+  }
+  return "";
+};
 
 /**
  * Premium animated thinking indicator - sleek and minimal
@@ -60,10 +268,11 @@ const SourcesDisplay = ({ sources }) => (
         try {
           domain = new URL(source.link).hostname.replace('www.', '');
         } catch {}
+        const sourceKey = source.link || source.title || `source-${idx}`;
         
         return (
           <a
-            key={idx}
+            key={sourceKey}
             href={source.link}
             target="_blank"
             rel="noopener noreferrer"
@@ -83,27 +292,53 @@ const SourcesDisplay = ({ sources }) => (
 /**
  * Thinking Dropdown Component
  */
-const ThinkingDropdown = ({ content }) => {
+const ThinkingDropdown = ({ formattedContent, currentHeading, isStreaming, hasAnswer }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasUserToggled, setHasUserToggled] = useState(false);
 
-  if (!content) return null;
+  if (!formattedContent) return null;
+
+  const showLiveHeading = Boolean(isStreaming && currentHeading);
+  const showStaticHeading = Boolean(!isStreaming && currentHeading);
+
+  useEffect(() => {
+    if (hasAnswer && isOpen && !hasUserToggled) {
+      setIsOpen(false);
+    }
+  }, [hasAnswer, isOpen, hasUserToggled]);
 
   return (
-    <div className="mb-3">
+    <div className="thinking-dropdown-container">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition-colors text-left"
+        onClick={() => {
+          setHasUserToggled(true);
+          setIsOpen(!isOpen);
+        }}
+        className="thinking-header"
       >
         {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        <Sparkles size={16} className="text-emerald-400/80" />
-        <span className="font-medium">Show thinking</span>
+        <Sparkles size={16} className="thinking-icon" />
+        <span className="thinking-label">{isStreaming ? "Thinking" : "Show thinking"}</span>
+        
+        {showLiveHeading && (
+          <span className="thinking-heading-live">
+            {currentHeading}
+          </span>
+        )}
+        {!showLiveHeading && showStaticHeading && (
+          <span className="thinking-heading-static">
+            {currentHeading}
+          </span>
+        )}
       </button>
       
       {isOpen && (
-        <div className="mt-3 rounded-lg border border-zinc-800/60 bg-zinc-900/60 p-4 text-zinc-200 text-[13px] leading-relaxed whitespace-pre-wrap shadow-inner animate-fade-in-down">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {content}
-          </ReactMarkdown>
+        <div className="thinking-content">
+          <div className="thinking-markdown">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {formattedContent}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
     </div>
@@ -116,6 +351,15 @@ const ThinkingDropdown = ({ content }) => {
 /**
  * Message component - ChatGPT style layout
  */
+const isSafeUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+};
+
 const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, onContinue, continueMeta, isLastMessage, chatMode, thinkingVisibility = 'auto' }, ref) => {
   const [showCopyButton, setShowCopyButton] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -304,20 +548,23 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
         {...props}
       />
     ),
-    a: ({ _node, href, children, ...props }) => (
-      <a
-        className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline transition-all"
-        target="_blank"
-        rel="noopener noreferrer"
-        href={href}
-        {...props}
-      >
-        {children}
-        <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-        </svg>
-      </a>
-    ),
+    a: ({ _node, href, children, ...props }) => {
+      const safeHref = isSafeUrl(href) ? href : '#';
+      return (
+        <a
+          className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline transition-all"
+          target="_blank"
+          rel="noopener noreferrer"
+          href={safeHref}
+          {...props}
+        >
+          {children}
+          <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+      );
+    },
     table: ({ _node, ...props }) => (
       <div className="my-4 w-full overflow-x-auto rounded-md border border-emerald-500/20">
         <table className="w-full border-collapse" {...props} />
@@ -426,22 +673,37 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const isGenerating = msg.isGenerating;
   const isStreaming = msg.isStreaming;
   const sources = msg.sources || [];
-  
-  // Extract thinking content
-  let thinkingContent = "";
-  let displayContent = msg.content;
 
-  const thinkingMatch = msg.content && msg.content.match(/\[THINKING\]([\s\S]*?)(?:\[\/THINKING\]|$)/);
-  if (thinkingMatch) {
-    thinkingContent = thinkingMatch[1].trim();
-    const fullMatch = thinkingMatch[0];
-    displayContent = msg.content.replace(fullMatch, "").trim();
-  }
-  displayContent = stripContinueMarkers(displayContent);
-  
+  const parsedContent = useMemo(
+    () => parseThinkingContent(msg.content || ""),
+    [msg.content]
+  );
+  const displayContent = useMemo(() => {
+    let cleaned = stripContinueMarkers(parsedContent.displayContent || "");
+    cleaned = cleaned.replace(/\[\/?THINKING\]/gi, "").trim();
+    return cleaned;
+  }, [parsedContent.displayContent]);
+  const thinkingContent = parsedContent.thinkingContent || "";
+  const normalizedThinking = useMemo(
+    () => normalizeThinkingContent(thinkingContent),
+    [thinkingContent]
+  );
+  const formattedThinking = useMemo(
+    () => formatThinkingForDisplay(normalizedThinking),
+    [normalizedThinking]
+  );
+  const currentHeading = useMemo(
+    () => extractCurrentHeading(formattedThinking),
+    [formattedThinking]
+  );
+  const preprocessedDisplay = useMemo(
+    () => preprocessContent(displayContent),
+    [displayContent]
+  );
+
   const hasVisibleContent = Boolean(displayContent && displayContent.trim().length > 0);
-  const allowThinkingPanel = thinkingVisibility !== 'off' && Boolean(thinkingContent);
-  const indicatorActive = Boolean((isSearching || isGenerating) && !hasVisibleContent && !thinkingContent);
+  const allowThinkingPanel = thinkingVisibility !== 'off' && Boolean(formattedThinking);
+  const indicatorActive = Boolean((isSearching || isGenerating) && !hasVisibleContent && !formattedThinking);
 
   useEffect(() => {
     const minDurationMs = 1200;
@@ -536,8 +798,10 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
           {/* File attachments */}
           {msg.files && msg.files.length > 0 && (
             <div className="mb-2 space-y-2">
-              {msg.files.map((file, idx) => (
-                <div key={idx} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-zinc-800/50">
+              {msg.files.map((file, idx) => {
+                const fileKey = file.id || `${file.name || 'file'}:${file.size || 0}:${file.lastModified || idx}`;
+                return (
+                  <div key={fileKey} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-zinc-800/50">
                   {(() => {
                     const icon = getFileIcon(file.type);
                     switch (icon.type) {
@@ -551,7 +815,8 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
                     <div className="text-xs text-gray-400">{formatFileSize(file.size)}</div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
           
@@ -595,7 +860,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
       <div className="flex-1 min-w-0">
         <div className={isGeneric ? "text-zinc-100 leading-[1.75] max-w-none" : "text-gray-100 leading-relaxed max-w-none"}>
           {/* Loader - only shows when NO content yet, hides immediately when first token arrives */}
-          {(!displayContent && !thinkingContent) && (isSearching || isGenerating) && (
+          {(!displayContent && !formattedThinking) && (isSearching || isGenerating) && (
             <ProcessingIndicator query={msg.searchQuery} showSearch={isSearching} holdFinalStep={holdFinalStep} />
           )}
 
@@ -606,7 +871,12 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
 
           {/* Thinking Dropdown */}
           {allowThinkingPanel && (
-            <ThinkingDropdown content={thinkingContent} />
+            <ThinkingDropdown
+              formattedContent={formattedThinking}
+              currentHeading={currentHeading}
+              isStreaming={Boolean(isStreaming && !hasVisibleContent)}
+              hasAnswer={hasVisibleContent}
+            />
           )}
 
           {/* Message text */}
@@ -622,7 +892,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
                 components={MarkdownComponents}
                 remarkPlugins={[remarkGfm]}
               >
-                {preprocessContent(displayContent)}
+                {preprocessedDisplay}
               </ReactMarkdown>
               {/* Streaming cursor */}
               {isStreaming && (
@@ -684,4 +954,3 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
 }));
 
 export default MessageComponent;
-

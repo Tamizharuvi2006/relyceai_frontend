@@ -6,13 +6,27 @@ import PDFService from '../../services/pdfService';
 import ChatService from '../../services/chatService';
 import { WebSocketChatManager, streamChatMessage } from '../../utils/api';
 
-// Module-level singleton to prevent React StrictMode from creating duplicate connections
 let sharedWsManager = null;
-const getWsManager = () => {
+let currentSessionId = null;
+
+const getWsManager = (sessionId) => {
+    if (sharedWsManager && currentSessionId !== sessionId) {
+        sharedWsManager.disconnect();
+        sharedWsManager = null;
+    }
     if (!sharedWsManager) {
         sharedWsManager = new WebSocketChatManager();
+        currentSessionId = sessionId;
     }
     return sharedWsManager;
+};
+
+const resetWsManager = () => {
+    if (sharedWsManager) {
+        sharedWsManager.disconnect();
+        sharedWsManager = null;
+        currentSessionId = null;
+    }
 };
 
 export default function useChatMessages({ core, currentSessionId, userId, onMessagesUpdate }) {
@@ -23,10 +37,9 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         activePersonality, userProfile
     } = core;
 
-    // Refs for tracking messages
     const lastSessionIdRef = useRef(null);
     const streamingMessageIdRef = useRef(null);
-    const wsManagerRef = useRef(getWsManager()); // Use singleton
+    const wsManagerRef = useRef(null);
     const tokenBufferRef = useRef('');
     const wsCallbacksRef = useRef(null);
     const tokenProviderRef = useRef(null);
@@ -57,6 +70,15 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     const failStream = useCallback((err) => {
         const botMsgId = streamingMessageIdRef.current;
         if (botMsgId) {
+            const buffered = tokenBufferRef.current;
+            const existing = messagesRef.current?.find(msg => msg.id === botMsgId);
+            const hasContent = Boolean((existing?.content || '').trim()) || Boolean(buffered);
+
+            if (hasContent) {
+                finalizeStream();
+                return;
+            }
+
             setMessages(prev => prev.map(msg =>
                 msg.id === botMsgId
                     ? {
@@ -74,7 +96,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         setIsDeepSearchActive(false);
         setCurrentMessageId(null);
         streamingMessageIdRef.current = null;
-    }, [setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
+    }, [finalizeStream, messagesRef, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
 
 
     useEffect(() => {
@@ -84,7 +106,15 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
 
         // Clear message tracking when session changes
         if (lastSessionIdRef.current !== currentSessionId) {
+            if (lastSessionIdRef.current && wsManagerRef.current) {
+                wsManagerRef.current.disconnect();
+                wsManagerRef.current = null;
+            }
             lastSessionIdRef.current = currentSessionId;
+        }
+        
+        if (!wsManagerRef.current) {
+            wsManagerRef.current = getWsManager(currentSessionId);
         }
 
         // Initialize WebSocket Connection
@@ -179,43 +209,89 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         };
     }, [currentSessionId, userId, setWsConnected, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId, setIsReconnecting, finalizeStream, failStream]);
 
-    // Heartbeat & Buffer Flush Effect
+    // Heartbeat & Buffer Flush Effect - use ref to avoid re-running on every render
+    const setMessagesRef = useRef(setMessages);
     useEffect(() => {
+        setMessagesRef.current = setMessages;
+    }, [setMessages]);
+
+useEffect(() => {
         const pingInterval = setInterval(() => {
              if (wsManagerRef.current) wsManagerRef.current.ping();
-        }, 25000); // 25s heartbeat
+        }, 25000);
 
-        // Use requestAnimationFrame for smoother 60fps+ updates (syncs with screen refresh)
-        let animationFrameId;
-        const flushBuffer = () => {
-            const chunk = tokenBufferRef.current;
-            if (chunk && streamingMessageIdRef.current) {
-                tokenBufferRef.current = "";
-                const botMsgId = streamingMessageIdRef.current;
-                
-                // Functional update to ensure we don't depend on stale state
-                // This runs as fast as the browser can paint (typically 60-144 times per second)
-                setMessages(prev => prev.map(msg => 
-                    msg.id === botMsgId 
-                        ? { 
-                            ...msg, 
-                            content: (msg.content || '') + chunk,
-                            isStreaming: true
-                          }
-                        : msg
-                ));
-            }
-            animationFrameId = requestAnimationFrame(flushBuffer);
+        let animationFrameId = null;
+        let lastFlushTime = 0;
+        const FLUSH_INTERVAL_MS = 50;
+        let pendingContent = '';
+        let isScheduled = false;
+
+        const scheduleFlush = () => {
+            if (isScheduled) return;
+            isScheduled = true;
+            animationFrameId = requestAnimationFrame(performFlush);
         };
-        
-        // Start the render loop
-        animationFrameId = requestAnimationFrame(flushBuffer);
+
+        const performFlush = () => {
+            isScheduled = false;
+            animationFrameId = null;
+
+            const now = Date.now();
+            const chunk = tokenBufferRef.current;
+            
+            if (chunk) {
+                tokenBufferRef.current = '';
+                pendingContent += chunk;
+            }
+
+            const hasPendingContent = pendingContent.length > 0;
+            const timeSinceLastFlush = now - lastFlushTime;
+            const shouldFlushNow = hasPendingContent && (timeSinceLastFlush >= FLUSH_INTERVAL_MS || pendingContent.length > 100);
+
+            if (shouldFlushNow && streamingMessageIdRef.current) {
+                const botMsgId = streamingMessageIdRef.current;
+                const contentToFlush = pendingContent;
+                pendingContent = '';
+                lastFlushTime = now;
+
+                const setMessages = setMessagesRef.current;
+                setMessages(prev => {
+                    const idx = prev.findIndex(msg => msg.id === botMsgId);
+                    if (idx === -1) return prev;
+                    const msg = prev[idx];
+                    if (msg.content === (msg.content || '') + contentToFlush) return prev;
+                    const newMsg = {
+                        ...msg,
+                        content: (msg.content || '') + contentToFlush,
+                        isStreaming: true
+                    };
+                    const newArr = prev.slice();
+                    newArr[idx] = newMsg;
+                    return newArr;
+                });
+            }
+
+            if (chunk || pendingContent) {
+                scheduleFlush();
+            }
+        };
+
+        const checkBuffer = () => {
+            if (tokenBufferRef.current || pendingContent) {
+                scheduleFlush();
+            }
+        };
+
+        const bufferCheckInterval = setInterval(checkBuffer, 30);
 
         return () => {
             clearInterval(pingInterval);
-            cancelAnimationFrame(animationFrameId);
+            clearInterval(bufferCheckInterval);
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
         };
-    }, [setMessages]);
+    }, []);
 
     const handleReconnect = async () => {
         if (isReconnecting) return;
@@ -332,7 +408,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
             // Send via WebSocket (preferred), fallback to SSE if not connected
             try {
                 const effectiveMode = isWebSearch ? 'deepsearch' : chatMode;
-                const personalityToSend = (effectiveMode === 'normal' || chatMode === 'normal') ? activePersonality : null;
+                const personalityToSend = effectiveMode === 'normal' ? activePersonality : null;
                 const userSettings = userProfile?.settings || null;
                 const fileIds = files.map((f) => f.fileId).filter(Boolean);
 

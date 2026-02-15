@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { LogIn } from 'lucide-react';
 import ChatInput from './ChatInput';
@@ -9,6 +9,79 @@ import TypingIndicator from './TypingIndicator';
 import { LoadingSpinner } from '../../../components/loading';
 import BotSkeletonLoader from './BotSkeletonLoader';
 import logo from '../../../assets/logo.svg';
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const inferContinueMeta = (content) => {
+  if (!content) return null;
+  if (/CONTINUE_AVAILABLE/i.test(content)) return null;
+  if (!/```/.test(content)) return null;
+  if (!/^##\s+[A-Za-z0-9_.-]+/m.test(content)) return null;
+
+  const fileRegex = /^##\s+([A-Za-z0-9_.-]+)\s*$/gm;
+  let lastFile = null;
+  let lastIndex = -1;
+  let match;
+  while ((match = fileRegex.exec(content)) !== null) {
+    lastFile = match[1];
+    lastIndex = match.index + match[0].length;
+  }
+  if (!lastFile || lastIndex < 0) return null;
+
+  const tail = content.slice(lastIndex);
+  const saveRegex = new RegExp(`Save as:\\s*${escapeRegex(lastFile)}\\b`, "i");
+  if (saveRegex.test(tail)) return null;
+
+  const fenceCount = (tail.match(/```/g) || []).length;
+  const unclosedFence = fenceCount % 2 === 1;
+  const endsWithFence = /```\s*$/.test(content.trim());
+  const looksIncomplete = unclosedFence || !endsWithFence;
+  if (!looksIncomplete) return null;
+
+  let mode = null;
+  if (/\.(jsx|tsx)$/i.test(lastFile)) mode = "ui_react";
+  else if (/\.(html|css|js)$/i.test(lastFile)) mode = "ui_demo_html";
+  else return null;
+
+  return { file: lastFile, mode };
+};
+
+const extractContinueMeta = (content) => {
+  if (!content) return null;
+  const match = content.match(/CONTINUE_AVAILABLE\s*(\{[\s\S]*?\})/i);
+  if (!match) return inferContinueMeta(content);
+  try {
+    const meta = JSON.parse(match[1]);
+    if (!meta || typeof meta.file !== "string" || typeof meta.mode !== "string") return null;
+    const allowedModes = new Set(["ui_demo_html", "ui_react", "ui_implementation"]);
+    if (!allowedModes.has(meta.mode)) return null;
+    return {
+      file: meta.file,
+      mode: meta.mode,
+      lines: Number.isFinite(meta.lines) ? meta.lines : undefined,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const buildContinuePrompt = (meta, content) => {
+  return [
+    "Continue generating UI code.",
+    `Mode: ${meta.mode}`,
+    `File: ${meta.file}`,
+    "Rules:",
+    "- Continue from the exact last line of the previous output.",
+    "- Do not repeat any previous content.",
+    "- Continue the same file only.",
+    "- Do not output any explanations or extra text.",
+    "- If you must stop again, append a CONTINUE_AVAILABLE comment with updated metadata.",
+    "",
+    "<PREVIOUS_OUTPUT>",
+    content || "",
+    "</PREVIOUS_OUTPUT>",
+  ].join("\n");
+};
 
 const ChatWindow = memo(function ChatWindow({
   currentSessionId,
@@ -74,49 +147,12 @@ const ChatWindow = memo(function ChatWindow({
     personalities: externalPersonalities,
   });
 
-  const extractContinueMeta = (content) => {
-    if (!content) return null;
-    const match = content.match(/CONTINUE_AVAILABLE\s*(\{[\s\S]*?\})/i);
-    if (!match) return null;
-    try {
-      const meta = JSON.parse(match[1]);
-      if (!meta || typeof meta.file !== 'string' || typeof meta.mode !== 'string') return null;
-      const allowedModes = new Set(['ui_demo_html', 'ui_react', 'ui_implementation']);
-      if (!allowedModes.has(meta.mode)) return null;
-      return {
-        file: meta.file,
-        mode: meta.mode,
-        lines: Number.isFinite(meta.lines) ? meta.lines : undefined,
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const buildContinuePrompt = (meta, content) => {
-    return [
-      "Continue generating UI code.",
-      `Mode: ${meta.mode}`,
-      `File: ${meta.file}`,
-      "Rules:",
-      "- Continue from the exact last line of the previous output.",
-      "- Do not repeat any previous content.",
-      "- Continue the same file only.",
-      "- Do not output any explanations or extra text.",
-      "- If you must stop again, append a CONTINUE_AVAILABLE comment with updated metadata.",
-      "",
-      "<PREVIOUS_OUTPUT>",
-      content || "",
-      "</PREVIOUS_OUTPUT>",
-    ].join("\n");
-  };
-
-  const handleContinue = (msg, meta) => {
+  const handleContinue = useCallback((msg, meta) => {
     if (!msg || !meta) return;
     if (chatMode !== 'normal') return;
     const prompt = buildContinuePrompt(meta, msg.content);
     handleSend({ text: prompt });
-  };
+  }, [chatMode, handleSend]);
 
   // ... (refs) ... 
   // (skipping unchanged code) since this is a view-replace tool, I need to be careful. 
@@ -333,10 +369,10 @@ const ChatWindow = memo(function ChatWindow({
           
           /* Smooth chat transition for session switching */
           .chat-messages-container {
-            transition: opacity 0.15s ease-out;
+            transition: none;
           }
           .chat-messages-container.transitioning {
-            opacity: 0.6;
+            opacity: 1;
           }
           
           /* Mobile input container styles */

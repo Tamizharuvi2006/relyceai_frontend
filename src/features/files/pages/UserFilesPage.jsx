@@ -23,46 +23,18 @@ const UserFiles = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('=== Loading user files ===');
-      console.log('User profile:', userProfile);
-      console.log('User ID:', userProfile?.uid);
 
       if (userProfile?.uid) {
-        console.log('Fetching files for user ID:', userProfile.uid);
         const userFiles = await getUserFiles(userProfile.uid);
-        console.log('Retrieved files:', userFiles);
-        console.log('Number of files retrieved:', userFiles.length);
-
-        // Log each file's properties
-        userFiles.forEach((file, index) => {
-          console.log(`File ${index + 1}:`, {
-            id: file.id,
-            fileName: file.fileName,
-            originalName: file.originalName,
-            fileSize: file.fileSize,
-            fileType: file.fileType,
-            uploadDate: file.uploadDate,
-            backendOnly: file.backendOnly,
-            backendPath: file.backendPath
-          });
-        });
 
         setFiles(userFiles);
-        console.log('Files state updated with', userFiles.length, 'files');
       } else {
-        console.log('No user ID found for file retrieval');
-        console.log('User profile:', userProfile);
       }
     } catch (err) {
-      console.error('Error loading user files:', err);
-      console.error('Error details:', {
-        message: err.message,
-        stack: err.stack
-      });
+      console.error('Error loading user files');
       setError('Failed to load files. Please try again.');
     } finally {
       setLoading(false);
-      console.log('=== Finished loading user files ===');
     }
   };
 
@@ -165,7 +137,7 @@ const UserFiles = () => {
       // Check for any errors
       const errors = results.filter(result => result.error);
       if (errors.length > 0) {
-        console.error('Some files failed to delete:', errors);
+        console.error('Some files failed to delete');
         showNotification(`Failed to delete ${errors.length} file(s). Please try again.`, 'error');
       } else {
         // Delete Firestore metadata for each file
@@ -183,9 +155,8 @@ const UserFiles = () => {
       // Clear selection
       setSelectedFiles(new Set());
 
-      console.log(`Successfully deleted ${filesToDelete.length} file(s)`);
     } catch (err) {
-      console.error('Error deleting files:', err);
+      console.error('Error deleting files');
       showNotification('Failed to delete files. Please try again.', 'error');
     } finally {
       setDeleting(false);
@@ -214,7 +185,7 @@ const UserFiles = () => {
       const result = await deleteFile(fileName);
 
       if (result.error) {
-        console.error('Failed to delete file:', result.error);
+        console.error('Failed to delete file');
         showNotification('Failed to delete file. Please try again.', 'error');
         return;
       }
@@ -233,9 +204,8 @@ const UserFiles = () => {
       }
 
       showNotification(`Successfully deleted ${file.originalName || file.fileName}`, 'success');
-      console.log(`Successfully deleted file: ${fileName}`);
     } catch (err) {
-      console.error('Error deleting file:', err);
+      console.error('Error deleting file');
       showNotification('Failed to delete file. Please try again.', 'error');
     } finally {
       setDeleting(false);
@@ -256,7 +226,7 @@ const UserFiles = () => {
         alert('Backend not connected. Please integrate your new backend for file downloads.');
       }
     } catch (err) {
-      console.error('Error downloading file:', err);
+      console.error('Error downloading file');
       alert('Failed to download file. Please try again.');
     }
   };

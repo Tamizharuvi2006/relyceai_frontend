@@ -7,9 +7,9 @@ import { generateUserId } from '../../users/services/userService';
 export const MEMBERSHIP_PLANS = {
   free: { name: 'Free', monthly: 0, yearly: 0, yearlyDiscountPercentage: 0, features: ['Generic AI chatbot', 'Limited business chatbot', 'Basic data visualization', '15 chats/month', '30-day history'] },
   starter: { name: 'Starter', monthly: 199, yearly: 1999, yearlyDiscountPercentage: 16.7, features: ['Generic + Business chatbot', 'Interactive visualization', '150 chats/month', '60-day history', 'Export chat', 'Priority support'] },
-  plus: { name: 'Plus', monthly: 499, yearly: 4999, yearlyDiscountPercentage: 16.7, features: ['Advanced business workflows', 'Enhanced visualization', '600 chats/month', 'File upload (50 files, 100MB)', 'Premium support', 'Export reports'] },
-  pro: { name: 'Pro', monthly: 1499, yearly: 14999, yearlyDiscountPercentage: 16.7, features: ['Team collaboration (5 users)', 'Advanced analytics', 'Custom branding', 'API access', '1,500 chats/month', 'Priority tech support'] },
-  business: { name: 'Business', monthly: 4999, yearly: 49999, yearlyDiscountPercentage: 16.7, features: ['Unlimited chats', 'Unlimited file uploads', 'Dedicated support manager', 'Team management', 'Advanced security', 'SLA guarantee'] }
+  plus: { name: 'Plus', monthly: 999, yearly: 9999, yearlyDiscountPercentage: 16.7, features: ['Advanced business workflows', 'Enhanced visualization', '600 chats/month', 'File upload (50 files, 100MB)', 'Premium support', 'Export reports'] },
+  pro: { name: 'Pro', monthly: 1999, yearly: 19999, yearlyDiscountPercentage: 16.7, features: ['Team collaboration (5 users)', 'Advanced analytics', 'Custom branding', 'API access', '1,500 chats/month', 'Priority tech support'] },
+  business: { name: 'Business', monthly: 2499, yearly: 24999, yearlyDiscountPercentage: 16.7, features: ['Unlimited chats', 'Unlimited file uploads', 'Dedicated support manager', 'Team management', 'Advanced security', 'SLA guarantee'] }
 };
 
 export const getAllUsers = async (requesterId) => {

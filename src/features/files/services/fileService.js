@@ -1,8 +1,8 @@
-import { doc, setDoc, addDoc, collection, serverTimestamp, deleteDoc, getDoc, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, serverTimestamp, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../utils/firebaseConfig';
 // import { updateUserUsage } from '../../users/services/userService'; // REMOVED: Backend handles usage
 import { MEMBERSHIP_PLANS } from '../../membership/services/membershipService';
-import { uploadFile } from '../../../utils/api';
+import { uploadFile, fetchUserProfile } from '../../../utils/api';
 
 /**
  * Upload file to FastAPI backend for RAG processing
@@ -107,10 +107,9 @@ export async function createUserFolderStructure(userId, userName) {
 
 export async function checkUploadLimits(userId, fileSize) {
     try {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (!userDoc.exists()) return { allowed: true, unlimited: false, defaultLimits: true };
-
-        const userData = userDoc.data();
+        const payload = await fetchUserProfile();
+        const userData = payload?.user;
+        if (!userData) return { allowed: true, unlimited: false, defaultLimits: true };
         const userRole = userData.role;
         if (!userRole) return { allowed: false, reason: 'User role unavailable' };
 

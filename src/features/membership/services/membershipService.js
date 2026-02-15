@@ -1,6 +1,4 @@
 import {
-    doc,
-    getDoc,
     addDoc,
     collection,
     serverTimestamp,
@@ -8,6 +6,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../../../utils/firebaseConfig';
 import { API_BASE_URL } from '../../../utils/api';
+import { fetchUserProfile } from '../../../utils/api';
 
 /**
  * Membership Plans Configuration
@@ -26,25 +25,12 @@ export const MEMBERSHIP_PLANS = {
             monthlyQuota: 100
         }
     },
-    STARTER: {
-        id: 'starter',
-        name: 'Starter Plan',
-        monthlyPrice: 199,
-        yearlyPrice: 1999,
-        duration: 'unlimited',
-        features: {
-            chatLimit: 150,
-            fileUploadLimit: 25,
-            fileSizeLimitMB: 25,
-            monthlyQuota: 1500
-        }
-    },
     PLUS: {
         id: 'plus',
         name: 'Plus Plan',
         monthlyPrice: 999,
         yearlyPrice: 9999,
-        duration: 'unlimited', // Plus users should have ongoing access
+        duration: 'unlimited',
         features: {
             chatLimit: 500,
             fileUploadLimit: 100,
@@ -57,7 +43,7 @@ export const MEMBERSHIP_PLANS = {
         name: 'Pro Plan',
         monthlyPrice: 1999,
         yearlyPrice: 19999,
-        duration: 'unlimited', // Pro users should have ongoing access
+        duration: 'unlimited',
         features: {
             chatLimit: 1000,
             fileUploadLimit: 250,
@@ -65,22 +51,6 @@ export const MEMBERSHIP_PLANS = {
             monthlyQuota: 10000,
             prioritySupport: true,
             advancedFeatures: true
-        }
-    },
-    BUSINESS: {
-        id: 'business',
-        name: 'Business Plan',
-        monthlyPrice: 2499,
-        yearlyPrice: 24999,
-        duration: 'unlimited', // Business users should have ongoing access
-        features: {
-            chatLimit: -1, // unlimited
-            fileUploadLimit: -1, // unlimited
-            fileSizeLimitMB: 500,
-            monthlyQuota: -1, // unlimited
-            prioritySupport: true,
-            advancedFeatures: true,
-            teamManagement: true
         }
     }
 };
@@ -135,7 +105,7 @@ export async function updateUserMembership(userId, newPlan, billingCycle = 'mont
             throw new Error(error.detail || 'Failed to downgrade membership');
         }
 
-        console.log(`User ${userId} downgraded to Free plan`);
+        console.log('User downgraded to Free plan');
         return await response.json();
 
     } catch (error) {
@@ -147,13 +117,19 @@ export async function updateUserMembership(userId, newPlan, billingCycle = 'mont
 /**
  * Checks if user's membership has expired and updates status
  */
-export async function checkMembershipExpiry(userId) {
+export async function checkMembershipExpiry(userId, existingProfile = null) {
     try {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (!userDoc.exists()) return false;
-        const data = userDoc.data();
-        const membership = data.membership;
+        let data = existingProfile;
+        if (!data) {
+             const payload = await fetchUserProfile();
+             data = payload?.user;
+        }
 
+        if (!data) return false;
+        const membership = data.membership;
+        
+        // ... (rest same) -> NO, rest uses membership.
+        
         const expired = isMembershipExpired(membership);
         if (!expired) return false;
 
@@ -163,7 +139,7 @@ export async function checkMembershipExpiry(userId) {
             await addMembershipLog(userId, membershipPlan, 'expired').catch(err =>
                 console.warn('[membershipService] Failed to log expiry:', err)
             );
-            console.warn(`[membershipService] Detected expired membership for ${userId}`);
+            console.warn('[membershipService] Detected expired membership');
         }
 
         return true;
@@ -176,12 +152,14 @@ export async function checkMembershipExpiry(userId) {
 /**
  * Gets user's current membership details
  */
-export async function getUserMembership(userId) {
+export async function getUserMembership(userId, existingProfile = null) {
     try {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (!userDoc.exists()) return null;
-
-        const userData = userDoc.data();
+        let userData = existingProfile;
+        if (!userData) {
+            const payload = await fetchUserProfile();
+            userData = payload?.user;
+        }
+        if (!userData) return null;
         const membership = userData.membership || { status: 'inactive' };
         if (isMembershipExpired(membership)) {
             return { ...membership, status: 'expired' };

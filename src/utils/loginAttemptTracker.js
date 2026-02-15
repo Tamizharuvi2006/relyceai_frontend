@@ -3,7 +3,7 @@
  * 2-Layer Security: Frontend UX + Backend Enforcement
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const STORAGE_KEY = 'login_attempts';
 
 /**
@@ -110,8 +110,14 @@ function saveLocalData(data) {
 }
 
 function getEmailKey(email) {
-    // Simple hash for privacy
-    return btoa(email.toLowerCase().trim()).slice(0, 16);
+    const normalized = email.toLowerCase().trim();
+    let hash = 0;
+    for (let i = 0; i < normalized.length; i++) {
+        const char = normalized.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash).toString(16).padStart(8, '0').slice(0, 16);
 }
 
 function updateLocalAttempts(email) {

@@ -5,7 +5,6 @@ import { uploadChatFileToFirebase } from '../../files/services/fileService.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 
 export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, botTyping, onStop, sessionId, chatMode }) {
-    // Enforce dark theme
     const theme = 'dark';
     const { currentUser: user, userProfile, loading } = useAuth();
     const [text, setText] = useState('');
@@ -13,11 +12,12 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [isWebSearchActive, setIsWebSearchActive] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false); // New state for expansion
-    const [showExpandButton, setShowExpandButton] = useState(false); // New state to control button visibility
-    const [skipAutoResize, setSkipAutoResize] = useState(false); // Flag to skip auto-resize
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [showExpandButton, setShowExpandButton] = useState(false);
+    const [skipAutoResize, setSkipAutoResize] = useState(false);
     const [showReactChecklist, setShowReactChecklist] = useState(false);
     const [pendingSend, setPendingSend] = useState(null);
+    const [uploadError, setUploadError] = useState(null);
     const [reactChecklist, setReactChecklist] = useState({
         product: '',
         audience: '',
@@ -49,6 +49,13 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         recog.onerror = () => setIsRecording(false);
         recog.onend = () => setIsRecording(false);
         recognitionRef.current = recog;
+
+        // Cleanup: stop recognition on unmount
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -117,18 +124,12 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         if (!text.trim() && uploadedFiles.length === 0) return;
         if (botTyping) return; // Prevent double submit while streaming
 
-        // Safety: Max length check (2k chars)
-        if (text.length > 2000) {
+        // Safety: Max length check (5k chars)
+        if (text.length > 5000) {
             // Toast or alert would be better, but console warn for now if no toast available in props
-            console.warn("Message too long (max 2000 chars)");
-            alert("Message must be under 2000 characters."); 
+            console.warn("Message too long (max 5000 chars)");
+            alert("Message must be under 5000 characters."); 
             return;
-        }
-        
-        // Debug: Log fileIds being sent
-        const fileIds = uploadedFiles.filter(f => f.fileId).map(f => f.fileId);
-        if (fileIds.length > 0) {
-            console.log('📁 Sending message with fileIds:', fileIds);
         }
         
         const payload = {
@@ -177,9 +178,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 const uniqueUserId = userProfile?.uniqueUserId || user.uid;
                 
                 // Upload to backend for RAG processing (session-specific - Option B)
-                const resp = await uploadChatFileToFirebase(firebaseUid, uniqueUserId, sessionId, file, (progress) => {
-                    console.log(`📤 Upload progress: ${Math.round(progress)}%`);
-                });
+                const resp = await uploadChatFileToFirebase(firebaseUid, uniqueUserId, sessionId, file);
                 
                 if (onFileUploadComplete) {
                     // Pass fileId for RAG context lookup
@@ -191,10 +190,9 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                     f.id === previewId ? { ...f, fileId: resp.fileId, ragReady: true } : f
                 ));
                 
-                console.log('✅ File processed for RAG:', resp.fileId, `(${resp.chunksCreated} chunks)`);
-                
             } catch (error) {
-                console.error('❌ File upload error:', error.message);
+                console.error('File upload error:', error);
+                setUploadError(`Failed to upload ${file.name}: ${error.message || 'Unknown error'}`);
                 if (onFileUploadComplete) {
                     onFileUploadComplete(previewId, false);
                 }
@@ -210,12 +208,11 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 try {
                     const response = await deleteFile(fileToRemove.name);
                     if (response && response.success) {
-                        console.log(`✅ File ${fileToRemove.name} deleted successfully`);
                     } else {
-                        console.warn(`⚠️ Failed to delete file ${fileToRemove.name}:`, response?.message);
+                        console.warn('⚠️ Failed to delete file');
                     }
                 } catch (error) {
-                    console.error(`❌ Error deleting file ${fileToRemove.name}:`, error);
+                    console.error('❌ Error deleting file');
                 }
             }
         }
@@ -427,6 +424,16 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 }
             `}</style>
 
+            {uploadError && (
+                <div className="w-full max-w-[1200px] mx-auto mb-2 chat-input-container">
+                    <div className="backdrop-blur-sm rounded-lg p-2 border bg-red-900/20 border-red-800/50 text-red-300 text-sm flex items-center justify-between">
+                        <span>{uploadError}</span>
+                        <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-300">
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
             {uploadedFiles.length > 0 && (
                 <div className="w-full max-w-[1200px] mx-auto mb-2 chat-input-container">
                     <div className="backdrop-blur-sm rounded-lg p-2 border bg-zinc-800/40 border-zinc-700/40">
@@ -510,6 +517,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                         onChange={handleTextareaChange}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                         placeholder="Ask Relyce"
+                        maxLength={5000}
                         className="w-full text-[15px] outline-none border-none custom-textarea-scrollbar leading-6 no-resize-handle bg-transparent text-white placeholder-zinc-400 disabled:opacity-60"
                         style={{
                             minHeight: '40px',
