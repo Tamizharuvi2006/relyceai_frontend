@@ -163,6 +163,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         // Default to current state to prevent flickering
                         let isSearching = msg.isSearching;
                         let searchQuery = msg.searchQuery;
+                        let intelligence = msg.intelligence || null;
 
                         if (infoText === "processing") {
                             isSearching = false;
@@ -172,12 +173,20 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                             isSearching = true;
                             searchQuery = infoText.replace("Searching with:", "").trim();
                             tokenBufferRef.current = ""; // Clear buffer on search start
+                        } else if (infoText.startsWith("INTEL:")) {
+                            // Intelligence metadata from backend
+                            try {
+                                intelligence = JSON.parse(infoText.slice(6));
+                            } catch (e) {
+                                console.warn('[WS] Failed to parse INTEL payload:', e);
+                            }
                         }
 
                         return {
                             ...msg,
                             isSearching,
-                            searchQuery
+                            searchQuery,
+                            intelligence
                         };
                     }));
                 },

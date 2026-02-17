@@ -6,6 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Download, Image, FileText, Globe, ExternalLink, Search, Sparkles, BrainCircuit, ChevronDown, ChevronUp } from 'lucide-react';
 import { getFileIcon, formatFileSize } from '../../../utils/chatHelpers';
+import IntelligenceBar from './IntelligenceBar';
 import './MessageComponent.css';
 
 const THINKING_START = "[THINKING]";
@@ -877,6 +878,11 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
               isStreaming={Boolean(isStreaming && !hasVisibleContent)}
               hasAnswer={hasVisibleContent}
             />
+          )}
+
+          {/* Intelligence Bar - visible AI intelligence layer */}
+          {msg.intelligence && (
+            <IntelligenceBar intelligence={msg.intelligence} isStreaming={isStreaming} />
           )}
 
           {/* Message text */}

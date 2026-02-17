@@ -3,7 +3,7 @@
 /* Thinking Dropdown Container */
 .thinking-dropdown-container {
   margin-bottom: 0.5rem;
-  font-family: 'Inter', sans-serif; /* Ensure a clean font */
+  font-family: 'Inter', sans-serif;
 }
 
 /* Header / Toggle Button */
@@ -11,8 +11,8 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.8125rem; /* text-[13px] */
-  color: #e4e4e7; /* text-zinc-200 */
+  font-size: 0.8125rem;
+  color: #e4e4e7;
   background: rgba(24, 24, 27, 0.45);
   border: 1px solid rgba(63, 63, 70, 0.5);
   border-radius: 0.5rem;
@@ -29,7 +29,7 @@
 }
 
 .thinking-icon {
-  color: rgba(52, 211, 153, 0.8); /* text-emerald-400/80 */
+  color: rgba(52, 211, 153, 0.8);
 }
 
 .thinking-label {
@@ -37,28 +37,28 @@
 }
 
 .thinking-heading-live {
-  font-size: 0.75rem; /* text-xs */
-  color: rgba(110, 231, 183, 0.9); /* text-emerald-300/90 */
+  font-size: 0.75rem;
+  color: rgba(110, 231, 183, 0.9);
   margin-left: 0.25rem;
   opacity: 0;
   animation: fadeInDown 0.3s forwards;
 }
 
 .thinking-heading-static {
-  font-size: 0.75rem; /* text-xs */
-  color: #a1a1aa; /* text-zinc-400 */
+  font-size: 0.75rem;
+  color: #a1a1aa;
   margin-left: 0.25rem;
 }
 
 /* Content Area */
 .thinking-content {
   margin-top: 0.4rem;
-  border-radius: 0.5rem; /* rounded-lg */
-  border: 1px solid rgba(39, 39, 42, 0.7); /* border-zinc-800/70 */
-  background-color: rgba(18, 18, 20, 0.75); /* tighter contrast */
+  border-radius: 0.5rem;
+  border: 1px solid rgba(39, 39, 42, 0.7);
+  background-color: rgba(18, 18, 20, 0.75);
   padding: 0.6rem 0.75rem;
-  color: #e4e4e7; /* text-zinc-200 */
-  font-size: 0.8rem; /* compact */
+  color: #e4e4e7;
+  font-size: 0.8rem;
   line-height: 1.5;
   white-space: normal;
   word-break: break-word;
@@ -69,8 +69,6 @@
 }
 
 /* Markdown Content Styling */
-/* Prose defaults adaptation */
-
 .thinking-markdown > *:first-child {
   margin-top: 0;
 }
@@ -84,7 +82,7 @@
   margin-bottom: 0.4em;
 }
 
-.thinking-markdown ul, 
+.thinking-markdown ul,
 .thinking-markdown ol {
   margin-top: 0.4em;
   margin-bottom: 0.4em;
@@ -100,23 +98,23 @@
 .thinking-markdown h2,
 .thinking-markdown h3,
 .thinking-markdown h4 {
-    margin-top: 0.75em;
-    margin-bottom: 0.35em;
-    font-weight: 600;
-    color: #e4e4e7;
+  margin-top: 0.75em;
+  margin-bottom: 0.35em;
+  font-weight: 600;
+  color: #e4e4e7;
 }
 
 .thinking-markdown strong {
   font-weight: 600;
-  color: #a7f3d0; /* text-emerald-200 */
+  color: #a7f3d0;
 }
 
 .thinking-markdown code {
-    background-color: rgba(63, 63, 70, 0.5);
-    padding: 0.1em 0.3em;
-    border-radius: 0.25em;
-    font-family: monospace;
-    font-size: 0.9em;
+  background-color: rgba(63, 63, 70, 0.5);
+  padding: 0.1em 0.3em;
+  border-radius: 0.25em;
+  font-family: monospace;
+  font-size: 0.9em;
 }
 
 /* Animations */
@@ -138,5 +136,23 @@
 }
 
 .animate-spin-slow {
-    animation: spin 3s linear infinite;
+  animation: spin 3s linear infinite;
+}
+
+/* Intelligence Bar Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 100px;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.4s ease-out forwards;
 }
