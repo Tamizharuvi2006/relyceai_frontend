@@ -109,22 +109,21 @@ export default function Header() {
   ];
 
   return (
-    <header className="sticky top-0 h-[10vh] w-full border-b border-emerald-500/30 z-50 bg-black text-white">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
-        <Link to="/" className="flex items-center gap-4">
-          <img src="/logo.svg" alt="Relyce AI" className="w-12 h-12 object-contain" />
-          <span className="text-3xl font-extrabold text-white">Relyce AI</span>
+    <header className="fixed top-0 w-full z-50 bg-transparent text-white">
+      <div className="max-w-[90rem] mx-auto flex items-center justify-between px-6 lg:px-12 py-5">
+        <Link to="/" className="flex items-center">
+          <img src="/logo.svg" alt="Relyce AI" className="w-10 h-10 object-contain opacity-90 hover:opacity-100 transition-opacity" />
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-6">
+        <nav className="hidden lg:flex items-center gap-10">
           {navItems.map(({ label, path }) => (
-            <Link key={label} to={path} className="text-lg font-medium text-gray-300 hover:text-emerald-400 transition-colors duration-200">
+            <Link key={label} to={path} className="text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-400 hover:text-white transition-colors duration-200" style={{ fontFamily: "'Geist Mono', monospace" }}>
               {label}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-6">
           {user ? (
             // --- NEW USER DROPDOWN MENU ---
             <div
@@ -142,7 +141,7 @@ export default function Header() {
             >
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-3 p-1.5 rounded-full hover:bg-zinc-800 transition-colors"
+                className="flex items-center gap-3 px-2 py-1.5 rounded-full hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-white/10"
               >
                 {userAvatar ? (
                   <>
@@ -234,9 +233,11 @@ export default function Header() {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <button onClick={() => navigate("/login")} type="button" className="px-5 py-2.5 text-lg font-medium text-gray-300 hover:text-white transition-colors">Login</button>
-              <button onClick={() => navigate("/Signup")} type="button" className="px-5 py-2.5 text-lg bg-emerald-500 text-black font-semibold rounded-lg hover:bg-emerald-400 transform transition-transform hover:-translate-y-0.5">Sign Up</button>
+            <div className="flex items-center gap-6">
+              <button onClick={() => navigate("/login")} type="button" className="text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-400 hover:text-white transition-colors" style={{ fontFamily: "'Geist Mono', monospace" }}>Login</button>
+              <button onClick={() => navigate("/Signup")} type="button" className="flex items-center gap-2 px-6 py-2.5 border border-white/20 rounded-[24px] text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-300 hover:text-white hover:border-white/40 transition-all" style={{ fontFamily: "'Geist Mono', monospace" }}>
+                TRY RELYCE AI ↗
+              </button>
             </div>
           )}
         </div>
