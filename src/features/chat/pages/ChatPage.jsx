@@ -3,107 +3,67 @@ import { Helmet } from 'react-helmet-async';
 import ReactDOM from 'react-dom';
 import ChatHistory from '../components/ChatHistory.jsx';
 import ChatWindow from '../components/ChatWindow.jsx';
-import ChatWindowHeader from '../components/ChatWindowHeader.jsx'; // Import the new header
+import ChatWindowHeader from '../components/ChatWindowHeader.jsx';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { LoadingSpinner } from '../../../components/loading';
 import { generateChatPDF } from '../../../utils/pdfGenerator.js';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../../../utils/firebaseConfig.js';
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  doc,
-  setDoc,
-  addDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import ChatService from '../../../services/chatService';
 
-// Simple Loading Skeleton using LoadingSpinner
 const ChatSkeleton = () => (
-  <div className="flex h-full w-full bg-zinc-900 items-center justify-center">
-    <LoadingSpinner size="default" message="Loading..." />
+  <div className="flex h-full w-full bg-[#0a0d14] items-center justify-center">
+    <div className="text-[10px] uppercase font-mono tracking-widest text-zinc-600 animate-pulse">Initializing Interface...</div>
   </div>
 );
 
 function AppContent() {
   const { currentUser: user, userProfile } = useAuth();
-  const theme = 'dark'; // Enforce dark theme
-  // Removed setTheme since we're removing the toggle
   const { chatId } = useParams();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState([]); // Add messages state
+  const [messages, setMessages] = useState([]);
   const [chatSessions, setChatSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [loadingChats, setLoadingChats] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
-  // Header state moved to ChatWindowHeader
   const [shareLoading, setShareLoading] = useState(false);
-
-  // Chat mode state
   const [chatMode, setChatMode] = useState('normal');
-
-  // Personality State
   const [personalities, setPersonalities] = useState([]);
   const [activePersonality, setActivePersonality] = useState(null);
-  const location = useLocation(); // Track navigation for refetching
 
-  // Use ref to prevent unnecessary navigation calls
+  const isNavigatingRef = useRef(false);
+  const lastUrlSessionRef = useRef(chatId);
 
-  // Fetch Personalities
   useEffect(() => {
     const uid = userProfile?.uniqueUserId;
     if (uid) {
         ChatService.getPersonalities(uid).then(result => {
             if (result.success && result.personalities) {
                 setPersonalities(result.personalities);
-                
-                // Update active personality if it exists, to reflect name changes
                 if (activePersonality) {
                     const updated = result.personalities.find(p => p.id === activePersonality.id);
                     if (updated) setActivePersonality(updated);
                 }
-                
-                // Set default active if none selected
                 if (!activePersonality) {
                     const def = result.personalities.find(p => p.is_default && p.id === 'default_relyce') || result.personalities[0];
                     setActivePersonality(def);
                 }
             } else {
-                // Fallback to default personality if API fails
-                console.warn('[ChatPage] Failed to fetch personalities, using default');
-                const defaultPersonality = {
-                    id: 'default_relyce',
-                    name: 'Relyce AI',
-                    description: 'Professional, helpful AI assistant',
-                    is_default: true
-                };
+                const defaultPersonality = { id: 'default_relyce', name: 'Relyce AI', description: 'Professional assistant', is_default: true };
                 setPersonalities([defaultPersonality]);
-                if (!activePersonality) {
-                    setActivePersonality(defaultPersonality);
-                }
+                if (!activePersonality) setActivePersonality(defaultPersonality);
             }
         }).catch(err => {
-            console.error('[ChatPage] Error fetching personalities:', err);
-            // Fallback to default personality on error
-            const defaultPersonality = {
-                id: 'default_relyce',
-                name: 'Relyce AI',
-                description: 'Professional, helpful AI assistant',
-                is_default: true
-            };
+            console.error(err);
+            const defaultPersonality = { id: 'default_relyce', name: 'Relyce AI', description: 'Professional assistant', is_default: true };
             setPersonalities([defaultPersonality]);
-            if (!activePersonality) {
-                setActivePersonality(defaultPersonality);
-            }
+            if (!activePersonality) setActivePersonality(defaultPersonality);
         });
     }
-  }, [userProfile?.uniqueUserId]); // Fetch once per unique user ID
+  }, [userProfile?.uniqueUserId]);
 
-  // Persist personality change to the current session
   const handleSetActivePersonality = useCallback((persona) => {
       setActivePersonality(persona);
       if (currentSessionId && user?.uid && persona?.id) {
@@ -111,112 +71,42 @@ function AppContent() {
       }
   }, [currentSessionId, user]);
 
-  // Sync Active Personality with Session Data
   useEffect(() => {
     if (!currentSessionId || !chatSessions.length || !personalities.length) return;
-
     const currentSession = chatSessions.find(s => s.id === currentSessionId);
+    
     if (currentSession?.personalityId) {
-        // Session has a saved preference, use it
         const savedPersona = personalities.find(p => p.id === currentSession.personalityId);
         if (savedPersona && savedPersona.id !== activePersonality?.id) {
-            console.log('[ChatPage] Restoring saved personality:', savedPersona.name);
             setActivePersonality(savedPersona);
         }
     } else {
-        // No saved preference? If activePersonality is null (e.g. refresh), set default.
-        // If it's ALREADY set (e.g. just switched sessions and kept previous state?), 
-        // usually we want to reset to Default for a new/unspecified chat? 
-        // User said: "REMAINS ONLY IF USER CHANGES". 
-        // This implies if I switch to a chat without preference, it might be safer to default to Relyce AI 
-        // to avoid "leaking" personality from previous chat? 
-        // Let's default to Relyce AI if session has NO preference, to be safe and consistent.
         if (activePersonality?.id !== 'default_relyce') {
              const defaultPersona = personalities.find(p => p.is_default && p.id === 'default_relyce') || personalities[0];
+             // Prevent infinite loop: Only set if the ID actually changed
              if (defaultPersona && activePersonality?.id !== defaultPersona.id) {
-                  // Only reset if we are not already default. 
-                  // But wait, if user creates NEW chat, we want default.
-                  // If user switches to old chat that never had personality set, we want default.
-                  setActivePersonality(defaultPersona);
+                 setActivePersonality(defaultPersona);
              }
         }
     }
-  }, [currentSessionId, chatSessions, personalities]);
+  }, [currentSessionId, chatSessions, personalities, activePersonality?.id]);
 
+  const memoizedChatSessions = useMemo(() => chatSessions || [], [chatSessions?.length]);
 
-
-
-
-  // Download menu state
-
-  // Set chat mode based on user's membership plan
-  // Note: Mode defaults to 'normal' (Generic) - only switch to business if user explicitly wants it
-  // Commenting out auto-mode change so users start with Generic by default
-  // useEffect(() => {
-  //   if (userProfile?.membership?.plan) {
-  //     if (userProfile.membership.plan === 'business') {
-  //       setChatMode('business');
-  //     } else if (userProfile.membership.plan === 'plus') {
-  //       setChatMode('business');
-  //     } else {
-  //       setChatMode('normal');
-  //     }
-  //   }
-  // }, [userProfile?.membership?.plan]);
-
-  // Download menu state
-  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
-  const downloadButtonRef = useRef(null);
-  const downloadMenuRef = useRef(null);
-  const [downloadMenuCoords, setDownloadMenuCoords] = useState(null);
-
-  // Use ref to prevent unnecessary navigation calls
-
-  // Use ref to prevent unnecessary navigation calls
-  const isNavigatingRef = useRef(false);
-  const lastUrlSessionRef = useRef(chatId);
-
-
-
-
-  // Memoize chatSessions to prevent unnecessary sidebar re-renders - MUST be before any early returns
-  const memoizedChatSessions = useMemo(() => {
-    return chatSessions || [];
-  }, [chatSessions?.length]);
-
-  // Track URL changes to update lastUrlSessionRef
   useEffect(() => {
-    if (chatId) {
-      lastUrlSessionRef.current = chatId;
-    }
+    if (chatId) lastUrlSessionRef.current = chatId;
   }, [chatId]);
-  // Listen for close sidebar events from mobile
+
   useEffect(() => {
     const handleCloseSidebar = () => setShowSidebar(false);
     window.addEventListener('closeSidebar', handleCloseSidebar);
     return () => window.removeEventListener('closeSidebar', handleCloseSidebar);
   }, []);
 
-
-
-
-
-
-
-  // Add handleDownloadPDF function
   const handleDownloadPDF = async () => {
-    if (!messages || messages.length === 0) {
-      alert('No chat to download!');
-      return;
-    }
-
+    if (!messages || messages.length === 0) return;
     try {
-      const blob = await generateChatPDF(messages, {
-        title: 'Chat Conversation',
-        date: new Date(),
-        participants: ['User', 'Relyce AI']
-      });
-      // Create download link
+      const blob = await generateChatPDF(messages, { title: 'Chat Conversation', date: new Date(), participants: ['User', 'Relyce AI'] });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -226,25 +116,14 @@ function AppContent() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      console.error(error);
     }
   };
 
-  // Add handleDownloadText function for exporting chat as text file
   const handleDownloadText = () => {
-    if (!messages || messages.length === 0) {
-      alert('No chat to download!');
-      return;
-    }
-
+    if (!messages || messages.length === 0) return;
     try {
-      // Format messages as text
-      const textContent = messages.map(msg => {
-        return `[${msg.role.toUpperCase()}] (${new Date(msg.timestamp?.toDate ? msg.timestamp.toDate() : msg.createdAt).toLocaleString()})\n${msg.content}\n`;
-      }).join('\n');
-
-      // Create blob and download
+      const textContent = messages.map(msg => `[${msg.role.toUpperCase()}] (${new Date(msg.timestamp?.toDate ? msg.timestamp.toDate() : msg.createdAt).toLocaleString()})\n${msg.content}\n`).join('\n');
       const blob = new Blob([textContent], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -255,116 +134,48 @@ function AppContent() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error generating text file:', error);
-      alert('Failed to generate text file. Please try again.');
+      console.error(error);
     }
   };
 
   const handleSetCurrentSession = useCallback((id) => {
-    // Same session? Just close sidebar
-    if (currentSessionId === id) {
-      setShowSidebar(false);
-      return;
-    }
-
-    // ChatGPT-style: State-only update, NO navigation
-    // This prevents component remounts and flashing
+    if (currentSessionId === id) { setShowSidebar(false); return; }
     setCurrentSessionId(id);
     setShowSidebar(false);
-
-    // Silently update URL without triggering React Router re-render
-    // This keeps URL in sync for sharing/bookmarking without causing flash
     window.history.replaceState(null, '', `/chat/${id}`);
   }, [currentSessionId]);
 
-  // Share chat function - saves to sharedChats collection
   const handleShareChat = useCallback(async () => {
-    if (!currentSessionId || !user || messages.length === 0) {
-      alert('No messages to share!');
-      return;
-    }
-
+    if (!currentSessionId || !user || messages.length === 0) return;
     setShareLoading(true);
     try {
-      // Generate unique share ID
       const shareId = crypto.randomUUID().slice(0, 8);
-      
-      // Get session name
       const currentSession = chatSessions.find(s => s.id === currentSessionId);
       const sessionName = currentSession?.name || 'Chat Conversation';
-      
-      // Save to sharedChats collection
       await addDoc(collection(db, 'sharedChats'), {
-        shareId: shareId,
-        originalSessionId: currentSessionId,
-        ownerId: user.uid,
-        title: sessionName,
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content,
-          timestamp: msg.timestamp || msg.createdAt
-        })),
-        isPublic: true,
-        sharedAt: serverTimestamp(),
-        messageCount: messages.length
+        shareId: shareId, originalSessionId: currentSessionId, ownerId: user.uid, title: sessionName,
+        messages: messages.map(msg => ({ role: msg.role, content: msg.content, timestamp: msg.timestamp || msg.createdAt })),
+        isPublic: true, sharedAt: serverTimestamp(), messageCount: messages.length
       });
-
-      // Generate share URL
       const shareUrl = `${window.location.origin}/shared/${shareId}`;
-      
-      // Copy to clipboard
       await navigator.clipboard.writeText(shareUrl);
-      
-      // Try native share if available
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'Relyce AI Chat',
-            text: 'Check out this AI chat conversation',
-            url: shareUrl,
-          });
-        } catch (e) {
-          // User cancelled or share failed, URL already copied
-        }
-      }
-      
-      alert(`Share link copied!\n${shareUrl}`);
     } catch (error) {
-      console.error('Error sharing chat:', error);
-      alert('Failed to share chat. Please try again.');
+      console.error(error);
     } finally {
       setShareLoading(false);
     }
   }, [currentSessionId, user, messages, chatSessions]);
 
-  const handleToggleSidebarExpanded = useCallback((expanded) => {
-    setSidebarExpanded(expanded);
-  }, []);
+  const handleToggleSidebarExpanded = useCallback((expanded) => setSidebarExpanded(expanded), []);
 
   const createNewSession = useCallback(async () => {
     if (!user) return;
-
     const newSessionId = crypto.randomUUID();
-    
-    // Update UI immediately for instant response
     setCurrentSessionId(newSessionId);
-    setMessages([]); // Clear messages for fresh chat
+    setMessages([]);
     setShowSidebar(false);
     navigate(`/chat/${newSessionId}`, { replace: true });
-
-    // Write to Firebase in background (non-blocking)
-    const newSessionRef = doc(
-      db,
-      'users',
-      user.uid,
-      'chatSessions',
-      newSessionId
-    );
-    
-    setDoc(newSessionRef, {
-      name: 'New Chat',
-      createdAt: serverTimestamp(),
-    }).catch(e => console.error('Failed to create session:', e));
+    setDoc(doc(db, 'users', user.uid, 'chatSessions', newSessionId), { name: 'New Session', createdAt: serverTimestamp() }).catch(e => console.error(e));
   }, [user, navigate]);
 
   useEffect(() => {
@@ -372,152 +183,74 @@ function AppContent() {
       setLoadingChats(true);
       const chatRef = collection(db, 'users', user.uid, 'chatSessions');
       const q = query(chatRef, orderBy('createdAt', 'desc'));
-
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const sessions = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          const sessions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           setChatSessions(sessions);
-
           if (snapshot.metadata.hasPendingWrites) return;
-
-          // Only handle URL-based navigation when URL actually changes
           if (chatId && chatId !== currentSessionId && !isNavigatingRef.current) {
-            const sessionExists = sessions.find((s) => s.id === chatId);
-            if (sessionExists) {
-              setCurrentSessionId(chatId);
-            } else if (sessions.length > 0) {
-              const firstSession = sessions[0];
-              setCurrentSessionId(firstSession.id);
-              navigate(`/chat/${firstSession.id}`, { replace: true });
-            }
+            if (sessions.find((s) => s.id === chatId)) setCurrentSessionId(chatId);
+            else if (sessions.length > 0) { setCurrentSessionId(sessions[0].id); navigate(`/chat/${sessions[0].id}`, { replace: true }); }
           } else if (!chatId && sessions.length > 0 && !currentSessionId) {
-            // Only set default if no session is selected
-            const firstSession = sessions[0];
-            setCurrentSessionId(firstSession.id);
-            navigate(`/chat/${firstSession.id}`, { replace: true });
+            setCurrentSessionId(sessions[0].id); navigate(`/chat/${sessions[0].id}`, { replace: true });
           } else if (!chatId && sessions.length === 0) {
             createNewSession();
           }
-
           setLoadingChats(false);
-        },
-        (error) => {
-          console.error('Error fetching chat sessions: ', error);
-          setLoadingChats(false);
-        }
+        }, (error) => { console.error(error); setLoadingChats(false); }
       );
-
       return () => unsubscribe();
     } else {
-      setChatSessions([]);
-      setCurrentSessionId(null);
-      setLoadingChats(false);
+      setChatSessions([]); setCurrentSessionId(null); setLoadingChats(false);
     }
-  }, [user, createNewSession, chatId, navigate]); // Removed currentSessionId - it causes subscription recreation
+  }, [user, createNewSession, chatId, navigate]);
 
-  // Pass messages to ChatWindow and update local state when messages change
-  const handleMessagesUpdate = useCallback((newMessages) => {
-    setMessages(newMessages);
-  }, []);
+  const handleMessagesUpdate = useCallback((newMessages) => setMessages(newMessages), []);
 
   if (loadingChats) return <ChatSkeleton />;
 
   return (
-    <div className="flex h-screen w-full font-sans overflow-hidden transition-colors duration-300 bg-zinc-900 text-gray-200">
-      <Helmet>
-        <title>Chat – Relyce AI</title>
-        <meta name="robots" content="noindex" />
-      </Helmet>
-      {/* Content with sidebar and chat area */}
-      <div className="flex h-full w-full">
-        {/* Sidebar */}
+    <div className="flex h-screen w-full font-sans overflow-hidden bg-[#0a0d14] text-white">
+      <Helmet><title>Interface | Relyce</title><meta name="robots" content="noindex" /></Helmet>
+      
+      {/* ── Minimalist Premium Background ───────────────────────── */}
+
+      {/* Persistent subtle noise texture */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.02] mix-blend-overlay z-0" 
+           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }}>
+      </div>
+
+      {/* Abstract Blur Orbs - drastically toned down */}
+      <div className="fixed -top-[10%] -right-[10%] w-[50vw] h-[50vw] bg-emerald-500/[0.02] rounded-full blur-[120px] mix-blend-screen pointer-events-none z-0" />
+      <div className="fixed top-[60%] -left-[10%] w-[40vw] h-[40vw] bg-zinc-500/[0.02] rounded-full blur-[120px] mix-blend-screen pointer-events-none z-0" />
+
+      <div className="flex h-full w-full relative z-10">
         <ChatHistory
-          chatSessions={memoizedChatSessions}
-          currentSessionId={currentSessionId}
-          setCurrentSessionId={handleSetCurrentSession}
-          createNewSession={createNewSession}
-          onToggleSidebar={handleToggleSidebarExpanded}
-          className={`z-40 flex-shrink-0
-          ${showSidebar ? 'fixed inset-y-0 left-0 w-3/5 max-w-xs md:relative md:w-auto' : 'hidden md:block'}`}
+          chatSessions={memoizedChatSessions} currentSessionId={currentSessionId} setCurrentSessionId={handleSetCurrentSession}
+          createNewSession={createNewSession} onToggleSidebar={handleToggleSidebarExpanded}
+          className={`z-40 flex-shrink-0 ${showSidebar ? 'fixed inset-y-0 left-0 w-3/5 max-w-xs md:relative md:w-auto' : 'hidden md:block'}`}
         />
 
-        {/* Chat Window with Header */}
         <main className="flex-1 flex flex-col overflow-hidden relative min-w-0 w-full">
-
-          {/* Header - sticky to prevent hiding on mobile scroll */}
-          {/* We use showHeader=true on ChatWindow mostly for standalone. Here we use distinct ChatWindowHeader */}
           <ChatWindowHeader 
-             onToggleSidebar={() => {
-                if (window.innerWidth < 768) {
-                    setShowSidebar(true);
-                } else {
-                    setSidebarExpanded(!sidebarExpanded);
-                }
-             }}
-             sidebarExpanded={sidebarExpanded}
-             currentSessionId={currentSessionId}
-             userId={user?.uid}
-             userUniqueId={userProfile?.uniqueUserId}
-             messages={messages}
-             chatMode={chatMode}
-             onChatModeChange={setChatMode}
-             onDownloadPDF={handleDownloadPDF}
-             onDownloadText={handleDownloadText}
-             onShare={handleShareChat}
-             onCopyLink={async () => {
-                 if (!currentSessionId) return;
-                 const shareUrl = `${window.location.origin}/chat/${currentSessionId}`;
-                 await navigator.clipboard.writeText(shareUrl);
-                 alert('Link copied to clipboard!');
-             }}
-             onDelete={() => {
-                 // Implement delete logic if needed or pass handler
-                 console.log("Delete clicked");
-             }}
-             personalities={personalities}
-             activePersonality={activePersonality}
-             setActivePersonality={handleSetActivePersonality}
-             setPersonalities={setPersonalities}
+             onToggleSidebar={() => { if (window.innerWidth < 768) setShowSidebar(true); else setSidebarExpanded(!sidebarExpanded); }}
+             sidebarExpanded={sidebarExpanded} currentSessionId={currentSessionId} userId={user?.uid} userUniqueId={userProfile?.uniqueUserId}
+             messages={messages} chatMode={chatMode} onChatModeChange={setChatMode} onDownloadPDF={handleDownloadPDF} onDownloadText={handleDownloadText} onShare={handleShareChat}
+             onCopyLink={async () => { if (!currentSessionId) return; await navigator.clipboard.writeText(`${window.location.origin}/chat/${currentSessionId}`); }}
+             onDelete={() => { console.log("Delete clicked"); }} personalities={personalities} activePersonality={activePersonality} setActivePersonality={handleSetActivePersonality} setPersonalities={setPersonalities}
           />
-
           {!loadingChats && (
             <ChatWindow
-              currentSessionId={currentSessionId}
-              userId={user?.uid}
-              chatSessions={memoizedChatSessions}
-              sidebarExpanded={sidebarExpanded}
-              onToggleSidebar={() => {
-                if (window.innerWidth < 768) {
-                  setShowSidebar(true);
-                } else {
-                  setSidebarExpanded(!sidebarExpanded);
-                }
-              }}
-              onMessagesUpdate={handleMessagesUpdate}
-              chatMode={chatMode}
-              onChatModeChange={setChatMode}
-              activePersonality={activePersonality}
-              setActivePersonality={handleSetActivePersonality}
-              personalities={personalities}
-              showHeader={false} 
+              currentSessionId={currentSessionId} userId={user?.uid} chatSessions={memoizedChatSessions} sidebarExpanded={sidebarExpanded}
+              onToggleSidebar={() => { if (window.innerWidth < 768) setShowSidebar(true); else setSidebarExpanded(!sidebarExpanded); }}
+              onMessagesUpdate={handleMessagesUpdate} chatMode={chatMode} onChatModeChange={setChatMode} activePersonality={activePersonality} setActivePersonality={handleSetActivePersonality} personalities={personalities} showHeader={false} 
             />
           )}
         </main>
 
-        {/* Mobile overlay */}
-        {showSidebar && (
-          <div
-            className="md:hidden fixed inset-0 bg-black/50 z-30"
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
+        {showSidebar && <div className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-30" onClick={() => setShowSidebar(false)} />}
       </div>
     </div>
   );
-};
+}
 
 export default AppContent;

@@ -153,7 +153,7 @@ const IntelligenceBar = memo(({ intelligence, isStreaming }) => {
       {/* Mode + Confidence Row */}
       <div className="flex items-center gap-2 flex-wrap">
         {/* Mode Pill */}
-        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${modeConfig.bg} ${modeConfig.border} border ${modeConfig.text}`}>
+        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 border ${modeConfig.border} text-[10px] font-mono tracking-widest uppercase ${modeConfig.bg} ${modeConfig.text}`}>
           <ModeIcon size={10} />
           <span>{modeConfig.label}</span>
         </div>

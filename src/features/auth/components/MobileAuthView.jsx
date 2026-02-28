@@ -33,25 +33,25 @@ export function MobileAuthView({
     onLockoutExpire,
 }) {
     return (
-        <div className="sm:hidden w-full max-w-md mx-auto">
-            <div className="text-center mb-8 mt-4 animate-fade-in-down">
-                <h1 className="text-3xl font-extrabold text-white">Relyce AI</h1>
-                <p className="text-zinc-400 mt-2">Your AI-powered assistant</p>
+        <div className="sm:hidden w-full max-w-md mx-auto p-4">
+            <div className="text-center mb-12 mt-8 animate-fade-in-down">
+                <h1 className="text-xl font-medium tracking-[0.2em] uppercase text-white">RELYCE ALGORITHM</h1>
+                <div className="w-12 h-px bg-white/20 mx-auto mt-6"></div>
             </div>
 
-            <div className="mobile-card bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 shadow-lg shimmer-border">
-                {/* Premium Tab Switcher */}
-                <div className="mobile-tab-container flex mb-6">
-                    <div className={`mobile-tab-indicator ${isMobileSignUp ? 'right' : ''}`}></div>
+            <div className="bg-[#0a0d14] border border-white/5 p-6 shadow-2xl relative">
+                {/* Minimalist Tab Switcher */}
+                <div className="flex mb-8 border-b border-white/5 relative">
+                    <div className={`absolute bottom-[-1px] h-[1px] bg-white transition-all duration-300 w-1/2 ${isMobileSignUp ? 'left-1/2' : 'left-0'}`}></div>
                     <button
                         onClick={() => setIsMobileSignUp(false)}
-                        className={`mobile-tab-btn rounded-l-lg ${!isMobileSignUp ? 'active' : 'inactive'}`}
+                        className={`flex-1 pb-4 text-[10px] font-mono tracking-[0.2em] uppercase transition-colors ${!isMobileSignUp ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
                     >
                         Sign In
                     </button>
                     <button
                         onClick={() => setIsMobileSignUp(true)}
-                        className={`mobile-tab-btn rounded-r-lg ${isMobileSignUp ? 'active' : 'inactive'}`}
+                        className={`flex-1 pb-4 text-[10px] font-mono tracking-[0.2em] uppercase transition-colors ${isMobileSignUp ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
                     >
                         Sign Up
                     </button>
@@ -104,7 +104,7 @@ export function MobileAuthView({
                                 <div className="w-full border-t border-zinc-700"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-zinc-900/50 text-zinc-400">or</span>
+                                <span className="px-4 bg-[#0a0d14] text-[10px] font-mono tracking-widest text-zinc-600 uppercase">or</span>
                             </div>
                         </div>
                         <GoogleButton type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
@@ -153,7 +153,7 @@ export function MobileAuthView({
                                 <div className="w-full border-t border-zinc-700"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-zinc-900/50 text-zinc-400">or</span>
+                                <span className="px-4 bg-[#0a0d14] text-[10px] font-mono tracking-widest text-zinc-600 uppercase">or</span>
                             </div>
                         </div>
                         <GoogleButton type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>

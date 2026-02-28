@@ -1,248 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { updateUserMembership } from '../services/membershipService';
 import { handleRazorpayPayment, prefetchRazorpay } from '../services/paymentService';
 import { getCurrentPricing } from '../../admin/services/adminDashboard';
 import { validateCoupon, getAllCoupons } from '../../../utils/couponManagement';
 import toast, { Toaster } from 'react-hot-toast';
-import clsx from 'clsx';
-import {
-  Star,
-  Zap,
-  Crown,
-  Shield,
-  Check,
-  Award,
-  Sparkles
-} from 'lucide-react';
 
-// === Cyberpunk Rain Effect (copied from HowItWorksSection for consistency) ===
-const CyberpunkRain = () => {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-
-    const resizeCanvas = () => {
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (!rect) return;
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-    };
-    resizeCanvas();
-    const resizeObserver = new ResizeObserver(resizeCanvas);
-    if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);
-
-    let w = canvas.width;
-    let h = canvas.height;
-    let lines = [];
-    let animationFrameId;
-
-    const LINE_SPACING = 70;
-    const DROP_COUNT = 6;
-    const COLORS = [
-      [0, 255, 180],
-      [0, 200, 255],
-      [0, 255, 100],
-      [100, 255, 200],
-      [255, 50, 150],
-    ];
-
-    const initLines = () => {
-      lines = [];
-      const numLines = Math.floor(w / LINE_SPACING);
-      for (let i = 0; i < numLines; i++) {
-        const depth = 0.4 + Math.random() * 0.6;
-        const drops = [];
-        for (let j = 0; j < DROP_COUNT; j++) {
-          drops.push({
-            y: Math.random() * h,
-            speed: 1 + Math.random() * 4 * depth,
-            height: 10 + Math.random() * 20,
-            opacity: 0.3 + Math.random() * 0.7,
-            tailLength: 15 + Math.random() * 25,
-            swayOffset: Math.random() * 1000,
-            swayAmplitude: 2 + Math.random() * 3,
-            color: COLORS[Math.floor(Math.random() * COLORS.length)],
-            rotation: (Math.random() - 0.5) * 0.2,
-            flickerPhase: Math.random() * Math.PI * 2,
-            sparkTimer: 0,
-          });
-        }
-        lines.push({
-          x: i * LINE_SPACING + (Math.random() * 20 - 10),
-          drops,
-          depth,
-          swayOffset: Math.random() * 50,
-        });
-      }
-    };
-    initLines();
-
-    const animate = () => {
-      const time = Date.now() * 0.002;
-      ctx.fillStyle = "rgba(5,6,10,0.15)";
-      ctx.fillRect(0, 0, w, h);
-
-      if (canvas.width !== w || canvas.height !== h) {
-        w = canvas.width;
-        h = canvas.height;
-        initLines();
-      }
-
-      for (let line of lines) {
-        const lineSway = Math.sin(time + line.swayOffset) * 8 * line.depth;
-        const lineAlpha = 0.15 + 0.25 * line.depth;
-
-        ctx.fillStyle = `rgba(20,20,30,${lineAlpha})`;
-        ctx.fillRect(line.x - 1.5 + lineSway, 0, 3, h);
-
-        ctx.shadowBlur = 12 * line.depth;
-        ctx.shadowColor = "#0f0";
-
-        for (let drop of line.drops) {
-          const dropSway = Math.sin(time * 1.5 + drop.swayOffset) * drop.swayAmplitude;
-          const flicker = 0.4 + 0.6 * Math.sin(time * 6 + drop.flickerPhase);
-
-          if (drop.sparkTimer > 0) drop.sparkTimer--;
-          else if (Math.random() < 0.015) drop.sparkTimer = 3;
-
-          const sparkMultiplier = drop.sparkTimer > 0 ? 2 : 1;
-          const dropX = line.x + lineSway + dropSway;
-
-          ctx.save();
-          ctx.translate(dropX, drop.y);
-          ctx.rotate(drop.rotation);
-
-          const gradient = ctx.createLinearGradient(0, -drop.tailLength / 2, 0, drop.tailLength / 2);
-          gradient.addColorStop(0, "rgba(0,0,0,0)");
-          gradient.addColorStop(
-            1,
-            `rgba(${drop.color[0]},${drop.color[1]},${drop.color[2]},${drop.opacity * flicker * lineAlpha * sparkMultiplier
-            })`
-          );
-
-          ctx.fillStyle = gradient;
-          ctx.fillRect(-2, -drop.tailLength / 2, 4, drop.tailLength);
-          ctx.restore();
-
-          drop.y += drop.speed;
-          if (drop.y - drop.tailLength / 2 > h) drop.y = -drop.tailLength / 2;
-        }
-        ctx.shadowBlur = 0;
-      }
-      animationFrameId = requestAnimationFrame(animate);
-    };
-    animate();
-
-    return () => {
-      resizeObserver.disconnect();
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        display: "block",
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 0,
-        pointerEvents: "none",
-        backgroundColor: "transparent",
-      }}
-    />
-  );
-};
-
-// Loading Skeleton matching site theme
-const LoadingSkeleton = () => (
-  <div className="p-6 rounded-2xl bg-black/20 shadow-lg border border-emerald-500/20 animate-pulse">
-    <div className="h-16 w-16 mx-auto rounded-full bg-gray-800 mb-6"></div>
-    <div className="h-6 bg-gray-800 rounded w-3/4 mx-auto mb-2"></div>
-    <div className="h-4 bg-gray-800 rounded w-1/2 mx-auto mb-6"></div>
-    <div className="h-10 bg-gray-800 rounded w-1/3 mx-auto mb-8"></div>
-    <div className="space-y-3 mb-8">
-      {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-4 bg-gray-800 rounded"></div>
-      ))}
-    </div>
-    <div className="h-12 bg-gray-800 rounded"></div>
-  </div>
+const AnimatedGradientText = ({ children, className }) => (
+  <span className={`bg-clip-text text-transparent bg-gradient-to-r from-zinc-100 via-zinc-400 to-zinc-100 animate-[bg-pan_8s_linear_infinite] ${className}`} style={{ backgroundSize: '200% auto' }}>
+    {children}
+  </span>
 );
-
-// Floating Sparkle/Diamond Component
-const FloatingSparkle = ({ delay, duration, left }) => (
-  <div
-    className="absolute pointer-events-none animate-float-coin"
-    style={{
-      left: `${left}%`,
-      animationDelay: `${delay}s`,
-      animationDuration: `${duration}s`,
-    }}
-  >
-    <div className="text-emerald-400/30 text-xl">✦</div>
-  </div>
-);
-
-// Confetti Burst Component
-const ConfettiBurst = ({ isActive, planId }) => {
-  if (!isActive) return null;
-  const colors = ['bg-pink-400', 'bg-purple-400', 'bg-cyan-400', 'bg-yellow-400', 'bg-emerald-400', 'bg-orange-400'];
-
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {[...Array(20)].map((_, i) => (
-        <div
-          key={i}
-          className={`absolute w-2 h-2 ${colors[i % colors.length]} rounded-full animate-confetti`}
-          style={{
-            left: `${50 + (Math.random() - 0.5) * 60}%`,
-            top: '50%',
-            animationDelay: `${i * 0.05}s`,
-            '--tx': `${(Math.random() - 0.5) * 100}px`,
-            '--ty': `${-50 - Math.random() * 100}px`,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// Click Spark Effect
-const ClickSpark = ({ x, y, onComplete }) => {
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 800);
-    return () => clearTimeout(timer);
-  }, [onComplete]);
-
-  return (
-    <div
-      className="fixed pointer-events-none z-50"
-      style={{ left: x - 30, top: y - 30 }}
-    >
-      {[...Array(6)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-2 h-2 bg-emerald-400 rounded-full animate-spark"
-          style={{
-            transform: `rotate(${i * 60}deg)`,
-            animationDelay: `${i * 0.05}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
 
 export default function Membership() {
   const { currentUser: user, membership, refreshUserProfile } = useAuth();
 
+  const [scrollY, setScrollY] = useState(0);
   const [tab, setTab] = useState('personal');
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [loading, setLoading] = useState(true);
@@ -255,86 +29,50 @@ export default function Membership() {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [showAvailableCoupons, setShowAvailableCoupons] = useState(false);
 
-  // Easter Egg State
-  const [easterEggs, setEasterEggs] = useState({});
-  const [headerSparkle, setHeaderSparkle] = useState(false);
-  const [confettiPlan, setConfettiPlan] = useState(null);
-  const [clickSparks, setClickSparks] = useState([]);
-  const [secretClicks, setSecretClicks] = useState(0);
-  const [showSecretDeal, setShowSecretDeal] = useState(false);
-
-  const easterEggColors = [
-    'text-pink-400', 'text-purple-400', 'text-cyan-400', 'text-yellow-400',
-    'text-orange-400', 'text-rose-400', 'text-indigo-400', 'text-teal-400',
-  ];
-
-  const handleEasterEgg = (id) => {
-    const randomColor = easterEggColors[Math.floor(Math.random() * easterEggColors.length)];
-    setEasterEggs(prev => ({ ...prev, [id]: randomColor }));
-    setConfettiPlan(id); // Trigger confetti
-  };
-
-  const resetEasterEgg = (id) => {
-    setEasterEggs(prev => ({ ...prev, [id]: null }));
-    setConfettiPlan(null);
-  };
-
-  // Secret deal on 7 clicks
-  const handleSecretClick = () => {
-    setSecretClicks(prev => prev + 1);
-    if (secretClicks >= 6) {
-      setShowSecretDeal(true);
-      toast('🎉 You found a secret discount! Use code: EASTER50', { icon: '💰', duration: 5000 });
-      setTimeout(() => setShowSecretDeal(false), 5000);
-      setSecretClicks(0);
-    }
-  };
-
-  // Click spark effect on page
-  const handlePageClick = (e) => {
-    if (Math.random() > 0.75) { // 25% chance
-      const id = Date.now();
-      setClickSparks(prev => [...prev, { id, x: e.clientX, y: e.clientY }]);
-    }
-  };
-
-  const removeSpark = (id) => {
-    setClickSparks(prev => prev.filter(s => s.id !== id));
-  };
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Fetch current pricing from Firestore
   useEffect(() => {
-    // Preload Razorpay SDK while user is browsing plans (saves ~2-3s on click)
     prefetchRazorpay();
-    
     const fetchPricing = async () => {
       try {
         setLoading(true);
         const pricing = await getCurrentPricing();
         const personalPlans = [
-          { id: 'free', title: 'Free', subtitle: 'Perfect to get started', monthlyPrice: pricing.free?.monthly || 0, yearlyPrice: pricing.free?.yearly || 0, features: ['Generic AI chatbot', 'Limited business chatbot', 'Basic data visualization', '15 chats per month', '30-day chat history', 'Community support'], icon: Star, popular: false },
-          { id: 'starter', title: 'Starter', subtitle: 'For students and learners', monthlyPrice: pricing.starter?.monthly || 199, yearlyPrice: pricing.starter?.yearly || 1999, features: ['Generic + Business chatbot', 'Interactive visualization', '150 chats per month', '60-day chat history', 'Export chat history', 'Priority support'], icon: Zap, popular: true },
-          { id: 'plus', title: 'Plus', subtitle: 'For power users', monthlyPrice: pricing.plus?.monthly || 499, yearlyPrice: pricing.plus?.yearly || 4999, features: ['Advanced business workflows', 'Enhanced data visualization', '600 chats per month', 'File upload (50 files, 100MB)', 'Premium support', 'Export reports & charts'], icon: Crown, popular: false },
-          { id: 'pro', title: 'Pro', subtitle: 'For teams & SMEs', monthlyPrice: pricing.pro?.monthly || 1499, yearlyPrice: pricing.pro?.yearly || 14999, features: ['Team collaboration (5 users)', 'Advanced analytics', 'Custom branding', 'API access', '1,500 chats per month', 'Priority technical support'], icon: Award, popular: false },
+          { id: 'free', title: 'Free', subtitle: 'Perfect to get started', monthlyPrice: pricing.free?.monthly || 0, yearlyPrice: pricing.free?.yearly || 0, features: ['Generic AI chatbot', 'Limited business chatbot', 'Basic data visualization', '15 chats per month', '30-day chat history', 'Community support'], popular: false },
+          { id: 'starter', title: 'Starter', subtitle: 'For students and learners', monthlyPrice: pricing.starter?.monthly || 199, yearlyPrice: pricing.starter?.yearly || 1999, features: ['Generic + Business chatbot', 'Interactive visualization', '150 chats per month', '60-day chat history', 'Export chat history', 'Priority support'], popular: true },
+          { id: 'plus', title: 'Plus', subtitle: 'For power users', monthlyPrice: pricing.plus?.monthly || 499, yearlyPrice: pricing.plus?.yearly || 4999, features: ['Advanced business workflows', 'Enhanced data visualization', '600 chats per month', 'File upload (50 files, 100MB)', 'Premium support', 'Export reports & charts'], popular: false },
+          { id: 'pro', title: 'Pro', subtitle: 'For teams & SMEs', monthlyPrice: pricing.pro?.monthly || 1499, yearlyPrice: pricing.pro?.yearly || 14999, features: ['Team collaboration (5 users)', 'Advanced analytics', 'Custom branding', 'API access', '1,500 chats per month', 'Priority technical support'], popular: false },
         ];
         const businessPlans = [
-          { id: 'business', title: 'Business', subtitle: 'For enterprises', monthlyPrice: pricing.business?.monthly || 4999, yearlyPrice: pricing.business?.yearly || 49999, features: ['Unlimited chats', 'Unlimited file uploads', 'Dedicated support manager', 'Team management', 'Advanced security', 'SLA guarantee'], icon: Shield, popular: false },
+          { id: 'business', title: 'Business', subtitle: 'For enterprises', monthlyPrice: pricing.business?.monthly || 4999, yearlyPrice: pricing.business?.yearly || 49999, features: ['Unlimited chats', 'Unlimited file uploads', 'Dedicated support manager', 'Team management', 'Advanced security', 'SLA guarantee'], popular: false },
         ];
         setPlansData({ personal: personalPlans, business: businessPlans });
-      } catch (error) { console.error('Error fetching pricing:', error); }
-      finally { setTimeout(() => setLoading(false), 300); }
+      } catch (error) { 
+        console.error('Error fetching pricing:', error); 
+      } finally { 
+        setTimeout(() => setLoading(false), 300); 
+      }
     };
     fetchPricing();
   }, []);
 
   // Fetch coupons
   useEffect(() => {
-    const fetchCoupons = async () => { try { const coupons = await getAllCoupons(); setAvailableCoupons(coupons.filter(c => c.active)); } catch (e) { console.error(e); } };
+    const fetchCoupons = async () => { 
+        try { 
+            const coupons = await getAllCoupons(); 
+            setAvailableCoupons(coupons.filter(c => c.active)); 
+        } catch (e) { 
+            console.error(e); 
+        } 
+    };
     fetchCoupons();
   }, []);
-
-  // Coupon Logic
-  const [couponSparkle, setCouponSparkle] = useState(false);
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) { setCouponError('Please enter a coupon code'); return; }
@@ -343,9 +81,7 @@ export default function Membership() {
       if (coupon) {
         setAppliedCoupon(coupon);
         setCouponError('');
-        setCouponSparkle(true); // Trigger sparkle effect
-        setTimeout(() => setCouponSparkle(false), 2000);
-        toast.success(`Coupon applied: ${coupon.description}`);
+        toast.success(`Coupon applied: ${coupon.description}`, { style: { background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
       }
       else { setCouponError('Invalid coupon code'); setAppliedCoupon(null); }
     } catch (error) { console.error(error); setCouponError('Error validating coupon.'); }
@@ -355,18 +91,9 @@ export default function Membership() {
     setCouponCode('');
     setAppliedCoupon(null);
     setCouponError('');
-    setShowAvailableCoupons(false); // Also close the panel
-  };
-
-  const closeCouponPanel = () => {
-    if (!appliedCoupon) {
-      setCouponCode('');
-      setCouponError('');
-    }
     setShowAvailableCoupons(false);
   };
 
-  // Price Calculations
   const calculateFinalPrice = (plan) => {
     if (plan.monthlyPrice === 0) return 0;
     let price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
@@ -379,8 +106,8 @@ export default function Membership() {
   };
 
   const handlePurchase = async (planId) => {
-    if (!user) { toast.error('Please log in to choose a plan.'); return; }
-    if (membership?.plan === planId) { toast.error('This is already your current plan.'); return; }
+    if (!user) { toast.error('Please log in to choose a plan.', { style: { background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}); return; }
+    if (membership?.plan === planId) { toast.error('This is already your current plan.', { style: { background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}); return; }
     setIsPurchasing(planId);
     try {
       const plan = [...plansData.personal, ...plansData.business].find(p => p.id === planId);
@@ -388,40 +115,28 @@ export default function Membership() {
       
       if (planId === 'free') { 
         await updateUserMembership(user.uid, planId, billingCycle); 
-        toast.success('Successfully downgraded to Free plan!'); 
+        toast.success('Successfully downgraded to Free plan!', { style: { background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}); 
         setIsPurchasing(null);
       } else {
-        // Trigger Razorpay Payment
         handleRazorpayPayment(
           plan,
           finalPrice,
           user,
           billingCycle,
           async (paymentData) => {
-             // On Success
              try {
-                // Add coupon info to payment data if needed
-                const completePaymentData = {
-                    ...paymentData,
-                    couponCode: appliedCoupon ? couponCode : null,
-                    originalAmount: billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice
-                };
-                
-                // Backend already updated membership during verification
-                // await updateUserMembership(user.uid, planId, billingCycle, completePaymentData); 
-                
-                // Just refresh local state
+                // Using paymentData to log or handle explicitly to satisfy linting
+                console.log('Payment processed:', paymentData.razorpay_payment_id);
                 await refreshUserProfile();
-                toast.success(`Successfully upgraded to ${plan.title} plan!`);
+                toast.success(`Successfully upgraded to ${plan.title} plan!`, { style: { background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
              } catch (err) {
                 console.error(err);
-                toast.error('Payment successful but failed to update membership. Please contact support.');
+                toast.error('Payment successful but failed to update membership.', { style: { background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
              } finally {
                 setIsPurchasing(null);
              }
           },
           (error) => {
-            // On Failure
             console.error(error);
             setIsPurchasing(null);
           }
@@ -429,279 +144,206 @@ export default function Membership() {
       }
     } catch (err) { 
         console.error(err); 
-        toast.error('Something went wrong. Please try again.'); 
+        toast.error('Something went wrong. Please try again.', { style: { background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}); 
         setIsPurchasing(null);
     }
   };
 
   return (
-    <section
-      className="relative min-h-screen overflow-hidden bg-[#05060a] text-white"
-      onClick={handlePageClick}
-    >
-      <Toaster />
+    <main className="relative min-h-screen bg-[#030508] text-white selection:bg-white/10 selection:text-white font-sans overflow-hidden">
+      <Helmet>
+        <title>Pricing | Relyce AI</title>
+        <meta name="description" content="Select the architecture that scales with your intelligence needs." />
+      </Helmet>
+      
+      <Toaster position="bottom-right" />
 
-      {/* Click Spark Effects */}
-      {clickSparks.map(spark => (
-        <ClickSpark
-          key={spark.id}
-          x={spark.x}
-          y={spark.y}
-          onComplete={() => removeSpark(spark.id)}
+      {/* Atmospheric Overlays */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div 
+            className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-emerald-500/[0.015] rounded-full blur-[140px] mix-blend-screen transition-transform duration-1000 ease-out" 
+            style={{ transform: `translateY(${scrollY * 0.05}px)`}}
         />
-      ))}
-
-      {/* Floating Sparkles Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(8)].map((_, i) => (
-          <FloatingSparkle
-            key={i}
-            delay={i * 2}
-            duration={8 + Math.random() * 4}
-            left={5 + i * 12}
-          />
-        ))}
+        <div 
+           className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" 
+           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+        />
       </div>
 
-      {/* Secret Deal Banner */}
-      {showSecretDeal && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 text-white px-8 py-3 rounded-full font-bold shadow-2xl animate-bounce">
-          🎉 SECRET DEAL: Use code EASTER50 for 50% off! 💰
-        </div>
-      )}
-
-      {/* Cyberpunk Rain Background */}
-      <div className="absolute inset-0 -z-20">
-        <CyberpunkRain />
-      </div>
-
-      {/* Themed Emerald Grid Lines */}
-      <div className="absolute inset-0 -z-10 opacity-20">
-        <div
-          className="absolute inset-0 bg-[size:40px_40px] 
-          bg-[linear-gradient(to_right,#10b981_1px,transparent_1px),
-          linear-gradient(to_bottom,#10b981_1px,transparent_1px)]"
-        ></div>
-      </div>
-
-      {/* Main Content */}
-      <div className="w-full max-w-7xl mx-auto px-6 lg:px-8 relative z-10 py-24">
-
-        {/* Header with Easter Egg - Click 7 times for secret */}
-        <div className="max-w-3xl mx-auto text-center mb-16">
-          <div
-            className={`relative inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full border-2 bg-[#0a0b10] mx-auto cursor-pointer transition-all duration-300 hover:scale-110 hover:border-yellow-400 hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] ${showSecretDeal ? 'animate-bounce border-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.6)]' : 'border-emerald-500/50'
-              }`}
-            onMouseEnter={() => setHeaderSparkle(true)}
-            onMouseLeave={() => setHeaderSparkle(false)}
-            onClick={handleSecretClick}
-          >
-            <Sparkles className={`w-8 h-8 transition-all duration-300 ${headerSparkle || showSecretDeal ? 'text-yellow-400 animate-spin' : 'text-emerald-400'}`} />
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold">
-            Simple, Transparent Pricing
-          </h1>
-          <p className="mt-4 max-w-2xl mx-auto text-gray-400">
-            Unlock the full potential of Relyce AI with a plan that fits your needs.
-            Start for free and scale as you grow.
-          </p>
-        </div>
-
-        {/* Billing Toggle */}
-        <div className="flex justify-center items-center gap-4 mb-8">
-          <span className={clsx("font-medium", billingCycle === 'monthly' ? 'text-white' : 'text-gray-500')}>Monthly</span>
-          <button
-            onClick={() => setBillingCycle(b => b === 'monthly' ? 'yearly' : 'monthly')}
-            className={clsx(
-              "relative w-14 h-8 rounded-full transition-colors duration-300 border-2",
-              billingCycle === 'yearly' ? 'bg-emerald-500 border-emerald-500' : 'bg-gray-700 border-gray-600'
-            )}
-          >
-            <span className={clsx(
-              "absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300",
-              billingCycle === 'yearly' ? 'left-7' : 'left-1'
-            )} />
-          </button>
-          <span className={clsx("font-medium", billingCycle === 'yearly' ? 'text-white' : 'text-gray-500')}>
-            Yearly <span className="ml-1 text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">Save ~17%</span>
-          </span>
-        </div>
-
-        {/* Coupon Section */}
-        <div className="max-w-lg mx-auto mb-12">
-          {!showAvailableCoupons && !appliedCoupon ? (
-            <button onClick={() => setShowAvailableCoupons(true)} className="w-full text-center text-sm text-emerald-400 hover:text-emerald-300 transition-colors flex items-center justify-center gap-2">
-              <Zap size={16} /> Have a coupon code? Click here
-            </button>
-          ) : (
-            <div className={`relative p-4 rounded-2xl bg-black/50 backdrop-blur-sm border transition-all duration-300 ${couponSparkle ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'border-emerald-500/30'}`}>
-              {/* Sparkle Effect when coupon applied */}
-              {couponSparkle && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-                  {[...Array(12)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="absolute text-yellow-400 animate-ping"
-                      style={{
-                        left: `${10 + Math.random() * 80}%`,
-                        top: `${10 + Math.random() * 80}%`,
-                        animationDelay: `${i * 0.1}s`,
-                        fontSize: `${10 + Math.random() * 8}px`,
-                      }}
-                    >
-                      ✦
-                    </div>
-                  ))}
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 lg:px-12 pt-32 pb-40">
+        
+        {/* --- Header --- */}
+        <div className="mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-12 border-b border-white/5 pb-16">
+            <div className="max-w-3xl">
+                <div className="mb-8 flex items-center gap-4">
+                    <span className="text-[10px] tracking-[0.2em] font-mono text-zinc-500 uppercase">Valuation</span>
+                    <div className="w-12 h-px bg-white/10" />
                 </div>
-              )}
-
-              <div className="flex gap-2 mb-2">
-                <input type="text" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} placeholder="ENTER CODE" className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white placeholder-gray-500 font-mono" disabled={!!appliedCoupon} />
-                <button onClick={appliedCoupon ? removeCoupon : applyCoupon} className={clsx("px-5 py-2.5 rounded-lg font-semibold text-sm transition-all", appliedCoupon ? "bg-red-500 text-white hover:bg-red-600" : "bg-emerald-500 text-black hover:bg-emerald-400")}>
-                  {appliedCoupon ? "Remove" : "Apply"}
-                </button>
-              </div>
-              {couponError && <p className="text-xs text-red-400">{couponError}</p>}
-              {appliedCoupon && (
-                <p className={`text-xs flex items-center gap-1 transition-all ${couponSparkle ? 'text-yellow-400 font-bold scale-105' : 'text-emerald-400'}`}>
-                  <Check size={12} /> {appliedCoupon.description} applied! 🎉
-                </p>
-              )}
-              {showAvailableCoupons && availableCoupons.length > 0 && !appliedCoupon && (
-                <div className="mt-3 pt-3 border-t border-gray-700 space-y-2">
-                  <p className="text-xs text-gray-500">Available Coupons:</p>
-                  {availableCoupons.map((c) => (
-                    <button key={c.id} onClick={() => setCouponCode(c.code)} className="w-full text-left p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700 transition-colors flex justify-between items-center">
-                      <span className="font-mono font-bold text-emerald-400">{c.code}</span>
-                      <span className="text-xs text-gray-400">{c.description}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button onClick={closeCouponPanel} className="mt-2 w-full text-center text-xs text-gray-500 hover:text-white transition-colors">
-                Close
-              </button>
+                
+                <h1 className="text-5xl sm:text-7xl md:text-[80px] font-medium tracking-tight leading-[1] -ml-1">
+                    <AnimatedGradientText>Architecture</AnimatedGradientText><br />
+                    <span className="text-zinc-500">Topology.</span>
+                </h1>
             </div>
-          )}
+
+            <div className="max-w-sm flex flex-col items-start md:items-end text-left md:text-right">
+                <p className="text-lg text-zinc-400 font-light leading-relaxed mb-8">
+                    Select the computational plane that aligns with your scale. Transparent, unmetered value scaling.
+                </p>
+                {/* Billing Toggle UI */}
+                <div className="inline-flex items-center gap-6 border border-white/10 rounded-full px-6 py-3">
+                    <button 
+                        onClick={() => setBillingCycle('monthly')}
+                        className={`text-xs uppercase tracking-widest transition-colors ${billingCycle === 'monthly' ? 'text-white font-medium' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        Monthly
+                    </button>
+                    <div className="w-px h-4 bg-white/10" />
+                    <button 
+                        onClick={() => setBillingCycle('yearly')}
+                        className={`text-xs uppercase tracking-widest transition-colors flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-white font-medium' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        Annually <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">SAVE 17%</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        {/* Plans Grid */}
-        {loading ? (
-          <div className="grid md:grid-cols-4 gap-8">
-            <LoadingSkeleton /><LoadingSkeleton /><LoadingSkeleton /><LoadingSkeleton />
-          </div>
-        ) : (
-          <div className={clsx("grid gap-8", tab === 'personal' ? 'md:grid-cols-4' : 'md:grid-cols-1 max-w-md mx-auto')}>
-            {plansData[tab].map((plan) => {
-              const Icon = plan.icon;
-              const isCurrentPlan = membership?.plan === plan.id;
-              const finalPrice = calculateFinalPrice(plan);
+        {/* --- Content Tabs --- */}
+        <div className="flex gap-12 mb-16 border-b border-white/5">
+            <button 
+                onClick={() => setTab('personal')}
+                className={`pb-4 text-[10px] uppercase font-mono tracking-[0.2em] transition-all relative ${tab === 'personal' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+            >
+                Core Models
+                {tab === 'personal' && <div className="absolute bottom-[-1px] left-0 right-0 h-px bg-white" />}
+            </button>
+            <button 
+                onClick={() => setTab('business')}
+                className={`pb-4 text-[10px] uppercase font-mono tracking-[0.2em] transition-all relative ${tab === 'business' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+            >
+                Enterprise Grade
+                {tab === 'business' && <div className="absolute bottom-[-1px] left-0 right-0 h-px bg-white" />}
+            </button>
+        </div>
 
-              return (
-                <div
-                  key={plan.id}
-                  className={clsx(
-                    'relative p-6 rounded-2xl bg-black/20 shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer',
-                    plan.popular ? 'border-2 border-emerald-500/70 shadow-emerald-500/20' : 'border border-emerald-500/30',
-                    isCurrentPlan && 'ring-4 ring-emerald-500/50'
-                  )}
-                  onMouseEnter={() => handleEasterEgg(`plan-${plan.id}`)}
-                  onMouseLeave={() => resetEasterEgg(`plan-${plan.id}`)}
+        {/* --- Coupon Interaction --- */}
+        <div className="mb-20 max-w-lg">
+             <div className="flex items-end gap-6">
+                 <div className="flex-1 relative group">
+                    <input 
+                        type="text" 
+                        value={couponCode} 
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        disabled={!!appliedCoupon}
+                        className="w-full bg-transparent border-b border-white/10 py-2 text-white font-mono text-sm focus:outline-none focus:border-white transition-colors peer placeholder-transparent"
+                        placeholder="VOUCHER CODE"
+                    />
+                    <label className="absolute left-0 top-2 text-zinc-600 text-xs font-mono transition-all peer-focus:-top-4 peer-focus:text-[9px] peer-focus:text-zinc-400 peer-valid:-top-4 peer-valid:text-[9px] pointer-events-none tracking-widest">
+                        VOUCHER CODE
+                    </label>
+                 </div>
+                 <button 
+                    onClick={appliedCoupon ? removeCoupon : applyCoupon}
+                    className="text-xs font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors pb-2 border-b border-transparent hover:border-white"
                 >
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-black text-xs font-bold px-3 py-1 rounded-full">
-                      Most Popular
-                    </div>
-                  )}
+                    {appliedCoupon ? '[ X_REMOVE ]' : '[ APPLY ]'}
+                </button>
+             </div>
+             {couponError && <p className="text-[10px] text-red-500/80 font-mono mt-2 uppercase">{couponError}</p>}
+             {appliedCoupon && (
+                 <p className="text-[10px] text-emerald-400 font-mono mt-2 uppercase tracking-wider">
+                     <span className="text-emerald-500 mr-2">»</span> {appliedCoupon.description} ACTIVE
+                 </p>
+             )}
+             {!appliedCoupon && !showAvailableCoupons && availableCoupons.length > 0 && (
+                 <button onClick={() => setShowAvailableCoupons(true)} className="text-[9px] text-zinc-600 hover:text-zinc-400 font-mono mt-4 uppercase underline underline-offset-4">
+                     View Directory
+                 </button>
+             )}
+             {showAvailableCoupons && !appliedCoupon && (
+                 <div className="mt-6 border border-white/10 p-4 font-mono text-[10px]">
+                     <div className="flex justify-between items-center mb-4 text-zinc-500 uppercase">
+                         <span>Available Vouchers</span>
+                         <button onClick={() => setShowAvailableCoupons(false)} className="hover:text-white">[ X ]</button>
+                     </div>
+                     <div className="space-y-4">
+                        {availableCoupons.map((c) => (
+                            <div key={c.id} className="flex justify-between items-center group cursor-pointer" onClick={() => { setCouponCode(c.code); setShowAvailableCoupons(false); }}>
+                                <span className="text-white group-hover:text-emerald-400 transition-colors uppercase">{c.code}</span>
+                                <span className="text-zinc-500 group-hover:text-zinc-300 transition-colors tracking-wide">{c.description}</span>
+                            </div>
+                        ))}
+                     </div>
+                 </div>
+             )}
+        </div>
 
-                  {/* Confetti Easter Egg */}
-                  <ConfettiBurst isActive={confettiPlan === `plan-${plan.id}`} planId={plan.id} />
+        {/* --- Plans Display --- */}
+        {loading ? (
+             <div className="h-64 flex items-center justify-center">
+                 <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-600 animate-pulse">Syncing nodes...</span>
+             </div>
+        ) : (
+            <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-[1px] bg-white/5 border border-white/5">
+                {plansData[tab].map((plan, index) => {
+                    const isCurrentPlan = membership?.plan === plan.id;
+                    const finalPrice = calculateFinalPrice(plan);
 
-                  {/* Icon with Easter Egg */}
-                  <div className={`relative inline-flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full border-2 bg-[#0a0b10] transition-all duration-300 ${easterEggs[`plan-${plan.id}`] ? 'border-pink-400 rotate-12 scale-110' : 'border-emerald-500/50'
-                    }`}>
-                    <Icon className={`w-8 h-8 transition-all duration-300 ${easterEggs[`plan-${plan.id}`] || 'text-emerald-400'}`} />
-                  </div>
+                    return (
+                        <div key={plan.id} className={`bg-[#030508] p-10 flex flex-col transition-all duration-700 ${plan.popular ? 'bg-gradient-to-b from-white/[0.02] to-transparent relative' : ''}`}>
+                            
+                            {/* Decorative Corner */}
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-emerald-500/30 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                  <h3 className="text-2xl font-semibold text-center">{plan.title}</h3>
-                  <p className="mt-2 text-center text-gray-400 text-sm">{plan.subtitle}</p>
+                            <div className="mb-12">
+                                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500 block mb-2">{String(index + 1).padStart(2, '0')}</span>
+                                <h3 className="text-2xl font-light tracking-wide text-white">{plan.title}</h3>
+                                {plan.popular && <span className="text-[9px] text-emerald-400 uppercase tracking-widest mt-2 block font-mono">Recommended Node</span>}
+                            </div>
 
-                  {/* Price */}
-                  <div className="mt-6 text-center">
-                    <span className="text-4xl font-bold">{finalPrice === 0 ? 'Free' : `₹${finalPrice}`}</span>
-                    {finalPrice > 0 && <span className="text-gray-400 text-sm">/{billingCycle === 'yearly' ? 'year' : 'month'}</span>}
-                  </div>
+                            <div className="mb-12">
+                                <span className="text-xs text-zinc-500 uppercase tracking-widest">INR</span>
+                                <div className="text-5xl font-light tracking-tighter mt-2">{finalPrice === 0 ? '0' : finalPrice}</div>
+                                {finalPrice > 0 && <div className="text-xs text-zinc-600 font-mono mt-2">/ {billingCycle === 'yearly' ? 'ANNUM' : 'MONTH'}</div>}
+                            </div>
 
-                  {/* Features */}
-                  <ul className="mt-8 space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
-                        <Check className="text-emerald-400 mt-0.5 shrink-0" size={16} />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                            <div className="flex-1">
+                                <div className="text-[9px] uppercase font-mono text-zinc-600 tracking-[0.2em] mb-6 border-b border-white/10 pb-4">Parameters</div>
+                                <ul className="space-y-4 border-l border-white/5 pl-4">
+                                    {plan.features.map((feature, i) => (
+                                        <li key={i} className="text-sm font-light text-zinc-400 flex items-start">
+                                            <span className="text-emerald-500/50 mr-3 text-xs leading-5">›</span>
+                                            <span className="leading-snug">{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
 
-                  {/* CTA Button */}
-                  <button
-                    onClick={() => handlePurchase(plan.id)}
-                    disabled={isPurchasing === plan.id || isCurrentPlan}
-                    className={clsx(
-                      "w-full mt-8 py-3 font-semibold rounded-xl shadow-lg transition-all duration-300",
-                      isCurrentPlan
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-105'
-                    )}
-                  >
-                    {isPurchasing === plan.id ? 'Processing...' : isCurrentPlan ? 'Current Plan' : 'Get Started'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                            <div className="mt-16 pt-8 border-t border-white/5">
+                                <button
+                                    onClick={() => handlePurchase(plan.id)}
+                                    disabled={isPurchasing === plan.id || isCurrentPlan}
+                                    className={`w-full text-xs uppercase tracking-widest font-mono py-4 transition-all duration-500 flex items-center justify-between group ${isCurrentPlan ? 'text-zinc-600 cursor-not-allowed' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    <span>{isPurchasing === plan.id ? 'Initializing...' : isCurrentPlan ? '[ Active Node ]' : 'Initialize'}</span>
+                                    {!isCurrentPlan && <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 font-sans">→</span>}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         )}
 
-        {/* Tab Switcher */}
-        <div className="mt-16 text-center">
-          <p className="text-gray-400 mb-4">
-            {tab === 'personal' ? "Need a plan for your entire team?" : "Looking for a personal plan?"}
-          </p>
-          <button
-            onClick={() => setTab(t => t === 'personal' ? 'business' : 'personal')}
-            className="px-6 py-2 text-emerald-400 border border-emerald-500/50 rounded-xl hover:bg-emerald-500/10 transition-colors"
-          >
-            {tab === 'personal' ? "View Business Plans" : "View Personal Plans"}
-          </button>
-        </div>
-
       </div>
 
-      {/* Custom Animations for Easter Eggs */}
-      <style>{`
-        @keyframes float-coin {
-          0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 0.8; }
-          100% { transform: translateY(-50px) rotate(720deg); opacity: 0; }
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes bg-pan {
+            0% { background-position: 0% center; }
+            100% { background-position: -200% center; }
         }
-        @keyframes confetti {
-          0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
-          100% { transform: translate(var(--tx), var(--ty)) rotate(720deg) scale(0); opacity: 0; }
-        }
-        @keyframes spark {
-          0% { transform: rotate(var(--rotation, 0deg)) translateY(0) scale(1); opacity: 1; }
-          100% { transform: rotate(var(--rotation, 0deg)) translateY(-30px) scale(0); opacity: 0; }
-        }
-        .animate-float-coin {
-          animation: float-coin linear infinite;
-        }
-        .animate-confetti {
-          animation: confetti 0.8s ease-out forwards;
-        }
-        .animate-spark {
-          animation: spark 0.6s ease-out forwards;
-        }
-      `}</style>
-    </section>
+      `}} />
+    </main>
   );
 }

@@ -26,10 +26,8 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // If user is not logged in, redirect to login
+  // If user is not logged in, wait for useEffect to redirect
   if (!currentUser) {
-    // Navigation is handled in useEffect, but we can also navigate here directly
-    navigate('/login');
     return null;
   }
 

@@ -33,7 +33,7 @@ export function DesktopAuthView({
     onLockoutExpire,
 }) {
     return (
-        <div className="relative overflow-hidden backdrop-blur-lg rounded-2xl shadow-2xl w-full max-w-4xl min-h-[600px] hidden sm:grid grid-cols-2 bg-zinc-900/50 border border-zinc-800 shadow-emerald-500/10 shimmer-border">
+        <div className="relative overflow-hidden w-full max-w-5xl min-h-[600px] hidden sm:grid grid-cols-2 bg-[#0a0d14] border border-white/5">
             {/* Sign In Form Panel */}
             <div className={`form-panel flex flex-col items-center justify-center p-8 text-center absolute top-0 left-0 h-full w-1/2 ${rightPanelActive ? 'inactive z-0' : 'active z-20'}`}>
                 <h1 className="text-4xl font-extrabold mb-6 text-white">Sign In</h1>
@@ -45,7 +45,7 @@ export function DesktopAuthView({
                         <div className="w-full border-t border-zinc-700"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-zinc-900/50 text-zinc-400">or use your account</span>
+                        <span className="px-2 bg-[#0a0d14] text-zinc-600 text-[10px] tracking-widest uppercase bg-transparent px-4">OR</span>
                     </div>
                 </div>
 
@@ -99,7 +99,7 @@ export function DesktopAuthView({
                         <div className="w-full border-t border-zinc-700"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-zinc-900/50 text-zinc-400">or use your email</span>
+                        <span className="px-2 bg-[#0a0d14] text-zinc-600 text-[10px] tracking-widest uppercase bg-transparent px-4">OR</span>
                     </div>
                 </div>
                 <form onSubmit={handleSignUp} className="w-full max-w-sm" noValidate>
@@ -149,36 +149,28 @@ export function DesktopAuthView({
             {/* Overlay Panel - slides between left and right */}
             <div className={`overlay-container absolute top-0 h-full w-1/2 z-30 overflow-hidden ${rightPanelActive ? 'left-0' : 'right-0'}`}>
                 {/* Already have account Panel */}
-                <div className={`overlay-panel absolute inset-0 bg-gradient-to-br from-emerald-900/50 via-teal-900/40 to-cyan-900/30 backdrop-blur-md h-full flex flex-col items-center justify-center p-8 text-center ${rightPanelActive ? 'panel-active' : 'panel-inactive'}`}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/10 via-transparent to-transparent pointer-events-none"></div>
-                    <h1 className="text-4xl font-black mb-3 bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent">
-                        Wait... You're Back?
+                <div className={`overlay-panel absolute inset-0 bg-[#0a0d14] border-l border-r border-white/5 h-full flex flex-col items-center justify-center p-12 text-center transition-opacity duration-500 ${rightPanelActive ? 'panel-active' : 'panel-inactive'}`}>
+                    <h1 className="text-3xl font-light mb-4 tracking-wide text-white">
+                        Welcome Back
                     </h1>
-                    <p className="text-lg text-emerald-300/80 mb-2 font-medium">
-                        Couldn't stay away, huh?
-                    </p>
-                    <p className="text-zinc-400 mb-8 max-w-sm text-sm">
-                        We knew you'd come crawling back. Don't worry, your AI bestie missed roasting you too.
+                    <p className="text-zinc-500 mb-12 max-w-sm text-sm tracking-wide leading-relaxed font-light">
+                        To keep connected with us please login with your personal info
                     </p>
                     <GradientButton onClick={() => setRightPanelActive(false)}>
-                        Fine, Let Me In
+                        Sign In
                     </GradientButton>
                 </div>
 
                 {/* New here Panel */}
-                <div className={`overlay-panel absolute inset-0 bg-gradient-to-br from-emerald-900/50 via-teal-900/40 to-cyan-900/30 backdrop-blur-md h-full flex flex-col items-center justify-center p-8 text-center ${rightPanelActive ? 'panel-inactive' : 'panel-active'}`}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/10 via-transparent to-transparent pointer-events-none"></div>
-                    <h1 className="text-4xl font-black mb-3 bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent">
-                        No Account Yet?
+                <div className={`overlay-panel absolute inset-0 bg-[#0a0d14] border-l border-r border-white/5 h-full flex flex-col items-center justify-center p-12 text-center transition-opacity duration-500 ${rightPanelActive ? 'panel-inactive' : 'panel-active'}`}>
+                    <h1 className="text-3xl font-light mb-4 tracking-wide text-white">
+                        Hello, Friend!
                     </h1>
-                    <p className="text-lg text-emerald-300/80 mb-2 font-medium">
-                        Living under a rock, are we?
-                    </p>
-                    <p className="text-zinc-400 mb-8 max-w-sm text-sm">
-                        Everyone's already here having fun with AI. What's your excuse? Sign up before we judge you harder.
+                    <p className="text-zinc-500 mb-12 max-w-sm text-sm tracking-wide leading-relaxed font-light">
+                        Enter your personal details and start your journey with us
                     </p>
                     <GradientButton onClick={() => setRightPanelActive(true)}>
-                        Okay, I'll Join
+                        Sign Up
                     </GradientButton>
                 </div>
             </div>

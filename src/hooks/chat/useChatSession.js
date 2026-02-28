@@ -87,30 +87,27 @@ export default function useChatSession({
                 }
             }
             
-            // Use requestAnimationFrame to batch updates and prevent visual glitches
-            requestAnimationFrame(() => {
-                // Check if we have a streaming message in progress - don't overwrite it
-                const currentMessages = messagesRef.current || [];
-                const hasStreamingMessage = currentMessages.some(m => m.isStreaming);
-                
-                if (hasStreamingMessage) {
-                    // Don't overwrite while streaming - just update cache
-                    if (currentSessionId && dedupedMessages.length > 0) {
-                        messageCache.set(currentSessionId, dedupedMessages);
-                    }
-                    return;
-                }
-                
-                setMessages(dedupedMessages);
-                // Update cache with latest messages from Firebase
+            // Check if we have a streaming message in progress - don't overwrite it
+            const currentMessages = messagesRef.current || [];
+            const hasStreamingMessage = currentMessages.some(m => m.isStreaming);
+            
+            if (hasStreamingMessage) {
+                // Don't overwrite while streaming - just update cache
                 if (currentSessionId && dedupedMessages.length > 0) {
                     messageCache.set(currentSessionId, dedupedMessages);
                 }
-                if (onMessagesUpdate) onMessagesUpdate(dedupedMessages);
-                setLoading(false);
-                setIsTransitioning(false);
-                setBotTyping(shouldShowTyping);
-            });
+                return;
+            }
+            
+            setMessages(dedupedMessages);
+            // Update cache with latest messages from Firebase
+            if (currentSessionId && dedupedMessages.length > 0) {
+                messageCache.set(currentSessionId, dedupedMessages);
+            }
+            if (onMessagesUpdate) onMessagesUpdate(dedupedMessages);
+            setLoading(false);
+            setIsTransitioning(false);
+            setBotTyping(shouldShowTyping);
         });
 
         return () => {

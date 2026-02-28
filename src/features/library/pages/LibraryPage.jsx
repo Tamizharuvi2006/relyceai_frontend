@@ -25,7 +25,7 @@ import {
     PanelLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../../../assets/logo.svg';
+// removed logo import
 
 // Message Component
 const MessageComponent = ({ msg, isUser }) => (
@@ -36,7 +36,7 @@ const MessageComponent = ({ msg, isUser }) => (
             }`}>
             {!isUser && (
                 <div className="flex items-center gap-2 mb-2">
-                    <img src={logo} alt="Relyce AI" className="w-5 h-5 rounded-full" />
+                    <img src="/logo.svg" alt="Relyce AI" className="w-5 h-5 rounded-full" />
                     <span className="text-xs text-emerald-400 font-medium">Relyce AI</span>
                 </div>
             )}
@@ -50,7 +50,7 @@ const TypingIndicator = () => (
     <div className="flex justify-start mb-4">
         <div className="bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-md">
             <div className="flex items-center gap-2">
-                <img src={logo} alt="Relyce AI" className="w-5 h-5 rounded-full" />
+                <img src="/logo.svg" alt="Relyce AI" className="w-5 h-5 rounded-full" />
                 <div className="flex space-x-1">
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -648,7 +648,7 @@ export default function LibraryPage() {
                         <div className="flex items-center justify-center h-full">
                             <div className="text-center max-w-md">
                                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-                                    <img src={logo} alt="Relyce AI" className="w-10 h-10 rounded-full" />
+                                    <img src="/logo.svg" alt="Relyce AI" className="w-10 h-10 rounded-full" />
                                 </div>
                                 <h3 className="text-xl font-bold mb-2">
                                     Chat with your <span className="text-emerald-400">Documents</span>

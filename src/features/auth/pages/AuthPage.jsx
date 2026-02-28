@@ -254,7 +254,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 font-sans bg-gradient-to-br from-zinc-900 to-black">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 font-sans bg-[#0a0d14]">
       <Helmet>
         <title>{location.pathname === '/login' ? 'Login' : 'Sign Up'} â€“ Relyce AI</title>
         <meta name="robots" content="noindex" />

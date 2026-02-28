@@ -8,7 +8,13 @@ import MessageComponent from './MessageComponent';
 import TypingIndicator from './TypingIndicator';
 import { LoadingSpinner } from '../../../components/loading';
 import BotSkeletonLoader from './BotSkeletonLoader';
-import logo from '../../../assets/logo.svg';
+// removed logo import
+
+const AnimatedGradientText = ({ children, className }) => (
+  <span className={`bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-200 to-emerald-400 animate-[bg-pan_8s_linear_infinite] ${className}`} style={{ backgroundSize: '200% auto' }}>
+    {children}
+  </span>
+);
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -97,53 +103,21 @@ const ChatWindow = memo(function ChatWindow({
   activePersonality: externalActivePersonality,
   setActivePersonality: externalSetActivePersonality,
 }) {
-  // Enforce dark theme
   const theme = 'dark';
   const { currentUser: user, userProfile, loading: authLoading } = useAuth();
 
-  // Use the custom chat hook for all logic
   const {
-    // State
-    messages,
-    loading,
-    wsConnected,
-    botTyping,
-    isReconnecting,
-    showScrollToBottom,
-    chatMode,
-    isTransitioning,
-    isDeepSearchActive,
-
-    // Refs
-    messagesContainerRef,
-
-    // Handlers
-    setChatMode,
-    handleSend,
-    handleStop,
-    handleReconnect,
-    scrollToBottom,
-    copyMessageToClipboard,
-    handleFileUpload,
-    handleFileUploadComplete,
-    handleDownloadPDF,
-    handleShare,
-    handleCopyLink,
-    handleDelete,
-    
-    // Personality
-    personalities,
-    activePersonality,
-    setActivePersonality,
+    messages, loading, wsConnected, botTyping, isReconnecting,
+    showScrollToBottom, chatMode, isTransitioning, isDeepSearchActive,
+    messagesContainerRef, setChatMode, handleSend, handleStop,
+    handleReconnect, scrollToBottom, copyMessageToClipboard,
+    handleFileUpload, handleFileUploadComplete, handleDownloadPDF,
+    handleShare, handleCopyLink, handleDelete,
+    personalities, activePersonality, setActivePersonality,
   } = useChat({
-    currentSessionId,
-    userId,
-    chatSessions,
-    onMessagesUpdate,
-    chatMode: externalChatMode,
-    onChatModeChange: externalOnChatModeChange,
-    activePersonality: externalActivePersonality,
-    setActivePersonality: externalSetActivePersonality,
+    currentSessionId, userId, chatSessions, onMessagesUpdate,
+    chatMode: externalChatMode, onChatModeChange: externalOnChatModeChange,
+    activePersonality: externalActivePersonality, setActivePersonality: externalSetActivePersonality,
     personalities: externalPersonalities,
   });
 
@@ -154,11 +128,6 @@ const ChatWindow = memo(function ChatWindow({
     handleSend({ text: prompt });
   }, [chatMode, handleSend]);
 
-  // ... (refs) ... 
-  // (skipping unchanged code) since this is a view-replace tool, I need to be careful. 
-  // I will just update the destructuring part first.
-
-  // Refs for tracking messages and scroll behavior
   const prevMessagesLengthRef = useRef(messages.length);
   const isAutoScrollingRef = useRef(false);
   const lastUserMessageRef = useRef(null);
@@ -166,418 +135,194 @@ const ChatWindow = memo(function ChatWindow({
   const prevSessionIdRef = useRef(currentSessionId);
   const isSessionSwitchingRef = useRef(false);
 
-  // Track session changes to prevent welcome screen flash
   useEffect(() => {
     if (prevSessionIdRef.current !== currentSessionId && prevSessionIdRef.current !== null) {
       isSessionSwitchingRef.current = true;
-      // Reset after messages load (short delay)
-      const timer = setTimeout(() => {
-        isSessionSwitchingRef.current = false;
-      }, 500);
+      const timer = setTimeout(() => { isSessionSwitchingRef.current = false; }, 500);
       return () => clearTimeout(timer);
     }
     prevSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
-  // Helper function to scroll to a specific message element
   const scrollToMessage = (element) => {
     if (!messagesContainerRef.current || !element) return;
-
     const container = messagesContainerRef.current;
     const elementRect = element.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
-
-    // Calculate the scroll position to center the element
     const scrollTop = elementRect.top - containerRect.top + container.scrollTop;
-
-    container.scrollTo({
-      top: scrollTop,
-      behavior: 'smooth'
-    });
+    container.scrollTo({ top: scrollTop, behavior: 'smooth' });
   };
 
-  // Helper function to scroll a new user message to the top of visible area
   const scrollNewUserMessageToTop = () => {
     if (!messagesContainerRef.current || messages.length === 0) return;
-
     const container = messagesContainerRef.current;
     const lastMessage = messages[messages.length - 1];
-
-    // Only for user messages
     if (lastMessage.role === 'user') {
-      // Small delay to ensure the DOM has updated with the new message
       setTimeout(() => {
         if (container && lastUserMessageRef.current) {
-          // Get the position of the last user message relative to the container
           const messageElement = lastUserMessageRef.current;
           const containerRect = container.getBoundingClientRect();
           const messageRect = messageElement.getBoundingClientRect();
-
-          // Calculate the scroll position to show the message near the top
           const messageTop = messageRect.top - containerRect.top + container.scrollTop;
           const visibleHeight = container.clientHeight;
-
-          // Scroll to position the message about 20% from the top of the visible area
           const targetScrollTop = Math.max(0, messageTop - (visibleHeight * 0.2));
-
-          container.scrollTo({
-            top: targetScrollTop,
-            behavior: 'smooth'
-          });
-
-          // Set auto-scrolling flag to true so bot responses follow
+          container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
           isAutoScrollingRef.current = true;
         } else {
-          // Fallback: scroll to bottom
           setTimeout(() => {
-            if (container) {
-              container.scrollTo({
-                top: container.scrollHeight,
-                behavior: 'smooth'
-              });
-            }
+            if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
           }, 50);
         }
       }, 100);
     }
   };
 
-  // ============ ChatGPT-Style Scroll Behavior ============
-  // Simple rule: Always scroll to bottom when new messages arrive or while bot is typing
-  
-  // Effect 1: Scroll to bottom when messages change
   useEffect(() => {
     if (!messagesContainerRef.current || messages.length === 0) return;
-    
     const container = messagesContainerRef.current;
     const isNewMessage = messages.length > prevMessagesLengthRef.current;
-    
     if (isNewMessage) {
-      // For any new message (User or Bot), scroll to bottom
       isAutoScrollingRef.current = true;
-      
-      // Use requestAnimationFrame to ensure the DOM has updated
-      requestAnimationFrame(() => {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth'
-        });
-      });
+      requestAnimationFrame(() => { container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' }); });
     }
-    
     prevMessagesLengthRef.current = messages.length;
   }, [messages]);
 
-  // Effect 2: Keep scrolling while bot is typing (for streaming effect)
   useEffect(() => {
     if (!messagesContainerRef.current || !botTyping || !isAutoScrollingRef.current) return;
-
     const container = messagesContainerRef.current;
-    
-    // Initial scroll when typing starts
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior: 'smooth'
-    });
-
-    // Keep following the bottom while streaming
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     const scrollInterval = setInterval(() => {
       if (container && isAutoScrollingRef.current) {
-        // More aggressive near-bottom check
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
-        if (isNearBottom) {
-          container.scrollTop = container.scrollHeight;
-        }
+        if (isNearBottom) container.scrollTop = container.scrollHeight;
       }
-    }, 100);
-
+    } , 100);
     return () => clearInterval(scrollInterval);
   }, [botTyping]);
 
-  // Effect 3: Reset auto-scroll flag when user manually scrolls up
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-
     const handleScroll = () => {
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-      if (!isNearBottom && !botTyping) {
-        isAutoScrollingRef.current = false;
-      } else if (isNearBottom) {
-        isAutoScrollingRef.current = true;
-      }
+      if (!isNearBottom && !botTyping) isAutoScrollingRef.current = false;
+      else if (isNearBottom) isAutoScrollingRef.current = true;
     };
-
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
   }, [botTyping]);
 
-  // If still loading auth state, show a loading indicator
   if (authLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-zinc-900">
-        <LoadingSpinner size="default" message="Loading..." />
-      </div>
-    );
+    return <div className="flex-1 flex items-center justify-center bg-transparent"><LoadingSpinner size="default" message="Loading..." /></div>;
   }
 
-  // If user is not authenticated, show a sign in prompt
   if (!user) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="mb-6">
-            <LogIn size={48} className="mx-auto text-emerald-500" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2 text-white">
-            Sign in required
-          </h2>
-          <p className="mb-6 text-slate-400">
-            Please sign in to access the chat
-          </p>
-          <button
-            onClick={() => window.location.href = '/login'}
-            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-colors"
-          >
-            Sign In
+      <div className="flex-1 flex items-center justify-center bg-transparent p-4 text-center">
+        <div className="max-w-md">
+          <LogIn size={48} className="mx-auto text-white/50 mb-6 opacity-80" />
+          <h2 className="text-2xl font-light tracking-tight mb-2 text-white">Sign in required</h2>
+          <p className="mb-6 text-white/50 text-sm">Authentication is required to initialize communication sequence.</p>
+          <button onClick={() => window.location.href = '/login'} className="px-6 py-3 bg-white text-black hover:bg-white/90 font-medium rounded-md transition-colors text-sm tracking-wide">
+            AUTHENTICATE
           </button>
         </div>
       </div>
     );
   }
 
-  // Use the loading animation hook - simplified approach
-  const showTypingAnimation = botTyping;
-
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full font-sans overflow-hidden relative transition-colors duration-300 bg-[#0f0f10]">
-      <style>
-        {`
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .animate-fade-in {
-            animation: fadeIn 0.2s ease-out forwards;
-          }
-          
-          /* Smooth chat transition for session switching */
-          .chat-messages-container {
-            transition: none;
-          }
-          .chat-messages-container.transitioning {
-            opacity: 1;
-          }
-          
-          /* Mobile input container styles */
+    <div className="flex flex-col flex-1 min-h-0 w-full font-sans overflow-hidden relative transition-colors duration-300 bg-transparent">
+      <style>{`
+          .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+          .chat-messages-container { transition: none; }
+          .chat-messages-container.transitioning { opacity: 1; }
           @media (max-width: 768px) {
-            .mobile-input-container {
-              padding: 0 !important;
-              border-top: none !important;
-            }
-            /* Add extra padding at the bottom of messages container on mobile */
-            .mobile-messages-container {
-              padding-bottom: 100px !important;
-            }
+            .mobile-input-container { padding: 0 !important; border-top: none !important; }
+            .mobile-messages-container { padding-bottom: 100px !important; }
           }
+          @media (min-width: 769px) { .user-message-desktop { max-width: 70%; } }
           
-          /* Ensure user messages have proper max width on desktop */
-          @media (min-width: 769px) {
-            .user-message-desktop {
-              max-width: 60%;
-            }
-          }
-          
-          /* Custom scrollbar styles */
-          .zeto-scrollbar::-webkit-scrollbar {
-            width: 8px;
-          }
-          
-          .zeto-scrollbar::-webkit-scrollbar-track {
-            background: #18181b; /* dark theme scrollbar track */
-            border-left: 3px solid #003925;
-          }
-          
-          .zeto-scrollbar::-webkit-scrollbar-thumb {
-            background: #005a3e;
-            border-radius: 4px;
-            border: none;
-          }
-          
-          .zeto-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #007a55;
-          }
-          
-          /* Firefox scrollbar */
-          .zeto-scrollbar {
-            scrollbar-width: thin;
-            scrollbar-color: #005a3e #18181b; /* thumb color, track color */
-          }
-          
-          /* Mobile viewport fixes for keyboard */
-          @supports (height: 100dvh) {
-            .mobile-full-height {
-              height: 100dvh;
-            }
-          }
-          
-          /* Ensure header stays visible on mobile when keyboard opens */
-          @media (max-width: 768px) {
-            .mobile-sticky-header {
-              position: fixed !important;
-              top: 0 !important;
-              left: 0 !important;
-              right: 0 !important;
-              z-index: 100 !important;
-            }
-            
-            .mobile-chat-container {
-              padding-top: 56px !important; /* Space for fixed header */
-            }
-            
-            /* Fix iOS keyboard push behavior */
-            .mobile-input-fixed {
-              position: fixed !important;
-              bottom: 0 !important;
-              left: 0 !important;
-              right: 0 !important;
-              padding-bottom: env(safe-area-inset-bottom, 0) !important;
-            }
-          }
-        `}
-      </style>
+          .custom-chat-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-chat-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-chat-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+          .custom-chat-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+      `}</style>
 
-      {/* Transparent Header */}
       {showHeader && (
         <ChatWindowHeader
-          onToggleSidebar={onToggleSidebar}
-          sidebarExpanded={sidebarExpanded}
-          currentSessionId={currentSessionId}
-          userId={userId}
-          userUniqueId={null} // This would be fetched in the hook
-          messages={messages}
-          theme={theme}
-          chatMode={chatMode}
-          onChatModeChange={setChatMode}
-          onDownloadPDF={handleDownloadPDF}
-          onShare={handleShare}
-          onCopyLink={handleCopyLink}
-          onDelete={handleDelete}
-          personalities={personalities}
-          activePersonality={activePersonality}
-          setActivePersonality={setActivePersonality}
+          onToggleSidebar={onToggleSidebar} sidebarExpanded={sidebarExpanded} currentSessionId={currentSessionId} userId={userId} userUniqueId={userProfile?.uniqueUserId}
+          messages={messages} theme={theme} chatMode={chatMode} onChatModeChange={setChatMode} onDownloadPDF={handleDownloadPDF} onShare={handleShare}
+          onCopyLink={handleCopyLink} onDelete={handleDelete} personalities={personalities} activePersonality={activePersonality} setActivePersonality={setActivePersonality}
         />
       )}
 
-      <div
-        ref={messagesContainerRef}
-        className={`flex-1 overflow-y-auto overflow-x-hidden smooth-scroll relative pb-40 mobile-messages-container pt-[60px] md:pt-0 bg-zinc-900 chat-messages-container ${isTransitioning ? 'transitioning' : ''}`}
-      >
-        {/* Loading spinner removed - using only the auth loading spinner */}
-        {/* Only show empty state when truly empty and not transitioning or switching sessions */}
+      <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative mobile-messages-container pt-[60px] md:pt-0 custom-chat-scrollbar chat-messages-container ${isTransitioning ? 'transitioning' : ''}`}>
         {!loading && !isTransitioning && !isSessionSwitchingRef.current && messages.length === 0 && (
-          <div className="flex items-center justify-center h-full overflow-x-hidden">
-            <div className="text-center max-w-md px-4">
-              <div className="mb-4 flex justify-center">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center">
-                  <img src={logo} alt="Relyce AI" className="w-[100%] h-[100%] rounded-[50%]" />
-                </div>
-              </div>
-              <h1 className="text-2xl font-bold mb-1 text-white">
-                Hello, <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                  {user?.displayName?.split(' ')[0] || 'there'}
-                </span>
-              </h1>
-              <p className="text-lg font-medium text-gray-300 mb-6">
-                Welcome to Relyce AI
-              </p>
-              <div className="flex flex-col gap-2">
-                <div className="text-left bg-zinc-800 rounded-lg p-3">
-                  <p className="text-sm font-medium text-gray-200">Try asking:</p>
-                  <ul className="mt-1 text-sm text-gray-400 list-disc list-inside space-y-1">
-                    <li>How can I improve my business strategy?</li>
-                    <li>What are the latest market trends in my industry?</li>
-                    <li>Can you analyze my business proposal?</li>
-                    <li>Help me understand financial forecasting</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div className="min-h-[calc(100vh-200px)] w-full"></div>
         )}
 
-        {/* Always show messages if they exist - prevents flash during loading/transitions */}
         {messages.length > 0 && (
-          <div className="max-w-4xl mx-auto w-full px-4 py-6 overflow-x-hidden">
+          <div className="max-w-4xl mx-auto w-full px-4 py-8 md:py-12 overflow-x-hidden">
             {messages.map((msg, index) => {
               const continueMeta = chatMode === 'normal' ? extractContinueMeta(msg.content) : null;
               const thinkingVisibility = userProfile?.settings?.personalization?.thinkingVisibility || 'auto';
               return (
               <MessageComponent
                 key={msg.id}
-                ref={(el) => {
-                  if (el) {
-                    if (msg.role === 'user') lastUserMessageRef.current = el;
-                    if (index === messages.length - 1 && msg.role === 'bot') lastBotMessageRef.current = el;
-                  }
-                }}
-                msg={msg}
-                index={index}
-                theme={theme}
-                chatMode={chatMode}
-                onCopyMessage={copyMessageToClipboard}
-                onContinue={handleContinue}
-                continueMeta={continueMeta}
-                isLastMessage={index === messages.length - 1}
-                thinkingVisibility={thinkingVisibility}
+                ref={(el) => { if (el) { if (msg.role === 'user') lastUserMessageRef.current = el; if (index === messages.length - 1 && msg.role === 'bot') lastBotMessageRef.current = el; } }}
+                msg={msg} index={index} theme={theme} chatMode={chatMode} onCopyMessage={copyMessageToClipboard}
+                onContinue={handleContinue} continueMeta={continueMeta} isLastMessage={index === messages.length - 1} thinkingVisibility={thinkingVisibility}
               />
               );
             })}
-            
           </div>
         )}
 
-        {/* ChatGPT-style scroll spacer */}
         <div className="h-[140px] w-full flex-shrink-0" aria-hidden="true" />
 
-        {/* Scroll to bottom button - Side panel version for both mobile and desktop */}
         {showScrollToBottom && (
-          <button
-            onClick={scrollToBottom}
-            className="fixed top-1/2 -translate-y-1/2 -right-2 p-2 rounded-l-lg shadow-lg z-10 transition-all duration-300 bg-emerald-600 text-white hover:bg-emerald-700"
-            aria-label="Scroll to bottom"
-            style={{ transform: 'translateY(-50%)' }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
+          <button onClick={scrollToBottom} className="fixed bottom-32 right-8 z-40 flex items-center gap-2 px-4 py-2 rounded-full bg-[#0a0d14]/90 backdrop-blur-xl border border-white/10 text-zinc-300 hover:text-emerald-400 hover:border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all duration-300 hover:-translate-y-0.5 text-xs font-medium tracking-wide shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+            <span>Latest</span>
           </button>
         )}
       </div>
 
-      {/* Improved chat input container with overlay positioning */}
-      <div className="absolute bottom-0 left-0 right-0 p-1 backdrop-blur-sm z-20 mobile-input-container mobile-input-fixed bg-zinc-900/90">
-        <div className="max-w-5xl mx-auto">
+      <div className={`absolute left-0 right-0 z-20 pointer-events-none transition-all duration-300 ease-in-out ${
+         (!loading && !isTransitioning && !isSessionSwitchingRef.current && messages.length === 0)
+           ? 'top-[45%] -translate-y-1/2 flex flex-col items-center justify-center p-4' 
+           : 'bottom-0 p-3 md:pb-8 md:px-6 mobile-input-container mobile-input-fixed bg-gradient-to-t from-[#0a0d14] via-[#0a0d14]/95 to-transparent pt-20'
+      }`}>
+        {(!loading && !isTransitioning && !isSessionSwitchingRef.current && messages.length === 0) && (
+          <div className="text-center animate-fade-in pointer-events-auto mb-8 flex flex-col items-center gap-3">
+            <span className="text-white/60 text-lg md:text-xl font-light tracking-wide">Welcome{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}</span>
+            <h1 className="text-3xl md:text-4xl font-medium tracking-wide text-white">What can I help with?</h1>
+          </div>
+        )}
+        <div className={`max-w-3xl lg:max-w-4xl mx-auto w-full pointer-events-auto transition-transform duration-500 ${!loading && !isTransitioning && !isSessionSwitchingRef.current && messages.length === 0 ? 'scale-105' : 'scale-100'}`}>
           <ChatInput
-            onSend={handleSend}
-            onFileUpload={handleFileUpload}
-            onFileUploadComplete={handleFileUploadComplete}
-            wsConnected={wsConnected}
-            botTyping={botTyping}
-            isReconnecting={isReconnecting}
-            onReconnect={handleReconnect}
-            onStop={handleStop}
-            sessionId={currentSessionId}
-            chatMode={chatMode}
+            onSend={handleSend} onFileUpload={handleFileUpload} onFileUploadComplete={handleFileUploadComplete} wsConnected={wsConnected} botTyping={botTyping}
+            isReconnecting={isReconnecting} onReconnect={handleReconnect} onStop={handleStop} sessionId={currentSessionId} chatMode={chatMode}
           />
         </div>
+        {(!loading && !isTransitioning && !isSessionSwitchingRef.current && messages.length === 0) && (
+          <div className="mt-8 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto pointer-events-auto opacity-80">
+             <button onClick={() => handleSend({ text: "Draft an architecture doc" })} className="px-4 py-2 rounded-full border border-white/5 text-[11px] font-medium tracking-wide text-zinc-400 hover:bg-white/5 hover:text-white transition-colors bg-white/[0.02]">Draft an architecture doc</button>
+             <button onClick={() => handleSend({ text: "Analyze market trends" })} className="px-4 py-2 rounded-full border border-white/5 text-[11px] font-medium tracking-wide text-zinc-400 hover:bg-white/5 hover:text-white transition-colors bg-white/[0.02]">Analyze market trends</button>
+             <button onClick={() => handleSend({ text: "Optimize pipeline" })} className="px-4 py-2 rounded-full border border-white/5 text-[11px] font-medium tracking-wide text-zinc-400 hover:bg-white/5 hover:text-white transition-colors bg-white/[0.02]">Optimize pipeline</button>
+             <button onClick={() => handleSend({ text: "Refactor algorithm" })} className="px-4 py-2 rounded-full border border-white/5 text-[11px] font-medium tracking-wide text-zinc-400 hover:bg-white/5 hover:text-white transition-colors bg-white/[0.02]">Refactor algorithm</button>
+          </div>
+        )}
       </div>
+      
+      <style>{`
+        @keyframes bg-pan {
+            0% { background-position: 0% center; }
+            100% { background-position: -200% center; }
+        }
+      `}</style>
     </div>
   );
 });

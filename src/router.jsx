@@ -59,7 +59,6 @@ LazyWrapper.displayName = 'LazyWrapper';
 // App Layout with AuthProvider (Logic Heavy)
 const AppLayoutContent = memo(() => {
   const location = useLocation();
-  const { isChatPage, setIsChatPage } = useTheme();
   const { roleError } = useAuth();
 
   useEffect(() => window.scrollTo(0, 0), [location.pathname]);
@@ -73,11 +72,6 @@ const AppLayoutContent = memo(() => {
     location.pathname.startsWith('/shared/') ||
     location.pathname.startsWith('/super') ||
     location.pathname.startsWith('/boss');
-
-  // Update theme context based on route
-  useEffect(() => {
-      setIsChatPage(!!isAppPage);
-  }, [isAppPage, setIsChatPage]);
 
   const roleErrorBanner = roleError ? (
     <div className="bg-amber-500/20 border border-amber-400 text-amber-100 px-4 py-3 text-sm">

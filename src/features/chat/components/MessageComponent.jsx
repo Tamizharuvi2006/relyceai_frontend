@@ -1,4 +1,3 @@
-// components/MessageComponent.jsx
 import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -216,26 +215,25 @@ const extractCurrentHeading = (text) => {
   return "";
 };
 
-/**
- * Premium animated thinking indicator - sleek and minimal
- */
 const ThinkingLoader = () => (
-  <div className="flex items-center gap-3 py-2 min-h-[36px]">
-    <div className="relative">
-      <div className="w-5 h-5 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+  <div className="flex items-center gap-4 py-3 min-h-[44px]">
+    <div className="relative flex h-3 w-3 mt-1.5">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20"></span>
+      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]"></span>
     </div>
-    <span className="text-sm text-zinc-400 animate-pulse">Generating...</span>
+    <span className="text-[13px] font-sans tracking-wide text-zinc-400 font-light animate-pulse mt-1">Analyzing request...</span>
   </div>
 );
 
-
-
 const ProcessingIndicator = ({ query, showSearch, holdFinalStep }) => (
-  <div className="py-1">
+  <div className="py-2">
     {showSearch ? (
-      <div className="flex items-center gap-3 py-2">
-        <Search size={14} className="text-emerald-500 animate-bounce" />
-        <span className="text-sm text-zinc-400">Searching</span>
+      <div className="flex items-center gap-4 py-3 min-h-[44px]">
+        <div className="relative flex h-3 w-3 mt-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-20"></span>
+            <Search size={14} className="text-zinc-400 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+        </div>
+        <span className="text-[13px] font-sans tracking-wide text-zinc-400 font-light animate-pulse mt-1">Deep search active...</span>
       </div>
     ) : (
       <ThinkingLoader />
@@ -243,25 +241,15 @@ const ProcessingIndicator = ({ query, showSearch, holdFinalStep }) => (
   </div>
 );
 
-
-
-
-
-/**
- * Generating response indicator
- */
 const GeneratingIndicator = ({ query, holdFinalStep }) => (
   <ThinkingLoader />
 );
 
-/**
- * Sources display component
- */
 const SourcesDisplay = ({ sources }) => (
-  <div className="mb-3 pb-3 border-b border-zinc-700/50">
-    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
-      <Globe size={12} />
-      <span>Sources ({sources.length})</span>
+  <div className="mb-4 pb-4 border-b border-white/5">
+    <div className="flex items-center gap-2 text-[10px] uppercase font-mono tracking-widest text-white/40 mb-3">
+      <Globe size={10} />
+      <span>REFERENCES ({sources.length})</span>
     </div>
     <div className="flex flex-wrap gap-2">
       {sources.slice(0, 5).map((source, idx) => {
@@ -277,11 +265,10 @@ const SourcesDisplay = ({ sources }) => (
             href={source.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-zinc-800 hover:bg-zinc-700 text-emerald-400 hover:text-emerald-300 transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-1.5 border border-white/10 text-[10px] uppercase tracking-wider font-mono text-white/60 hover:text-white hover:bg-white/5 transition-colors"
             title={source.title}
           >
-            <Globe size={10} />
-            <span className="truncate max-w-[100px]">{domain}</span>
+            <span className="truncate max-w-[120px]">{domain}</span>
             <ExternalLink size={10} className="opacity-50" />
           </a>
         );
@@ -290,9 +277,6 @@ const SourcesDisplay = ({ sources }) => (
   </div>
 );
 
-/**
- * Thinking Dropdown Component
- */
 const ThinkingDropdown = ({ formattedContent, currentHeading, isStreaming, hasAnswer }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasUserToggled, setHasUserToggled] = useState(false);
@@ -315,27 +299,27 @@ const ThinkingDropdown = ({ formattedContent, currentHeading, isStreaming, hasAn
           setHasUserToggled(true);
           setIsOpen(!isOpen);
         }}
-        className="thinking-header"
+        className="flex items-center gap-2 py-2 text-[10px] font-mono tracking-widest text-white/40 hover:text-white w-full uppercase border-b border-transparent hover:border-white/20 transition-all text-left group"
       >
-        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        <Sparkles size={16} className="thinking-icon" />
-        <span className="thinking-label">{isStreaming ? "Thinking" : "Show thinking"}</span>
+        {isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        <Sparkles size={12} className={isOpen ? "text-white" : "opacity-40"} />
+        <span>{isStreaming ? "PROCESSING" : "SHOW LOGS"}</span>
         
         {showLiveHeading && (
-          <span className="thinking-heading-live">
+          <span className="text-white border-l border-white/20 pl-2 ml-2 tracking-normal truncate">
             {currentHeading}
           </span>
         )}
         {!showLiveHeading && showStaticHeading && (
-          <span className="thinking-heading-static">
+          <span className="opacity-50 border-l border-white/10 pl-2 ml-2 tracking-normal truncate">
             {currentHeading}
           </span>
         )}
       </button>
       
       {isOpen && (
-        <div className="thinking-content">
-          <div className="thinking-markdown">
+        <div className="border border-white/5 bg-[#0a0d14]/50 backdrop-blur-md rounded-2xl p-5 mt-3 shadow-inner">
+          <div className="prose prose-sm prose-invert max-w-none text-zinc-400 prose-p:leading-relaxed text-[13px] font-light">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {formattedContent}
             </ReactMarkdown>
@@ -346,12 +330,6 @@ const ThinkingDropdown = ({ formattedContent, currentHeading, isStreaming, hasAn
   );
 };
 
-/**
- * Markdown components for rendering messages
- */
-/**
- * Message component - ChatGPT style layout
- */
 const isSafeUrl = (url) => {
   try {
     const parsed = new URL(url);
@@ -374,9 +352,6 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const fadeTimeoutRef = useRef(null);
   const ghostTimeoutRef = useRef(null);
 
-  /**
-   * Markdown components for rendering messages - defined inside to access chatMode
-   */
   const isGeneric = chatMode === 'normal' || !chatMode;
 
   const MarkdownComponents = {
@@ -397,66 +372,21 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
           }
         };
 
-        // If not generic mode, use a simpler style (original style)
-        if (!isGenericMode) {
-          return (
-            <div className="rounded-lg overflow-hidden my-3 relative group border border-zinc-800">
-              <button
-                onClick={handleCopy}
-                className="absolute top-2 right-2 p-1.5 rounded-md bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
-                title={copied ? "Copied!" : "Copy code"}
-              >
-                {copied ? <Copy size={14} className="text-emerald-400" /> : <Copy size={14} />}
-              </button>
-              <div className="overflow-x-auto" style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'rgba(52, 211, 153, 0.2) transparent',
-                borderRadius: '0.5rem'
-              }}>
-                <SyntaxHighlighter
-                  style={atomDark}
-                  language={language}
-                  PreTag="div"
-                  customStyle={{ margin: 0, borderRadius: '0.5rem', background: '#09090b', padding: '1rem' }}
-                  {...props}
-                >
-                  {String(code).replace(/\n$/, "")}
-                </SyntaxHighlighter>
-              </div>
-            </div>
-          );
-        }
-
-        // ChatGPT style for Generic mode - Premium Emerald-Slate Theme
         return (
-          <div className="rounded-xl overflow-hidden my-6 border border-zinc-700/60 bg-[#0f1117] shadow-xl shadow-black/30">
-            {/* Header bar - neutral dark */}
-            <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/60 border-b border-zinc-700/40">
-              <span className="text-[10px] font-semibold text-zinc-400 font-mono uppercase tracking-[0.12em]">
+          <div className="overflow-hidden my-6 border border-white/[0.05] bg-[#0a0d14] rounded-2xl shadow-xl group/code">
+            <div className="flex items-center justify-between px-5 py-3 bg-[#030508]/80 backdrop-blur-sm border-b border-white/[0.02]">
+              <span className="text-[11px] text-zinc-500 font-medium tracking-wider">
                 {language || 'code'}
               </span>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-zinc-700/40 text-zinc-400 hover:text-zinc-200 transition-all text-xs font-medium"
+                className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5 opacity-0 group-hover/code:opacity-100"
               >
-                {copied ? (
-                  <>
-                    <Copy size={12} className="text-emerald-400" />
-                    <span className="text-emerald-300">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={12} />
-                    <span>Copy code</span>
-                  </>
-                )}
+                {copied ? <span className="text-emerald-400">Copied</span> : <>Copy code</>}
               </button>
             </div>
             
-            <div className="overflow-x-auto relative" style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(99, 102, 241, 0.35) transparent'
-            }}>
+            <div className="overflow-x-auto relative" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent' }}>
               <SyntaxHighlighter
                 style={atomDark}
                 language={language === 'text' ? 'text' : language}
@@ -464,10 +394,10 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
                 customStyle={{
                   margin: 0,
                   background: 'transparent',
-                  padding: '1.25rem',
-                  fontSize: '0.875rem',
+                  padding: '1.25rem 1.5rem',
+                  fontSize: '13px',
                   lineHeight: '1.7',
-                  fontFamily: '"Fira Code", "JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+                  fontFamily: '"JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
                 }}
                 {...props}
               >
@@ -482,122 +412,44 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
       return isBlock ? (
         <CodeBlockWithCopy code={children} language={language} isGenericMode={isGeneric} />
       ) : (
-        <code
-          className="bg-zinc-800/80 text-emerald-300 px-1.5 py-0.5 rounded border border-zinc-700/50 text-sm font-mono"
-          {...props}
-        >
+        <code className="bg-white/5 text-white/90 px-1.5 py-0.5 border border-white/10 text-sm font-mono" {...props}>
           {children}
         </code>
       );
     },
-    h1: ({ _node, ...props }) => (
-      <h1
-        className={isGeneric
-          ? "text-3xl font-semibold mt-7 mb-3 text-emerald-300"
-          : "text-2xl font-bold mt-6 mb-4 pb-2 border-b border-emerald-500/30 text-emerald-400"}
-        {...props}
-      />
-    ),
-    h2: ({ _node, ...props }) => (
-      <h2
-        className={isGeneric
-          ? "text-2xl font-semibold mt-6 mb-3 text-emerald-200"
-          : "text-xl font-semibold mt-5 mb-3 pb-1 border-b border-emerald-500/20 text-emerald-300"}
-        {...props}
-      />
-    ),
-    h3: ({ _node, ...props }) => (
-      <h3
-        className={isGeneric
-          ? "text-xl font-semibold mt-4 mb-2 text-emerald-100"
-          : "text-lg font-semibold mt-4 mb-2 text-emerald-200"}
-        {...props}
-      />
-    ),
-    h4: ({ _node, ...props }) => <h4 className="text-base font-medium mt-3 mb-2 text-emerald-100" {...props} />,
-    h5: ({ _node, ...props }) => <h5 className="text-sm font-medium mt-2 mb-1 text-emerald-50" {...props} />,
-    h6: ({ _node, ...props }) => <h6 className="text-xs font-medium mt-2 mb-1 uppercase tracking-wide text-emerald-500/70" {...props} />,
-    ul: ({ _node, ...props }) => (
-      <ul
-        className={isGeneric
-          ? "list-disc list-outside space-y-2 my-4 ml-5 marker:text-emerald-400"
-          : "list-disc list-outside space-y-1 my-3 ml-4 marker:text-emerald-500"}
-        {...props}
-      />
-    ),
-    ol: ({ _node, ...props }) => (
-      <ol
-        className={isGeneric
-          ? "list-decimal list-outside space-y-2 my-4 ml-5 marker:text-emerald-400"
-          : "list-decimal list-outside space-y-1 my-3 ml-4 marker:text-emerald-500"}
-        {...props}
-      />
-    ),
-    li: ({ _node, ...props }) => <li className={isGeneric ? "my-1 leading-relaxed" : "my-1 pl-1 leading-relaxed"} {...props} />,
-    hr: ({ _node, ...props }) => <hr className={isGeneric ? "my-6 border-emerald-500/20" : "my-6 border-emerald-500/20"} {...props} />,
-    p: ({ _node, ...props }) => (
-      <div
-        className={isGeneric
-          ? "leading-[1.75] my-4 text-zinc-100"
-          : "leading-relaxed my-3 text-gray-200"}
-        {...props}
-      />
-    ),
-    blockquote: ({ _node, ...props }) => (
-      <blockquote
-        className="border-l-4 border-emerald-500 pl-4 py-1 my-3 italic text-gray-300 bg-emerald-900/10 rounded-r"
-        {...props}
-      />
-    ),
+    h1: ({ _node, ...props }) => <h1 className="text-2xl sm:text-3xl font-normal tracking-tight mt-10 mb-5 text-white" {...props} />,
+    h2: ({ _node, ...props }) => <h2 className="text-xl sm:text-2xl font-light tracking-wide mt-10 mb-5 border-b border-white/5 pb-3 text-zinc-100" {...props} />,
+    h3: ({ _node, ...props }) => <h3 className="text-lg font-medium tracking-wide mt-8 mb-4 text-zinc-200" {...props} />,
+    h4: ({ _node, ...props }) => <h4 className="text-base font-medium mt-6 mb-3 text-zinc-300" {...props} />,
+    h5: ({ _node, ...props }) => <h5 className="text-sm tracking-wide mt-5 mb-2 text-zinc-400" {...props} />,
+    h6: ({ _node, ...props }) => <h6 className="text-[12px] font-medium mt-4 mb-2 uppercase tracking-wider text-zinc-500" {...props} />,
+    ul: ({ _node, ...props }) => <ul className="list-disc list-outside space-y-2 my-5 ml-6 marker:text-zinc-500 text-zinc-300" {...props} />,
+    ol: ({ _node, ...props }) => <ol className="list-decimal list-outside space-y-2 my-5 ml-6 marker:text-zinc-500 text-zinc-300" {...props} />,
+    li: ({ _node, ...props }) => <li className="my-1.5 leading-relaxed pl-1" {...props} />,
+    hr: ({ _node, ...props }) => <hr className="my-10 border-white/5" {...props} />,
+    p: ({ _node, ...props }) => <p className="leading-relaxed my-5 text-zinc-300 font-light" {...props} />,
+    blockquote: ({ _node, ...props }) => <blockquote className="border-l-2 border-emerald-500/30 bg-emerald-500/5 rounded-r-2xl px-5 py-3 my-6 italic text-zinc-400" {...props} />,
     a: ({ _node, href, children, ...props }) => {
       const safeHref = isSafeUrl(href) ? href : '#';
       return (
-        <a
-          className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 hover:underline transition-all"
-          target="_blank"
-          rel="noopener noreferrer"
-          href={safeHref}
-          {...props}
-        >
+        <a className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 border-b border-emerald-500/30 hover:border-emerald-400 transition-colors" target="_blank" rel="noopener noreferrer" href={safeHref} {...props}>
           {children}
-          <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
+          <ExternalLink size={12} className="opacity-70" />
         </a>
       );
     },
     table: ({ _node, ...props }) => (
-      <div className="my-4 w-full overflow-x-auto rounded-md border border-emerald-500/20">
-        <table className="w-full border-collapse" {...props} />
+      <div className="my-8 w-full overflow-x-auto border border-white/5 bg-[#0a0d14] rounded-2xl shadow-lg">
+        <table className="w-full border-collapse text-sm text-left" {...props} />
       </div>
     ),
-    thead: ({ _node, ...props }) => <thead className="bg-emerald-900/30 text-emerald-200" {...props} />,
-    th: ({ _node, ...props }) => (
-      <th
-        className="border-b border-emerald-500/30 px-4 py-2 text-left font-semibold"
-        {...props}
-      />
-    ),
-    td: ({ _node, ...props }) => (
-      <td
-        className="border-b border-emerald-500/10 px-4 py-2 text-gray-300"
-        {...props}
-      />
-    ),
-    tr: ({ _node, ...props }) => (
-      <tr
-        className="hover:bg-emerald-500/5 transition-colors"
-        {...props}
-      />
-    ),
-    img: ({ _node, ...props }) => (
-      <img
-        className="rounded-lg my-4 max-w-full h-auto border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
-        {...props}
-      />
-    ),
-    strong: ({ _node, ...props }) => <strong className="font-bold text-emerald-400" {...props} />,
-    em: ({ _node, ...props }) => <em className="italic" {...props} />,
+    thead: ({ _node, ...props }) => <thead className="bg-[#030508]/80 backdrop-blur-sm border-b border-white/5 text-[11px] uppercase tracking-wider font-medium text-zinc-500" {...props} />,
+    th: ({ _node, ...props }) => <th className="px-6 py-4 font-medium" {...props} />,
+    td: ({ _node, ...props }) => <td className="border-t border-white/[0.02] px-6 py-4 text-zinc-300 font-light" {...props} />,
+    tr: ({ _node, ...props }) => <tr className="hover:bg-white/[0.02] transition-colors" {...props} />,
+    img: ({ _node, ...props }) => <img className="my-8 max-w-full h-auto border border-white/5 rounded-2xl shadow-xl" {...props} />,
+    strong: ({ _node, ...props }) => <strong className="font-medium text-white" {...props} />,
+    em: ({ _node, ...props }) => <em className="italic text-zinc-400" {...props} />,
   };
 
   const stripContinueMarkers = (content) => {
@@ -619,29 +471,23 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Preprocess content to convert raw URLs to markdown links and handle raw code
   const preprocessContent = (content) => {
     if (!content) return content;
-
     let processed = stripContinueMarkers(content);
 
-    // 1. Detect if the message is a standalone terminal command/code without backticks
-    // Common terminal commands or code-like patterns
     const codePatterns = [
       /^(mkdir|cd|npm|npm run|npm install|git|sudo|apt-get|docker|pip|pip install|python|node|ls|cat|chmod|chown)\s+.+$/i,
-      /^[a-z0-9_]+\s*=\s*['"][^'"]*['"]$/i, // Simple variable assignment
-      /^\s*\{\s*".+":\s*.+\}\s*$/s, // JSON object
+      /^[a-z0-9_]+\s*=\s*['"][^'"]*['"]$/i,
+      /^\s*\{\s*".+":\s*.+\}\s*$/s,
     ];
 
     const isRawCode = codePatterns.some(pattern => pattern.test(processed.trim())) && !processed.includes('```') && !processed.includes('`');
 
     if (isRawCode) {
-      // Wrap it in a bash block if it looks like a command, otherwise generic code
       const isTerminal = /^(mkdir|cd|npm|git|sudo|apt-get|docker|pip|python|node|ls|cat|chmod|chown)/i.test(processed.trim());
       processed = `\`\`\`${isTerminal ? 'bash' : 'code'}\n${processed.trim()}\n\`\`\``;
     }
 
-    // 2. Convert raw Source: URL patterns to markdown links
     processed = processed.replace(
       /Source:\s*(https?:\/\/[^\s]+)/gi,
       (match, url) => {
@@ -654,7 +500,6 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
       }
     );
 
-    // 3. Convert other raw URLs to markdown links
     processed = processed.replace(
       /(?<!\[.*?\]\()(?<!\()(?<!")(?<!')\b(https?:\/\/[^\s\)"'\]<>]+)/g,
       (url) => {
@@ -675,32 +520,17 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const isStreaming = msg.isStreaming;
   const sources = msg.sources || [];
 
-  const parsedContent = useMemo(
-    () => parseThinkingContent(msg.content || ""),
-    [msg.content]
-  );
+  const parsedContent = useMemo(() => parseThinkingContent(msg.content || ""), [msg.content]);
   const displayContent = useMemo(() => {
     let cleaned = stripContinueMarkers(parsedContent.displayContent || "");
     cleaned = cleaned.replace(/\[\/?THINKING\]/gi, "").trim();
     return cleaned;
   }, [parsedContent.displayContent]);
   const thinkingContent = parsedContent.thinkingContent || "";
-  const normalizedThinking = useMemo(
-    () => normalizeThinkingContent(thinkingContent),
-    [thinkingContent]
-  );
-  const formattedThinking = useMemo(
-    () => formatThinkingForDisplay(normalizedThinking),
-    [normalizedThinking]
-  );
-  const currentHeading = useMemo(
-    () => extractCurrentHeading(formattedThinking),
-    [formattedThinking]
-  );
-  const preprocessedDisplay = useMemo(
-    () => preprocessContent(displayContent),
-    [displayContent]
-  );
+  const normalizedThinking = useMemo(() => normalizeThinkingContent(thinkingContent), [thinkingContent]);
+  const formattedThinking = useMemo(() => formatThinkingForDisplay(normalizedThinking), [normalizedThinking]);
+  const currentHeading = useMemo(() => extractCurrentHeading(formattedThinking), [formattedThinking]);
+  const preprocessedDisplay = useMemo(() => preprocessContent(displayContent), [displayContent]);
 
   const hasVisibleContent = Boolean(displayContent && displayContent.trim().length > 0);
   const allowThinkingPanel = thinkingVisibility !== 'off' && Boolean(formattedThinking);
@@ -710,25 +540,12 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     const minDurationMs = 1200;
     const holdAfterMs = 2000;
 
-    if (indicatorTimeoutRef.current) {
-      clearTimeout(indicatorTimeoutRef.current);
-      indicatorTimeoutRef.current = null;
-    }
-    if (holdTimeoutRef.current) {
-      clearTimeout(holdTimeoutRef.current);
-      holdTimeoutRef.current = null;
-    }
-    if (fadeTimeoutRef.current) {
-      clearTimeout(fadeTimeoutRef.current);
-      fadeTimeoutRef.current = null;
-    }
-    if (ghostTimeoutRef.current) {
-      clearTimeout(ghostTimeoutRef.current);
-      ghostTimeoutRef.current = null;
-    }
+    if (indicatorTimeoutRef.current) clearTimeout(indicatorTimeoutRef.current);
+    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+    if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+    if (ghostTimeoutRef.current) clearTimeout(ghostTimeoutRef.current);
 
     if (indicatorActive) {
-      // Always reset start time to avoid stale state
       indicatorStartRef.current = Date.now();
       setShowIndicator(true);
       setHoldFinalStep(false);
@@ -762,23 +579,10 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     }, remaining);
 
     return () => {
-      if (indicatorTimeoutRef.current) {
-        clearTimeout(indicatorTimeoutRef.current);
-        indicatorTimeoutRef.current = null;
-      }
-      if (holdTimeoutRef.current) {
-        clearTimeout(holdTimeoutRef.current);
-        holdTimeoutRef.current = null;
-      }
-      if (fadeTimeoutRef.current) {
-        clearTimeout(fadeTimeoutRef.current);
-        fadeTimeoutRef.current = null;
-      }
-      if (ghostTimeoutRef.current) {
-        clearTimeout(ghostTimeoutRef.current);
-        ghostTimeoutRef.current = null;
-      }
-      // Reset all UI state flags on cleanup to prevent stale state
+      if (indicatorTimeoutRef.current) clearTimeout(indicatorTimeoutRef.current);
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+      if (ghostTimeoutRef.current) clearTimeout(ghostTimeoutRef.current);
       setIndicatorFade(false);
       setShowIndicator(false);
       setGhostSpace(false);
@@ -787,33 +591,29 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     };
   }, [indicatorActive]);
 
-  // ChatGPT-style: User messages are simple pills on the right
   if (msg.role === "user") {
     return (
-      <div
-        ref={ref}
-        className="flex justify-end mb-6 animate-fade-in"
-        style={{ animationDelay: `${index * 0.03}s` }}
-      >
-        <div className="max-w-[70%]">
-          {/* File attachments */}
+      <div ref={ref} className="flex justify-end mb-10 animate-fade-in group w-full px-4 md:px-0" style={{ animationDelay: `${index * 0.03}s` }}>
+        <div className="max-w-[90%] md:max-w-[75%] lg:max-w-[65%] flex flex-col items-end">
           {msg.files && msg.files.length > 0 && (
-            <div className="mb-2 space-y-2">
+            <div className="mb-3 space-y-2 inline-flex flex-col items-end w-full">
               {msg.files.map((file, idx) => {
                 const fileKey = file.id || `${file.name || 'file'}:${file.size || 0}:${file.lastModified || idx}`;
                 return (
-                  <div key={fileKey} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-zinc-800/50">
-                  {(() => {
-                    const icon = getFileIcon(file.type);
-                    switch (icon.type) {
-                      case 'image': return <Image size={16} className={icon.className} />;
-                      case 'pdf': return <FileText size={16} className={icon.className} />;
-                      default: return <FileText size={16} className={icon.className} />;
-                    }
-                  })()}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate text-white">{file.name}</div>
-                    <div className="text-xs text-gray-400">{formatFileSize(file.size)}</div>
+                  <div key={fileKey} className="flex items-center gap-3 px-4 py-3 border border-white/10 bg-[#030508] shadow-sm w-auto max-w-full">
+                  <div className="text-zinc-500">
+                    {(() => {
+                      const icon = getFileIcon(file.type);
+                      switch (icon.type) {
+                        case 'image': return <Image size={18} />;
+                        case 'pdf': return <FileText size={18} />;
+                        default: return <FileText size={18} />;
+                      }
+                    })()}
+                  </div>
+                  <div className="flex-1 min-w-0 pr-4">
+                    <div className="text-sm truncate text-zinc-300 font-medium">{file.name}</div>
+                    <div className="text-[11px] text-zinc-500 font-mono tracking-wide">{formatFileSize(file.size)}</div>
                   </div>
                 </div>
                 );
@@ -821,19 +621,13 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
             </div>
           )}
           
-          {/* User message bubble - slightly rounded, not full pill */}
-          <div className="inline-block px-4 py-2.5 rounded-2xl bg-zinc-700/60 text-white text-[15px] leading-relaxed">
+          <div className="inline-block px-6 py-4 bg-white/[0.02] border border-white/10 rounded-[2px] shadow-sm text-white/90 text-sm leading-relaxed font-light text-left min-w-[60px] max-w-full break-words">
             {msg.content}
           </div>
           
-          {/* Copy button for user message */}
-          <div className="mt-1 flex gap-1 justify-end">
-            <button
-              onClick={handleCopy}
-              className="p-1.5 rounded-md hover:bg-zinc-700/50 text-gray-500 hover:text-gray-300 transition-colors"
-              title={copied ? "Copied!" : "Copy message"}
-            >
-              <Copy size={14} className={copied ? "text-green-500" : ""} />
+          <div className="mt-2 flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={handleCopy} className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-all flex items-center gap-1.5" title={copied ? "Copied!" : "Copy request"}>
+              {copied ? <><Sparkles size={12} className="text-emerald-400" /> <span className="text-emerald-400">Copied</span></> : <><Copy size={12} /> Copy</>}
             </button>
           </div>
         </div>
@@ -841,116 +635,73 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     );
   }
 
-  // Bot messages - full width with actions below
+  // System/Bot Message Body
   return (
     <div
       ref={ref}
-      className="flex items-start gap-3 mb-6 animate-fade-in group"
+      className={`flex items-start gap-6 mb-12 animate-fade-in group w-full ${isLastMessage ? 'pb-8' : 'border-b border-white/5 pb-10'}`}
       onMouseEnter={() => setShowCopyButton(true)}
       onMouseLeave={() => setShowCopyButton(false)}
       style={{ animationDelay: `${index * 0.03}s` }}
     >
-      {/* Bot Avatar */}
-      <div className="relative flex-shrink-0 hidden md:block">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg bg-gradient-to-br from-emerald-600 to-teal-600">
-          R
-        </div>
-      </div>
-
-      {/* Message content */}
-      <div className="flex-1 min-w-0">
-        <div className={isGeneric ? "text-zinc-100 leading-[1.75] max-w-none" : "text-gray-100 leading-relaxed max-w-none"}>
-          {/* Loader - only shows when NO content yet, hides immediately when first token arrives */}
+      <div className="flex-1 min-w-0 px-2 lg:px-8 max-w-4xl mx-auto w-full">
+        <div className="text-white/80 leading-loose text-[15px] font-light font-['Inter',sans-serif]">
           {(!displayContent && !formattedThinking) && (isSearching || isGenerating) && (
             <ProcessingIndicator query={msg.searchQuery} showSearch={isSearching} holdFinalStep={holdFinalStep} />
           )}
 
-          {/* Sources - consolidated single render location */}
           {sources.length > 0 && !showIndicator && !indicatorFade && !ghostSpace && (
             <SourcesDisplay sources={sources} />
           )}
 
-          {/* Thinking Dropdown */}
           {allowThinkingPanel && (
-            <ThinkingDropdown
-              formattedContent={formattedThinking}
-              currentHeading={currentHeading}
-              isStreaming={Boolean(isStreaming && !hasVisibleContent)}
-              hasAnswer={hasVisibleContent}
-            />
+            <ThinkingDropdown formattedContent={formattedThinking} currentHeading={currentHeading} isStreaming={Boolean(isStreaming && !hasVisibleContent)} hasAnswer={hasVisibleContent} />
           )}
 
-          {/* Intelligence Bar - visible AI intelligence layer */}
           {msg.intelligence && (
             <IntelligenceBar intelligence={msg.intelligence} isStreaming={isStreaming} />
           )}
 
-          {/* Message text */}
           {displayContent && (
-            <div
-              className={`relative ${
-                isGeneric
-                  ? "prose prose-invert prose-emerald max-w-none leading-relaxed prose-h2:mt-8 prose-h2:font-semibold prose-h3:mt-6 prose-h3:font-semibold prose-p:mt-3 prose-ul:mt-3 prose-ol:mt-3"
-                  : ""
-              }`}
-            >
-              <ReactMarkdown
-                components={MarkdownComponents}
-                remarkPlugins={[remarkGfm]}
-              >
-                {preprocessedDisplay}
-              </ReactMarkdown>
-              {/* Streaming cursor */}
+            <div className="relative">
+              <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0">
+                <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
+                  {preprocessedDisplay}
+                </ReactMarkdown>
+              </div>
               {isStreaming && (
-                <span className="inline-block w-2 h-4 bg-emerald-400 ml-1 animate-pulse"></span>
+                <span className="inline-block w-2.5 h-4 bg-emerald-400 ml-2 animate-pulse align-middle opacity-80 decoration-blink rounded-sm"></span>
               )}
             </div>
           )}
         </div>
         
-        {/* Copy and Download buttons - always visible, below message */}
         {displayContent && !isSearching && !isGenerating && !isStreaming && (
-          <div className="mt-2 flex gap-2 items-center flex-wrap">
-            <button
-              onClick={handleCopy}
-              className="p-1.5 rounded-md hover:bg-zinc-700/50 text-gray-500 hover:text-gray-300 transition-colors"
-              title={copied ? "Copied!" : "Copy message"}
-            >
-              <Copy size={16} className={copied ? "text-green-500" : ""} />
+          <div className="mt-8 pt-4 border-t border-white/5 flex gap-4 items-center opacity-30 group-hover:opacity-100 transition-opacity">
+            <button onClick={handleCopy} className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5" title={copied ? "Copied!" : "Copy text"}>
+              <Copy size={12} className={copied ? "text-emerald-400" : ""} /> {copied ? <span className="text-emerald-400">Copied</span> : 'Copy text'}
             </button>
             {isGeneric && continueMeta && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Continue available
+              <span className="text-[11px] font-medium tracking-wide text-zinc-500 border border-white/5 bg-white/[0.02] px-3 py-1.5 rounded-full flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" /> Continuation Available
               </span>
             )}
             {isGeneric && continueMeta && onContinue && (
-              <button
-                onClick={() => onContinue(msg, continueMeta)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200 transition-colors text-xs font-medium"
-                title="Continue generating"
-              >
-                <Sparkles size={14} />
-                Continue
+              <button onClick={() => onContinue(msg, continueMeta)} className="text-[11px] font-medium tracking-wide text-zinc-300 hover:text-white transition-colors bg-white/5 px-4 py-1.5 rounded-full flex items-center gap-2 border border-white/10 hover:border-white/20">
+                <Sparkles size={12} className="text-emerald-400" /> Proceed
               </button>
             )}
             <button
               onClick={() => {
-                // Download as text file
                 const blob = new Blob([stripSystemMarkers(msg.content)], { type: 'text/plain' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `relyce-response-${Date.now()}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                const a = document.createElement('a'); a.href = url; a.download = `relyce-log-${Date.now()}.txt`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
               }}
-              className="p-1.5 rounded-md hover:bg-zinc-700/50 text-gray-500 hover:text-gray-300 transition-colors"
-              title="Download as text"
+              className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5"
+              title="Download text file"
             >
-              <Download size={16} />
+              <Download size={12} /> Export
             </button>
           </div>
         )}

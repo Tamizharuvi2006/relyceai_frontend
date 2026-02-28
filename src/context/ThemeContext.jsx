@@ -10,12 +10,12 @@ export function ThemeProvider({ children }) {
   // Always dark theme - light mode removed
   const theme = 'dark';
 
-  // Value object with theme info
-  const value = {
+  // Value object with theme info, memoized to prevent infinite renders
+  const value = React.useMemo(() => ({
     theme,
     setTheme: () => { }, // No-op since we only use dark
     setIsChatPage: () => { } // No-op, not needed anymore
-  };
+  }), [theme]);
 
   return (
     <ThemeContext.Provider value={value}>

@@ -5,13 +5,13 @@ import React from 'react';
  */
 export function InputWithIcon({ icon, ...props }) {
     return (
-        <div className="relative mb-4">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+        <div className="relative mb-6">
+            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none opacity-50">
                 {icon}
             </div>
             <input
                 {...props}
-                className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition bg-zinc-900/50 border border-zinc-700 text-emerald-400 placeholder-zinc-500 hover:border-emerald-500/50"
+                className="w-full pl-10 pr-4 py-3 bg-transparent border-b border-white/10 text-white placeholder-zinc-600 focus:outline-none focus:border-white/40 transition-colors duration-300 text-sm tracking-wide font-light"
             />
         </div>
     );

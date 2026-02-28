@@ -1,27 +1,26 @@
-// components/TypingIndicator.jsx
 import React from 'react';
+// No need for logo import since we use the public folder
 
 /**
- * Typing indicator component for showing bot is typing
- * @param {Object} props - Component props
- * @returns {JSX.Element} Typing indicator component
+ * Premium typing indicator — emerald breathing orb with Relyce logo + dot pulse
  */
-const TypingIndicator = ({ theme }) => (
-  <div className="flex items-center">
-    <div className="relative">
-      {/* Wave animation circles */}
-      <div className="absolute inset-0">
-        <div className={`absolute inset-0 rounded-full ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'} animate-ping opacity-75`}></div>
-        <div className={`absolute inset-0 rounded-full ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'} animate-ping opacity-50`} style={{ animationDelay: '0.5s', animationDuration: '1.5s' }}></div>
-        <div className={`absolute inset-0 rounded-full ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'} animate-ping opacity-25`} style={{ animationDelay: '1s', animationDuration: '1.5s' }}></div>
+const TypingIndicator = () => (
+  <div className="flex items-center gap-3 py-1">
+    {/* Emerald Orb */}
+    <div className="relative flex-shrink-0">
+      {/* Outer pulse ring */}
+      <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-ping" style={{ animationDuration: '2s' }} />
+      {/* Inner orb */}
+      <div className="relative w-8 h-8 rounded-full bg-[#0a0d14] border border-emerald-500/25 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+        <img src="/logo.svg" alt="Relyce" className="w-4 h-4 opacity-70" style={{ filter: 'drop-shadow(0 0 4px rgba(16,185,129,0.5))' }} />
       </div>
-      
-      {/* "R" letter with better styling */}
-      <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
-        theme === 'dark' ? 'bg-gradient-to-br from-blue-600 to-purple-600' : 'bg-gradient-to-br from-blue-500 to-purple-500'
-      }`}>
-        R
-      </div>
+    </div>
+
+    {/* Dot animation */}
+    <div className="flex items-center gap-1">
+      <span className="typing-dot" />
+      <span className="typing-dot typing-dot-2" />
+      <span className="typing-dot typing-dot-3" />
     </div>
   </div>
 );

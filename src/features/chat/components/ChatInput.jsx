@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Plus, Upload, Search, X, FileText, Image, Square } from 'lucide-react';
+import { Mic, MicOff, Plus, Upload, Search, X, FileText, Image, Square, Globe, Send } from 'lucide-react';
 import { uploadFile, deleteFile } from '../../../utils/api.js';
 import { uploadChatFileToFirebase } from '../../files/services/fileService.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
@@ -8,6 +8,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
     const theme = 'dark';
     const { currentUser: user, userProfile, loading } = useAuth();
     const [text, setText] = useState('');
+    const [isFocused, setIsFocused] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -28,8 +29,8 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
     const recognitionRef = useRef(null);
     const dropdownRef = useRef(null);
     const textareaRef = useRef(null);
-    const prevTextRef = useRef(''); // Store previous value to avoid unnecessary resizes
-
+    const inputContainerRef = useRef(null);
+    const prevTextRef = useRef('');
 
     useEffect(() => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -50,7 +51,6 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         recog.onend = () => setIsRecording(false);
         recognitionRef.current = recog;
 
-        // Cleanup: stop recognition on unmount
         return () => {
             if (recognitionRef.current) {
                 recognitionRef.current.stop();
@@ -122,11 +122,9 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
 
     const handleSend = () => {
         if (!text.trim() && uploadedFiles.length === 0) return;
-        if (botTyping) return; // Prevent double submit while streaming
+        if (botTyping) return;
 
-        // Safety: Max length check (5k chars)
         if (text.length > 5000) {
-            // Toast or alert would be better, but console warn for now if no toast available in props
             console.warn("Message too long (max 5000 chars)");
             alert("Message must be under 5000 characters."); 
             return;
@@ -166,7 +164,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         e.stopPropagation();
 
         if (onFileUpload) {
-            onFileUpload(file.name); // Just notify parent
+            onFileUpload(file.name);
             try {
                 if (!user) {
                     console.error('❌ No user found, cannot upload file');
@@ -177,15 +175,12 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 const firebaseUid = user.uid;
                 const uniqueUserId = userProfile?.uniqueUserId || user.uid;
                 
-                // Upload to backend for RAG processing (session-specific - Option B)
                 const resp = await uploadChatFileToFirebase(firebaseUid, uniqueUserId, sessionId, file);
                 
                 if (onFileUploadComplete) {
-                    // Pass fileId for RAG context lookup
                     onFileUploadComplete(previewId, resp.success, resp.fileName, resp.fileId);
                 }
                 
-                // Store fileId for use in chat messages - use previewId to match
                 setUploadedFiles(prev => prev.map(f => 
                     f.id === previewId ? { ...f, fileId: resp.fileId, ragReady: true } : f
                 ));
@@ -220,11 +215,11 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
 
     const getFileIcon = (fileType) => {
         if (fileType.startsWith('image/')) {
-            return <Image size={16} className="text-blue-400" />;
+            return <Image size={16} className="text-white/50" />;
         } else if (fileType === 'application/pdf') {
-            return <FileText size={16} className="text-red-400" />;
+            return <FileText size={16} className="text-white/50" />;
         } else {
-            return <FileText size={16} className="text-gray-400" />;
+            return <FileText size={16} className="text-white/50" />;
         }
     };
 
@@ -247,30 +242,24 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         setDropdownOpen(false);
     };
 
-    // Handle expand/collapse button click
     const toggleExpand = () => {
         const newState = !isExpanded;
 
         if (textareaRef.current) {
             if (newState) {
-                // Expanding
                 setIsExpanded(true);
                 setSkipAutoResize(true);
-
                 textareaRef.current.style.height = '240px';
                 textareaRef.current.style.overflowY = 'auto';
-
                 setTimeout(() => setSkipAutoResize(false), 100);
             } else {
-                // Collapsing
                 setIsExpanded(false);
                 setSkipAutoResize(true);
 
                 const target = textareaRef.current;
-                const maxHeight = 112; // 4 lines
+                const maxHeight = 112; 
                 const minHeight = 40;
 
-                // Use direct scrollHeight measurement
                 target.style.height = 'auto';
                 const scrollHeight = target.scrollHeight;
 
@@ -290,24 +279,18 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         }
     };
 
-    // OPTIMIZED RESIZING LOGIC - Uses direct scrollHeight instead of DOM cloning
     const autoResizeTextarea = (target) => {
         if (!target) return;
-
-        // If we're manually expanding, skip auto-resize
         if (skipAutoResize) return;
-
-        // If expanded, set to 10 lines height regardless of content
         if (isExpanded) {
             target.style.height = '240px';
             target.style.overflowY = 'auto';
             return;
         }
 
-        const maxHeight = 112; // 4 lines (24px * 4 + 16px padding)
-        const minHeight = 40;  // 1 line with padding
+        const maxHeight = 112;
+        const minHeight = 40;
 
-        // If no content, maintain minimum height
         if (!target.value.trim()) {
             target.style.height = `${minHeight}px`;
             target.style.overflowY = 'hidden';
@@ -315,13 +298,10 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
             return;
         }
 
-        // Direct scrollHeight measurement (FAST - no DOM cloning)
-        // Temporarily set height to auto to get actual content height
         const currentHeight = target.style.height;
         target.style.height = 'auto';
         const scrollHeight = target.scrollHeight;
         
-        // Apply appropriate height based on content
         if (scrollHeight <= minHeight) {
             target.style.height = `${minHeight}px`;
             target.style.overflowY = 'hidden';
@@ -341,10 +321,8 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         const newValue = e.target.value;
         setText(newValue);
 
-        // Trigger auto-resize with minimal debounce (resize is now fast)
         if (textareaRef.current && prevTextRef.current !== newValue) {
             prevTextRef.current = newValue;
-
             if (textareaRef.current.resizeTimeout) {
                 clearTimeout(textareaRef.current.resizeTimeout);
             }
@@ -352,26 +330,22 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 if (textareaRef.current) {
                     autoResizeTextarea(textareaRef.current);
                 }
-            }, 50); // Reduced debounce - resize is now fast
+            }, 50);
         }
     };
 
     useEffect(() => {
-        // Set initial height to 1 line with padding
         const timer = setTimeout(() => {
             if (textareaRef.current) {
-                textareaRef.current.style.height = '40px'; // 1 line height with padding (24px line height + 16px padding)
+                textareaRef.current.style.height = '40px';
                 textareaRef.current.style.overflowY = 'hidden';
             }
-        }, 100); // Increased delay to ensure proper initialization
-
+        }, 100);
         return () => clearTimeout(timer);
     }, []);
 
     useEffect(() => {
-        // Only trigger auto-resize if text actually changed
         if (textareaRef.current && prevTextRef.current !== text) {
-            // Debounce to prevent too frequent updates
             if (textareaRef.current.resizeEffectTimeout) {
                 clearTimeout(textareaRef.current.resizeEffectTimeout);
             }
@@ -379,13 +353,13 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 autoResizeTextarea(textareaRef.current);
             }, 100);
         }
-    }, [text, isExpanded, skipAutoResize]); // Add skipAutoResize to dependencies
+    }, [text, isExpanded, skipAutoResize]);
 
     if (loading) {
         return (
             <div className="w-full flex flex-col items-center">
-                <div className="relative flex items-center w-full max-w-4xl backdrop-blur-xl rounded-2xl px-2 py-2 shadow-lg bg-gray-800/80 border border-gray-700/60">
-                    <div className="flex-1 px-2 py-3 text-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500 mx-auto"></div></div>
+                <div className="relative flex items-center w-full max-w-4xl px-2 py-2 bg-[#0a0d14] border-t border-white/5">
+                    <div className="flex-1 px-2 py-3 text-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div></div>
                 </div>
             </div>
         );
@@ -394,10 +368,10 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
     if (!user) {
         return (
             <div className="w-full flex flex-col items-center">
-                <div className="relative flex items-center w-full max-w-4xl backdrop-blur-xl rounded-2xl px-4 py-3 shadow-lg bg-gray-800/80 border border-gray-700/60">
+                <div className="relative flex items-center w-full max-w-4xl px-4 py-4 bg-[#0a0d14] border-t border-white/5">
                     <div className="flex-1 text-center">
-                        <p className="text-sm text-slate-400">
-                            Please <button onClick={() => window.location.href = '/login'} className="font-semibold text-emerald-400 hover:text-emerald-300">sign in</button> to start chatting
+                        <p className="text-[11px] uppercase tracking-widest text-white/50">
+                            Authentication Required. <button onClick={() => window.location.href = '/login'} className="text-white hover:underline transition-all">Authenticate</button>
                         </p>
                     </div>
                 </div>
@@ -408,25 +382,25 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
     return (
         <div className="w-full flex flex-col items-center mobile-chat-input-container">
             <style>{`
-                .custom-textarea-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-textarea-scrollbar::-webkit-scrollbar { width: 2px; }
                 .custom-textarea-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .dark .custom-textarea-scrollbar::-webkit-scrollbar-thumb { background-color: #003925; border-radius: 10px; }
+                .dark .custom-textarea-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.2); }
                 .no-resize-handle { resize: none !important; }
                 @media (max-width: 768px) {
-                  .chat-input-container { width: 90% !important; }
+                  .chat-input-container { width: 100% !important; }
                   .websearch-text { display: none; }
                   .mobile-chat-input-container {
-                    padding-bottom: env(safe-area-inset-bottom); /* Handle mobile notches */
+                    padding-bottom: env(safe-area-inset-bottom);
                   }
                 }
                 @media (min-width: 769px) {
-                  .chat-input-container { width: 70% !important; max-width: 1200px !important; }
+                  .chat-input-container { width: 100% !important; max-width: 900px !important; }
                 }
             `}</style>
 
             {uploadError && (
-                <div className="w-full max-w-[1200px] mx-auto mb-2 chat-input-container">
-                    <div className="backdrop-blur-sm rounded-lg p-2 border bg-red-900/20 border-red-800/50 text-red-300 text-sm flex items-center justify-between">
+                <div className="w-full max-w-[900px] mx-auto mb-2 chat-input-container">
+                    <div className="p-3 border bg-red-900/10 border-red-500/20 text-red-400 text-xs tracking-wide uppercase flex items-center justify-between">
                         <span>{uploadError}</span>
                         <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-300">
                             <X size={14} />
@@ -434,15 +408,16 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                     </div>
                 </div>
             )}
+            
             {uploadedFiles.length > 0 && (
-                <div className="w-full max-w-[1200px] mx-auto mb-2 chat-input-container">
-                    <div className="backdrop-blur-sm rounded-lg p-2 border bg-zinc-800/40 border-zinc-700/40">
+                <div className="w-full max-w-[900px] mx-auto mb-2 chat-input-container">
+                    <div className="p-3 bg-[#0a0d14] border border-white/10">
                         <div className="flex flex-wrap gap-2">
                             {uploadedFiles.map((file) => (
-                                <div key={file.id} className="flex items-center gap-2 rounded-md px-2 py-1 border text-xs bg-zinc-900/60 border-zinc-600/40">
-                                    <div className="p-1 rounded bg-gray-700">{getFileIcon(file.type)}</div>
-                                    <div className="flex-1 min-w-0"><div className="font-medium truncate text-white" title={file.name}>{file.name}</div></div>
-                                    <button onClick={() => removeFile(file.id)} className="p-1 rounded-full transition-all text-zinc-400 hover:text-white hover:bg-zinc-700" title="Remove file"><X size={14} /></button>
+                                <div key={file.id} className="flex items-center gap-3 px-3 py-2 border bg-white/5 border-white/10 text-xs">
+                                    <div className="text-white/50">{getFileIcon(file.type)}</div>
+                                    <div className="flex-1 min-w-0"><div className="font-mono truncate text-white/80" title={file.name}>{file.name}</div></div>
+                                    <button onClick={() => removeFile(file.id)} className="transition-all text-white/40 hover:text-white" title="Remove file"><X size={14} /></button>
                                 </div>
                             ))}
                         </div>
@@ -450,152 +425,124 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 </div>
             )}
 
-            <div className="relative w-full max-w-[1200px] mx-auto backdrop-blur-xl rounded-2xl p-2.5 shadow-lg transition-all duration-300 chat-input-container bg-zinc-900 border border-emerald-500/30">
-
+            {/* Main Input Area */}
+            <div 
+                ref={inputContainerRef}
+                className={`relative flex flex-col w-full max-w-[900px] mx-auto bg-[#0a0d14] border transition-all duration-300 rounded-[2px] ${
+                isFocused
+                  ? 'border-white/30 shadow-2xl'
+                  : 'border-white/10 hover:border-white/20 shadow-lg'
+                }`}
+            >
+                
+                {/* Web Search/Deep Toggle (Moved Inside Top) */}
+                {chatMode === 'normal' && (
+                <div className="flex items-center px-4 pt-3 pb-1 gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsWebSearchActive(!isWebSearchActive)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 border border-transparent transition-all duration-300 text-[10px] font-mono tracking-widest uppercase ${
+                          isWebSearchActive
+                            ? 'bg-white/10 text-white border-white/20'
+                            : 'text-zinc-500 hover:bg-white/5 hover:text-white'
+                        }`}
+                        title="Toggle Web Search"
+                    >
+                    <Globe size={12} className={isWebSearchActive ? 'text-white' : ''} />
+                    <span>{isWebSearchActive ? 'WEB: ON' : 'WEB SEARCH'}</span>
+                    </button>
+                </div>
+                )}
+                
                 {showReactChecklist && (
-                    <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
-                        <div className="flex items-center justify-between gap-3">
+                    <div className="mb-4 border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between gap-3 mb-4">
                             <div>
-                                <div className="text-sm font-semibold text-emerald-300">React Requirements Checklist</div>
-                                <div className="text-xs text-zinc-400">Fill quick details or proceed with dummy data</div>
+                                <div className="text-[11px] uppercase tracking-widest font-mono text-white">Interface Requirements Checklist</div>
                             </div>
-                            <button
-                                onClick={() => { setShowReactChecklist(false); setPendingSend(null); }}
-                                className="text-zinc-400 hover:text-zinc-200"
-                                title="Close"
-                            >
-                                <X size={16} />
-                            </button>
+                            <button onClick={() => { setShowReactChecklist(false); setPendingSend(null); }} className="text-white/40 hover:text-white transition-all"><X size={16} /></button>
                         </div>
-                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <input
-                                value={reactChecklist.product}
-                                onChange={(e) => setReactChecklist(prev => ({ ...prev, product: e.target.value }))}
-                                placeholder="Product or app name"
-                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                            />
-                            <input
-                                value={reactChecklist.audience}
-                                onChange={(e) => setReactChecklist(prev => ({ ...prev, audience: e.target.value }))}
-                                placeholder="Target audience"
-                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                            />
-                            <input
-                                value={reactChecklist.sections}
-                                onChange={(e) => setReactChecklist(prev => ({ ...prev, sections: e.target.value }))}
-                                placeholder="Key sections (hero, features, pricing...)"
-                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                            />
-                            <input
-                                value={reactChecklist.theme}
-                                onChange={(e) => setReactChecklist(prev => ({ ...prev, theme: e.target.value }))}
-                                placeholder="Theme or vibe (dark, minimal, neon...)"
-                                className="w-full rounded-lg bg-zinc-900 border border-zinc-700/60 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input value={reactChecklist.product} onChange={(e) => setReactChecklist(prev => ({ ...prev, product: e.target.value }))} placeholder="Product or app name" className="w-full bg-[#0a0d14] border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40 transition-all font-light" />
+                            <input value={reactChecklist.audience} onChange={(e) => setReactChecklist(prev => ({ ...prev, audience: e.target.value }))} placeholder="Target audience" className="w-full bg-[#0a0d14] border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40 transition-all font-light" />
+                            <input value={reactChecklist.sections} onChange={(e) => setReactChecklist(prev => ({ ...prev, sections: e.target.value }))} placeholder="Key sections (hero, features...)" className="w-full bg-[#0a0d14] border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40 transition-all font-light" />
+                            <input value={reactChecklist.theme} onChange={(e) => setReactChecklist(prev => ({ ...prev, theme: e.target.value }))} placeholder="Theme or vibe (dark, minimal...)" className="w-full bg-[#0a0d14] border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40 transition-all font-light" />
                         </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                            <button
-                                onClick={() => pendingSend && finalizeSend(pendingSend, { includeChecklist: true, useDefaults: true })}
-                                className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                            >
-                                Skip and use dummy data
+                        <div className="mt-4 flex flex-wrap gap-3">
+                            <button onClick={() => pendingSend && finalizeSend(pendingSend, { includeChecklist: true, useDefaults: true })} className="px-4 py-2 text-[10px] uppercase font-mono tracking-widest bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-all border border-transparent">
+                                SKIP DETAILS
                             </button>
-                            <button
-                                onClick={() => pendingSend && finalizeSend(pendingSend, { includeChecklist: true, useDefaults: false })}
-                                className="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
-                            >
-                                Send with details
+                            <button onClick={() => pendingSend && finalizeSend(pendingSend, { includeChecklist: true, useDefaults: false })} className="px-4 py-2 text-[10px] uppercase font-mono tracking-widest bg-white text-black hover:bg-white/90 transition-all border border-white">
+                                INITIALIZE GENERATION
                             </button>
                         </div>
                     </div>
                 )}
 
-                <div className="w-full">
-                    <textarea
-                        ref={textareaRef}
-                        value={text}
-                        onChange={handleTextareaChange}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                        placeholder="Ask Relyce"
-                        maxLength={5000}
-                        className="w-full text-[15px] outline-none border-none custom-textarea-scrollbar leading-6 no-resize-handle bg-transparent text-white placeholder-zinc-400 disabled:opacity-60"
-                        style={{
-                            minHeight: '40px',
-                            height: '40px',
-                            maxHeight: '240px', // Increased from 112px to accommodate expansion
-                            resize: 'none',
-                            overflowY: 'hidden',
-                            boxSizing: 'border-box',
-                            padding: '8px 0' // Add vertical padding
-                        }}
-                        disabled={showReactChecklist}
-                    />
-                </div>
-
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,image/*,.txt,.doc,.docx" className="hidden" />
-
-                <div className="flex justify-between items-center w-full mt-2">
-                    <div className="flex items-center gap-1">
-                        <div className="relative" ref={dropdownRef}>
-                            <button onClick={() => setDropdownOpen(prev => !prev)} className="group p-2 rounded-full transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60" title="Add content">
-                                <Plus size={18} className="transition-transform group-hover:rotate-45" />
-                            </button>
-                            {dropdownOpen && (
-                                <div className="absolute bottom-12 left-0 backdrop-blur-xl rounded-xl shadow-xl py-2 w-52 z-50 animate-in slide-in-from-bottom-4 duration-200 bg-zinc-800/95 border border-zinc-700/60">
-                                    <button onClick={() => { fileInputRef.current.click(); setDropdownOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2 transition-all text-left group hover:bg-zinc-700/50 text-white">
-                                        <div className="p-1.5 rounded-md bg-gray-700"><Upload size={16} className="text-gray-400" /></div>
-                                        <div>
-                                            <div className="text-sm font-medium">Upload File</div>
-                                            <div className="text-xs text-zinc-400">PDF, images, docs</div>
-                                        </div>
-                                    </button>
-                                    <button onClick={handleVoiceClick} className="w-full flex items-center gap-3 px-3 py-2 transition-all text-left group hover:bg-zinc-700/50 text-white">
-                                        <div className="p-1.5 rounded-md bg-gray-700"><Mic size={16} className="text-gray-400" /></div>
-                                        <div>
-                                            <div className="text-sm font-medium">Voice Input</div>
-                                            <div className="text-xs text-zinc-400">Record message</div>
-                                        </div>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        <button onClick={handleWebSearch} className={`websearch-button flex items-center gap-1 p-2 rounded-full transition-all text-xs ${isWebSearchActive ? 'bg-[#003925] text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60'}`} title={isWebSearchActive ? "Deep search enabled - Click to disable" : "Enable deep search"}>
-                            <Search size={16} className={isWebSearchActive ? "text-white" : ""} />
-                            <span className="websearch-text font-medium">deep search {isWebSearchActive && '✓'}</span>
+                <div className="flex items-end px-2 sm:px-4 py-2 sm:py-3 w-full">
+                    {/* File Upload Button (Desktop) */}
+                    <div className="relative static" ref={dropdownRef}>
+                        <button onClick={() => setDropdownOpen(prev => !prev)} className="group p-2 transition-all text-white/50 hover:text-white hover:bg-white/5" title="Add content">
+                            <Plus size={16} className="transition-transform group-hover:rotate-90" />
                         </button>
-                        {/* Resize button - only show when content fills 4 lines */}
-                        {showExpandButton && (
-                            <button
-                                onClick={toggleExpand}
-                                className={`p-2 rounded-full transition-all ${isExpanded ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60'}`}
-                                title={isExpanded ? "Collapse input" : "Expand input"}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    {isExpanded ? (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-                                    ) : (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7l4-4m0 0l4 4m-4-4v18m0 0l-4-4m4 4l4-4" />
-                                    )}
-                                </svg>
-                            </button>
+                        {dropdownOpen && (
+                            <div className="absolute bottom-[calc(100%+8px)] left-0 shadow-2xl py-2 w-56 z-50 bg-[#0a0d14] border border-white/10 flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                <button onClick={() => { fileInputRef.current.click(); setDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest hover:bg-white/5 text-zinc-300 hover:text-white border-b border-white/5">
+                                    <Upload size={14} />
+                                    <span>Upload Document</span>
+                                </button>
+                                <button onClick={() => { handleVoiceClick(); setDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest hover:bg-white/5 text-zinc-300 hover:text-white relative">
+                                    <Mic size={14} />
+                                    <span>Voice Dictation</span>
+                                </button>
+                            </div>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-1">
-                        <button onClick={toggleRecording} title={isRecording ? 'Stop Recording' : 'Start Voice Input'} className={`p-2 rounded-full transition-all ${isRecording ? 'bg-red-500 text-white hover:bg-red-600' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60'}`}>
-                            {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
-                        </button>
-                        <button onClick={botTyping ? handleStop : handleSend} disabled={showReactChecklist || (!text.trim() && uploadedFiles.length === 0 && !botTyping)} className={`p-2 rounded-full transition-all ${(text.trim() || uploadedFiles.length > 0 || botTyping) && !showReactChecklist ? 'bg-[#003925] hover:bg-emerald-900 text-white' : 'bg-zinc-700/50 text-zinc-500 cursor-not-allowed'}`}>
-                            {botTyping ? <Square size={18} className="fill-current" /> : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-                            </svg>}
-                        </button>
+                    <div className="flex-1">
+                        <textarea
+                            ref={textareaRef}
+                            value={text}
+                            onChange={handleTextareaChange}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                            placeholder="Ask anything..."
+                            maxLength={5000}
+                            className="w-full text-sm md:text-base outline-none border-none custom-textarea-scrollbar leading-relaxed no-resize-handle bg-transparent text-zinc-100 placeholder-zinc-600 italic disabled:opacity-60 font-light"
+                            style={{
+                                minHeight: '44px',
+                                height: '44px',
+                                maxHeight: '240px',
+                                resize: 'none',
+                                overflowY: 'hidden',
+                                boxSizing: 'border-box',
+                                padding: '10px 0'
+                            }}
+                            disabled={showReactChecklist}
+                            onFocus={() => setIsFocused(true)}
+                            onBlur={() => setIsFocused(false)}
+                        />
                     </div>
+                    
+                    <button 
+                        onClick={botTyping ? handleStop : handleSend} 
+                        disabled={showReactChecklist || (!text.trim() && uploadedFiles.length === 0 && !botTyping)} 
+                        className={`ml-2 flex-shrink-0 flex items-center justify-center w-[40px] h-[40px] border border-white/10 transition-all duration-300 ${
+                          botTyping
+                            ? 'bg-white/10 border-white/30 text-white hover:bg-white/20'
+                            : (!text.trim() && uploadedFiles.length === 0) || showReactChecklist
+                              ? 'bg-transparent text-white/20 cursor-not-allowed hidden sm:flex'
+                              : 'bg-white text-black hover:bg-zinc-200'
+                        }`}
+                    >
+                        {botTyping ? <Square size={14} className="fill-current" /> : <Send size={14} className="ml-0.5" />}
+                    </button>
                 </div>
+
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,image/*,.txt,.doc,.docx" className="hidden" />
             </div>
 
-            <p className="text-xs text-center mt-3 px-4 leading-relaxed text-zinc-500">
-                Relyce AI may produce inaccurate information about people, places, or facts.
+            <p className="text-[11px] font-sans tracking-wide text-center mt-4 px-4 leading-relaxed text-zinc-500 pb-2">
+                Relyce AI can make mistakes. Consider verifying important information.
             </p>
         </div>
     );

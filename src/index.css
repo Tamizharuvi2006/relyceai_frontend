@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500&display=swap");
+@import url('https://fonts.cdnfonts.com/css/geist-mono');
 @import "tailwindcss";
 
 *,
@@ -375,4 +376,65 @@ body::-webkit-scrollbar-thumb:hover {
   .razorpay-backdrop {
     background: rgba(0, 0, 0, 0.95) !important;
   }
+}
+
+/* ── Premium Chat UI Additions ─────────────────────────────────── */
+
+/* Conic gradient spin — used for animated logo ring / input focus ring */
+@keyframes conic-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Slow floating drift — used for ambient glow orbs */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%       { transform: translateY(-24px) scale(1.04); }
+}
+@keyframes float-slow-reverse {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%       { transform: translateY(24px) scale(0.96); }
+}
+
+/* Gentle orb pulse */
+@keyframes orb-pulse {
+  0%, 100% { opacity: 0.08; }
+  50%       { opacity: 0.16; }
+}
+
+/* Send button bloom */
+@keyframes send-bloom {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+/* Input container — focus glow ring */
+.chat-glow-active {
+  box-shadow:
+    0 0 0 1px rgba(16,185,129,0.18),
+    0 0 40px rgba(16,185,129,0.07),
+    0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* Emerald send button bloom */
+.chat-send-active {
+  animation: send-bloom 1.4s ease-out infinite;
+}
+
+/* Typing indicator dots */
+.typing-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(52,211,153,0.7);
+  animation: relyceDots 1.2s ease-in-out infinite;
+}
+.typing-dot-2 { animation-delay: 0.2s; }
+.typing-dot-3 { animation-delay: 0.4s; }
+
+/* Suggestion chip hover underline accent */
+.suggestion-chip:hover .chip-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16,185,129,0.6);
 }

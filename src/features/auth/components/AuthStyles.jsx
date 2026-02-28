@@ -260,10 +260,9 @@ export function AuthStyles() {
         top: 4px;
         bottom: 4px;
         width: calc(50% - 4px);
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border-radius: 0.5rem;
+        background: #ffffff;
+        border-radius: 2px;
         transition: transform 0.5s cubic-bezier(0.68, -0.15, 0.32, 1.15);
-        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
       }
       
       .mobile-tab-indicator.right {
@@ -275,7 +274,6 @@ export function AuthStyles() {
         z-index: 1;
         flex: 1;
         padding: 0.75rem;
-        font-weight: 600;
         transition: color 0.3s ease;
       }
       
@@ -285,10 +283,6 @@ export function AuthStyles() {
       
       .mobile-tab-btn.inactive {
         color: #a1a1aa;
-      }
-      
-      .mobile-card {
-        animation: glowPulse 4s ease-in-out infinite;
       }
     `}} />
     );

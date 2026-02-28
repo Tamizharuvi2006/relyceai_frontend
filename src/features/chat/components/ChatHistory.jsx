@@ -9,7 +9,6 @@ import { db } from "../../../utils/firebaseConfig.js";
 
 // Transparent Header Component
 const TransparentHeader = ({ onToggleSidebar, isSidebarExpanded, currentSessionId }) => {
-  const { theme } = useTheme();
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const headerMenuRef = useRef(null);
 
@@ -28,14 +27,9 @@ const TransparentHeader = ({ onToggleSidebar, isSidebarExpanded, currentSessionI
   const handleShare = () => {
     const currentUrl = `${window.location.origin}/chat/${currentSessionId}`;
     if (navigator.share) {
-      navigator.share({
-        title: 'Relyce AI Chat',
-        text: 'Check out this AI chat conversation',
-        url: currentUrl,
-      });
+      navigator.share({ title: 'Relyce AI Chat', text: 'Check out this AI chat conversation', url: currentUrl });
     } else {
-      navigator.clipboard.writeText(currentUrl);
-      alert('Chat link copied to clipboard!');
+      navigator.clipboard.writeText(currentUrl); alert('Chat link copied to clipboard!');
     }
     setHeaderMenuOpen(false);
   };
@@ -48,94 +42,38 @@ const TransparentHeader = ({ onToggleSidebar, isSidebarExpanded, currentSessionI
   };
 
   const handleDelete = () => {
-    if (confirm('Delete this conversation?')) {
-      // Add delete functionality here
-      console.log('Delete conversation');
-    }
+    if (confirm('Delete this conversation?')) { console.log('Delete conversation'); }
     setHeaderMenuOpen(false);
   };
 
   return (
-    <div className={`absolute top-0 left-0 right-0 z-50 backdrop-blur-sm border-b ${theme === 'dark'
-      ? 'bg-black/10 border-emerald-500/20'
-      : 'bg-white/10 border-emerald-200'
-      }`}>
+    <div className="absolute top-0 left-0 right-0 z-50 backdrop-blur-md border-b bg-black/40 border-white/5">
       <div className="flex items-center justify-between px-4 py-3">
-        {/* Left side */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={onToggleSidebar}
-            className={`p-2 rounded-lg transition ${theme === 'dark'
-              ? 'hover:bg-white/10 text-white'
-              : 'hover:bg-black/10 text-black'
-              }`}
-            title={isSidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}
-          >
+          <button onClick={onToggleSidebar} className="p-2 transition hover:bg-white/5 text-white" title={isSidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}>
             <Menu size={20} />
           </button>
-          <img src="/logo.svg" alt="Relyce AI" className="w-10 h-10 object-contain" />
-          <span className={`font-semibold text-lg ${theme === 'dark' ? 'text-white' : 'text-black'
-            }`}>Relyce AI</span>
+          <img src="/logo.svg" alt="Relyce AI" className="w-8 h-8 opacity-80" />
+          <span className="font-medium text-lg tracking-wide text-white">RELYCE</span>
         </div>
-
-        {/* Right side */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleShare}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition text-sm ${theme === 'dark'
-              ? 'hover:bg-white/10 text-white'
-              : 'hover:bg-black/10 text-black'
-              }`}
-          >
-            <Share size={16} />
-            <span>Share</span>
+          <button onClick={handleShare} className="flex items-center gap-2 px-3 py-2 transition text-xs tracking-wider uppercase text-white hover:bg-white/5">
+            <Share size={14} /><span>Share</span>
           </button>
-
           <div className="relative" ref={headerMenuRef}>
-            <button
-              onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
-              className={`p-2 rounded-lg transition ${theme === 'dark'
-                ? 'hover:bg-white/10 text-white'
-                : 'hover:bg-black/10 text-black'
-                }`}
-            >
+            <button onClick={() => setHeaderMenuOpen(!headerMenuOpen)} className="p-2 transition hover:bg-white/5 text-white">
               <MoreVertical size={20} />
             </button>
-
             {headerMenuOpen && (
-              <div className={`absolute top-12 right-0 border rounded-lg shadow-xl py-2 w-48 z-50 ${theme === 'dark'
-                ? 'bg-slate-800 border-emerald-500/30'
-                : 'bg-white border-emerald-200'
-                }`}>
-                <button
-                  onClick={handleShare}
-                  className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${theme === 'dark'
-                    ? 'hover:bg-emerald-500/20 text-white'
-                    : 'hover:bg-emerald-100 text-emerald-800'
-                    }`}
-                >
-                  <Share size={16} />
-                  Share conversation
+              <div className="absolute top-12 right-0 border shadow-2xl py-2 w-48 z-50 bg-[#0a0d14] border-white/10">
+                <button onClick={handleShare} className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-xs uppercase tracking-wider hover:bg-white/5 text-white">
+                  <Share size={14} />Share
                 </button>
-                <button
-                  onClick={handleCopyLink}
-                  className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${theme === 'dark'
-                    ? 'hover:bg-emerald-500/20 text-white'
-                    : 'hover:bg-emerald-100 text-emerald-800'
-                    }`}
-                >
-                  <Copy size={16} />
-                  Copy link
+                <button onClick={handleCopyLink} className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-xs uppercase tracking-wider hover:bg-white/5 text-white">
+                  <Copy size={14} />Copy link
                 </button>
-                <button
-                  onClick={handleDelete}
-                  className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${theme === 'dark'
-                    ? 'hover:bg-emerald-500/20 text-emerald-400'
-                    : 'hover:bg-emerald-100 text-emerald-600'
-                    }`}
-                >
-                  <Trash2 size={16} />
-                  Delete conversation
+                <button onClick={handleDelete} className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-xs uppercase tracking-wider hover:bg-white/5 text-red-400">
+                  <Trash2 size={14} />Delete
                 </button>
               </div>
             )}
@@ -146,49 +84,27 @@ const TransparentHeader = ({ onToggleSidebar, isSidebarExpanded, currentSessionI
   );
 };
 
-// Floating Dropdown Menu Component (rendered in a Portal)
-const DropdownMenu = ({ coords, session, onRename, onDelete, onPin, onClose, theme }) => {
+// Floating Dropdown Menu Component
+const DropdownMenu = ({ coords, session, onRename, onDelete, onPin, onClose }) => {
   const menuRef = useRef(null);
-
   useEffect(() => {
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) onClose(); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
 
-  const menuStyle = {
-    position: 'absolute',
-    top: `${coords.bottom + 4}px`,
-    left: `${coords.right - 144}px`,
-  };
+  const menuStyle = { position: 'absolute', top: `${coords.bottom + 4}px`, left: `${coords.right - 144}px` };
 
   return ReactDOM.createPortal(
-    <div ref={menuRef} style={menuStyle} className={`border rounded-lg shadow-xl z-[999] w-36 overflow-hidden animate-fade-in-fast ${theme === 'dark'
-      ? 'bg-[#18181b] border-emerald-500/30'
-      : 'bg-white border-emerald-200'
-      }`}>
-      <button onClick={onPin} className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition ${theme === 'dark'
-        ? 'hover:bg-emerald-500/10 text-slate-200'
-        : 'hover:bg-emerald-100 text-slate-800'
-        }`}>
-        <Pin size={14} className={session.isPinned ? 'text-emerald-400' : ''} /> 
-        {session.isPinned ? 'Unpin' : 'Pin'}
+    <div ref={menuRef} style={menuStyle} className="border shadow-2xl z-[999] w-36 overflow-hidden animate-fade-in-fast bg-[#0a0d14] border-white/10">
+      <button onClick={onPin} className="w-full flex items-center gap-2 px-3 py-3 text-xs tracking-wider uppercase text-left transition hover:bg-white/5 text-slate-300">
+        <Pin size={12} className={session.isPinned ? 'text-white' : ''} /> {session.isPinned ? 'Unpin' : 'Pin'}
       </button>
-      <button onClick={onRename} className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition ${theme === 'dark'
-        ? 'hover:bg-emerald-500/10 text-slate-200'
-        : 'hover:bg-emerald-100 text-slate-800'
-        }`}>
-        <FilePenLine size={14} /> Rename
+      <button onClick={onRename} className="w-full flex items-center gap-2 px-3 py-3 text-xs tracking-wider uppercase text-left transition hover:bg-white/5 text-slate-300">
+        <FilePenLine size={12} /> Rename
       </button>
-      <button onClick={onDelete} className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition ${theme === 'dark'
-        ? 'hover:bg-emerald-500/20 text-emerald-400'
-        : 'hover:bg-emerald-100 text-emerald-600'
-        }`}>
-        <Trash2 size={14} /> Delete
+      <button onClick={onDelete} className="w-full flex items-center gap-2 px-3 py-3 text-xs tracking-wider uppercase text-left transition hover:bg-white/5 text-red-400">
+        <Trash2 size={12} /> Delete
       </button>
     </div>,
     document.body
@@ -196,45 +112,27 @@ const DropdownMenu = ({ coords, session, onRename, onDelete, onPin, onClose, the
 };
 
 // Custom Modal for Delete Confirmation
-const DeleteConfirmationModal = ({ session, onConfirm, onCancel, theme }) => {
+const DeleteConfirmationModal = ({ session, onConfirm, onCancel }) => {
   const modalRef = useRef(null);
-
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onCancel();
-    };
+    const handleKeyDown = (event) => { if (event.key === 'Escape') onCancel(); };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onCancel]);
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in-fast" onClick={onCancel}>
-      <div ref={modalRef} className={`border rounded-xl shadow-2xl p-6 max-w-sm w-full text-center ${theme === 'dark'
-        ? 'bg-slate-800 border-emerald-500/30'
-        : 'bg-white border-emerald-200'
-        }`} onClick={e => e.stopPropagation()}>
-        <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center border ${theme === 'dark'
-          ? 'bg-emerald-500/10 border-emerald-500/20'
-          : 'bg-emerald-100 border-emerald-200'
-          }`}>
-          <Trash2 className={theme === 'dark' ? "text-emerald-400" : "text-emerald-600"} size={24} />
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 animate-fade-in-fast" onClick={onCancel}>
+      <div ref={modalRef} className="border p-8 max-w-sm w-full text-center bg-[#0a0d14] border-white/10" onClick={e => e.stopPropagation()}>
+        <div className="mx-auto w-12 h-12 flex items-center justify-center border bg-red-500/5 border-red-500/20 mb-6">
+          <Trash2 className="text-red-400" size={20} />
         </div>
-        <h2 className={`text-xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-slate-900'
-          }`}>Delete Chat?</h2>
-        <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-          }`}>
-          Are you sure you want to delete "<span className={`font-semibold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
-            }`}>{session.name}</span>"? This cannot be undone.
+        <h2 className="text-xl font-light tracking-wide mt-4 text-white uppercase">Initialize Deletion?</h2>
+        <p className="mt-4 text-sm tracking-wide leading-relaxed text-slate-400">
+          Confirm purge of sequence: <br/><span className="text-white font-mono mt-2 block opacity-80">{session.name}</span>
         </p>
-        <div className="flex gap-4 mt-6">
-          <button onClick={onCancel} className={`w-full py-2.5 rounded-lg font-semibold transition ${theme === 'dark'
-            ? 'bg-slate-700 hover:bg-slate-600 text-white'
-            : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
-            }`}>Cancel</button>
-          <button onClick={onConfirm} className={`w-full py-2.5 rounded-lg font-semibold transition shadow-lg ${theme === 'dark'
-            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
-            : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/20'
-            }`}>Delete</button>
+        <div className="flex gap-4 mt-8">
+          <button onClick={onCancel} className="w-full py-3 text-xs tracking-wider uppercase transition border border-white/10 hover:bg-white/5 text-slate-300">Cancel</button>
+          <button onClick={onConfirm} className="w-full py-3 text-xs tracking-wider uppercase transition bg-white text-black hover:bg-white/90">Confirm Purge</button>
         </div>
       </div>
     </div>
@@ -242,92 +140,48 @@ const DeleteConfirmationModal = ({ session, onConfirm, onCancel, theme }) => {
 };
 
 // Simplified User Profile Component
-const UserProfile = memo(({ user, userProfile, userName, isExpanded, auth, navigate, theme }) => {
-  // Prioritize custom uploaded photo over Google photo
+const UserProfile = memo(({ user, userProfile, userName, isExpanded, auth, navigate }) => {
   const photoURL = userProfile?.photoURL || user?.photoURL;
-
   const userIcon = photoURL ? (
-    <img
-      src={photoURL}
-      alt={userName}
-      className="w-7 h-7 rounded-full object-cover"
-      loading="lazy"
-      onError={(e) => {
-        // Replace with fallback div if image fails
-        const fallback = document.createElement('div');
-        fallback.className = `w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${theme === 'dark' ? 'bg-slate-700 text-emerald-400' : 'bg-slate-200 text-emerald-600'
-          }`;
-        fallback.textContent = userName.charAt(0).toUpperCase();
-        e.target.parentNode.replaceChild(fallback, e.target);
-      }}
-    />
+    <img src={photoURL} alt={userName} className="w-6 h-6 object-cover grayscale opacity-80" loading="lazy" />
   ) : (
-    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${theme === 'dark' ? 'bg-slate-700 text-emerald-400' : 'bg-slate-200 text-emerald-600'
-      }`}>
+    <div className="w-6 h-6 flex items-center justify-center font-mono text-xs bg-white/5 text-white border border-white/10">
       {userName.charAt(0).toUpperCase()}
     </div>
   );
 
   return (
     <>
-      <SidebarItem
-        icon={userIcon}
-        text={userName}
-        isExpanded={isExpanded}
-        theme={theme}
-      />
-      <SidebarItem
-        icon={<Settings size={20} />}
-        text="Settings"
-        isExpanded={isExpanded}
-        onClick={() => navigate('/settings')}
-        theme={theme}
-      />
-
+      <SidebarItem icon={userIcon} text={userName} isExpanded={isExpanded} />
+      <SidebarItem icon={<Settings size={16} />} text="Settings" isExpanded={isExpanded} onClick={() => navigate('/settings')} />
       {user ? (
-        <SidebarItem
-          icon={<LogOut size={20} className={theme === 'dark' ? "text-red-400/80" : "text-red-600/80"} />}
-          text={<span className={theme === 'dark' ? "text-red-400/80" : "text-red-600/80"}>Sign Out</span>}
-          onClick={() => auth.signOut()}
-          isExpanded={isExpanded}
-          theme={theme}
-        />
+        <SidebarItem icon={<LogOut size={16} className="text-white/50" />} text={<span className="text-white/50">Sign Out</span>} onClick={() => auth.signOut()} isExpanded={isExpanded} />
       ) : (
-        <SidebarItem
-          icon={<LogIn size={20} className={theme === 'dark' ? "text-emerald-400/80" : "text-emerald-600/80"} />}
-          text={<span className={theme === 'dark' ? "text-emerald-400/80" : "text-emerald-600/80"}>Sign In</span>}
-          onClick={() => navigate('/login')}
-          isExpanded={isExpanded}
-          theme={theme}
-        />
+        <SidebarItem icon={<LogIn size={16} className="text-white" />} text={<span className="text-white">Sign In</span>} onClick={() => navigate('/login')} isExpanded={isExpanded} />
       )}
     </>
   );
 }, (prevProps, nextProps) => {
-  // Only re-render UserProfile if these specific props change
   return (
     prevProps.isExpanded === nextProps.isExpanded &&
     prevProps.userName === nextProps.userName &&
     prevProps.user?.photoURL === nextProps.user?.photoURL &&
     prevProps.userProfile?.photoURL === nextProps.userProfile?.photoURL &&
-    prevProps.user?.uid === nextProps.user?.uid &&
-    prevProps.theme === nextProps.theme
+    prevProps.user?.uid === nextProps.user?.uid
   );
 });
 
 // Memoized SidebarItem component
-const SidebarItem = memo(({ icon, text, onClick, isExpanded, isActive = false, theme }) => (
+const SidebarItem = memo(({ icon, text, onClick, isExpanded, isActive = false }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center ${isExpanded ? 'gap-3 px-2' : 'justify-center px-0'} py-2 rounded-lg text-sm font-semibold ${isActive
-      ? (theme === 'dark' ? "bg-emerald-500/20 text-white" : "bg-emerald-100 text-emerald-800")
-      : (theme === 'dark' ? "text-slate-300 hover:bg-zinc-800" : "text-slate-700 hover:bg-slate-200")
+    className={`w-full flex items-center ${isExpanded ? 'gap-4 px-4' : 'justify-center px-0'} py-3 text-xs tracking-widest uppercase transition-all duration-300 ${isActive
+      ? "bg-white/5 text-white border-l-2 border-white"
+      : "text-slate-400 hover:text-white hover:bg-white/[0.02] border-l-2 border-transparent"
       }`}
   >
-    <div className="flex-shrink-0">{icon}</div>
-    {isExpanded && (
-      <span className="whitespace-nowrap opacity-100">{text}</span>
-    )}
+    <div className="flex-shrink-0 opacity-80">{icon}</div>
+    {isExpanded && <span className="whitespace-nowrap opacity-100">{text}</span>}
   </button>
 ));
 
@@ -340,9 +194,8 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
   onToggleSidebar,
   className = ""
 }) {
-  const { theme } = useTheme();
   const { currentUser: user, userProfile, auth, loading } = useAuth();
-  const [isExpanded, setIsExpanded] = useState(true); // Click to expand/collapse
+  const [isExpanded, setIsExpanded] = useState(true);
   const navigate = useNavigate();
   const [menuSession, setMenuSession] = useState(null);
   const [menuCoords, setMenuCoords] = useState(null);
@@ -351,58 +204,31 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Auth-bound UI state kept in memory only (no localStorage leakage)
   const [pinnedIds, setPinnedIds] = useState([]);
   const [customOrder, setCustomOrder] = useState([]);
 
-  // Reset per-user to avoid cross-user leakage
-  useEffect(() => {
-    setPinnedIds([]);
-    setCustomOrder([]);
-  }, [user?.uid]);
+  useEffect(() => { setPinnedIds([]); setCustomOrder([]); }, [user?.uid]);
   
-  // Drag state
   const [draggedSessionId, setDraggedSessionId] = useState(null);
   const [dragOverSessionId, setDragOverSessionId] = useState(null);
 
-  // If still loading auth state, show a loading indicator
   if (loading) {
     return (
-      <div className={`hidden md:flex flex-col h-full border-r transition-colors ${theme === 'dark'
-        ? 'bg-zinc-900 border-emerald-500/20'
-        : 'bg-white border-emerald-200'
-        } ${className}`}>
+      <div className={`hidden md:flex flex-col h-full border-r transition-colors bg-[#0a0d14] border-white/5 ${className}`}>
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+          <div className="text-[10px] uppercase font-mono tracking-widest text-zinc-600 animate-pulse">Scanning...</div>
         </div>
       </div>
     );
   }
 
-  // If user is not authenticated, show a sign in prompt
   if (!user) {
     return (
-      <div className={`hidden md:flex flex-col h-full border-r transition-colors ${theme === 'dark'
-        ? 'bg-zinc-900 border-emerald-500/20'
-        : 'bg-white border-emerald-200'
-        } ${className}`}>
-        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          <div className="mb-4">
-            <LogIn size={48} className={theme === 'dark' ? "text-emerald-400" : "text-emerald-600"} />
-          </div>
-          <h2 className={`text-xl font-bold mb-2 ${theme === 'dark' ? "text-white" : "text-slate-900"}`}>
-            Sign in required
-          </h2>
-          <p className={`mb-6 ${theme === 'dark' ? "text-slate-400" : "text-slate-600"}`}>
-            Please sign in to access your chat history
-          </p>
-          <button
-            onClick={() => navigate('/login')}
-            className={`px-4 py-2 rounded-lg font-semibold transition ${theme === 'dark'
-              ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-              : 'bg-emerald-500 hover:bg-emerald-400 text-white'
-              }`}
-          >
+      <div className={`hidden md:flex flex-col h-full border-r transition-colors bg-[#0a0d14] border-white/5 ${className}`}>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="mb-6 opacity-50"><LogIn size={32} className="text-white" /></div>
+          <h2 className="text-sm tracking-widest uppercase mb-4 text-white">Auth Required</h2>
+          <button onClick={() => navigate('/login')} className="px-6 py-3 text-xs tracking-widest uppercase transition bg-white text-black hover:bg-white/90">
             Sign In
           </button>
         </div>
@@ -412,28 +238,20 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
 
   const handleToggleSidebar = useCallback(() => {
     setIsExpanded(!isExpanded);
-    if (onToggleSidebar) {
-      onToggleSidebar(!isExpanded);
-    }
+    if (onToggleSidebar) onToggleSidebar(!isExpanded);
   }, [isExpanded, onToggleSidebar]);
 
   const userName = user ? user.displayName || user.email?.split("@")[0] : "Guest";
 
   const sortedSessions = useMemo(() => {
-    const filtered = [...chatSessions].filter(session =>
-      session.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filtered = [...chatSessions].filter(session => session.name.toLowerCase().includes(searchQuery.toLowerCase()));
     return filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   }, [chatSessions, searchQuery]);
   
-  // Separate pinned and unpinned sessions
-  const pinnedSessions = useMemo(() => {
-    return sortedSessions.filter(s => pinnedIds.includes(s.id));
-  }, [sortedSessions, pinnedIds]);
+  const pinnedSessions = useMemo(() => { return sortedSessions.filter(s => pinnedIds.includes(s.id)); }, [sortedSessions, pinnedIds]);
   
   const unpinnedSessions = useMemo(() => {
     const unpinned = sortedSessions.filter(s => !pinnedIds.includes(s.id));
-    // Apply custom order if available
     if (customOrder.length > 0) {
       return unpinned.sort((a, b) => {
         const aIdx = customOrder.indexOf(a.id);
@@ -448,10 +266,7 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
   }, [sortedSessions, pinnedIds, customOrder]);
 
   const handleRename = useCallback(async (sessionId, newName) => {
-    if (!newName || newName.trim() === "") {
-      setEditingSessionId(null);
-      return;
-    }
+    if (!newName || newName.trim() === "") { setEditingSessionId(null); return; }
     const ref = doc(db, "users", user.uid, "chatSessions", sessionId);
     await updateDoc(ref, { name: newName.trim() });
     setEditingSessionId(null);
@@ -470,330 +285,180 @@ const ZetoChatHistory = memo(function ZetoChatHistory({
 
   const handleMenuClick = useCallback((e, session) => {
     e.stopPropagation();
-    if (menuSession?.id === session.id) {
-      setMenuSession(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      setMenuCoords({ top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right });
-      setMenuSession(session);
-    }
+    if (menuSession?.id === session.id) { setMenuSession(null); } 
+    else { const rect = e.currentTarget.getBoundingClientRect(); setMenuCoords({ top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right }); setMenuSession(session); }
   }, [menuSession]);
   
-  // Handle pin/unpin
   const handlePin = useCallback((sessionId) => {
-    setPinnedIds(prev => {
-      const newPinned = prev.includes(sessionId)
-        ? prev.filter(id => id !== sessionId)
-        : [...prev, sessionId];
-      return newPinned;
-    });
+    setPinnedIds(prev => prev.includes(sessionId) ? prev.filter(id => id !== sessionId) : [...prev, sessionId]);
     setMenuSession(null);
   }, [user]);
   
-  // Handle drag start
-  const handleDragStart = (e, sessionId) => {
-    setDraggedSessionId(sessionId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  const handleDragStart = (e, sessionId) => { setDraggedSessionId(sessionId); e.dataTransfer.effectAllowed = 'move'; };
+  const handleDragOver = (e, sessionId) => { e.preventDefault(); if (sessionId !== draggedSessionId) setDragOverSessionId(sessionId); };
   
-  // Handle drag over
-  const handleDragOver = (e, sessionId) => {
-    e.preventDefault();
-    if (sessionId !== draggedSessionId) {
-      setDragOverSessionId(sessionId);
-    }
-  };
-  
-  // Handle drop - reorder unpinned sessions
   const handleDrop = (e, targetSessionId) => {
     e.preventDefault();
     if (!draggedSessionId || draggedSessionId === targetSessionId) return;
-    
-    // Only allow reorder for unpinned sessions
     if (pinnedIds.includes(draggedSessionId) || pinnedIds.includes(targetSessionId)) return;
-    
     const unpinnedIds = unpinnedSessions.map(s => s.id);
     const fromIdx = unpinnedIds.indexOf(draggedSessionId);
     const toIdx = unpinnedIds.indexOf(targetSessionId);
-    
     if (fromIdx !== -1 && toIdx !== -1) {
       const newOrder = [...unpinnedIds];
       newOrder.splice(fromIdx, 1);
       newOrder.splice(toIdx, 0, draggedSessionId);
       setCustomOrder(newOrder);
     }
-    
-    setDraggedSessionId(null);
-    setDragOverSessionId(null);
+    setDraggedSessionId(null); setDragOverSessionId(null);
   };
   
-  const handleDragEnd = () => {
-    setDraggedSessionId(null);
-    setDragOverSessionId(null);
-  };
+  const handleDragEnd = () => { setDraggedSessionId(null); setDragOverSessionId(null); };
 
   return (
     <>
-      <div
-        className={`flex flex-col h-full flex-shrink-0 transition-all duration-300 ${isExpanded ? "w-72" : "w-16"} ${className} relative overflow-hidden ${theme === 'dark'
-          ? 'bg-zinc-900 text-slate-200 border-r border-emerald-500/20'
-          : 'bg-white text-slate-800 border-r border-emerald-200'
-          }`}>
-        <div className="flex flex-col gap-2 flex-shrink-0 px-3 pt-3">
-          {/* Mobile close button */}
-          <div className="md:hidden flex justify-end mb-2">
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('closeSidebar'))}
-              className={`p-1 rounded-full ${theme === 'dark'
-                ? 'text-gray-400 hover:text-white hover:bg-zinc-800'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'
-                }`}
-              title="Close Sidebar"
-            >
-              <X size={20} />
-            </button>
+      <div className={`flex flex-col h-full flex-shrink-0 transition-all duration-300 ${isExpanded ? "w-80" : "w-16"} ${className} relative overflow-hidden bg-[#0a0d14] text-white border-r border-white/5`}>
+        <div className="flex flex-col gap-0 flex-shrink-0 pt-6">
+          <div className="md:hidden flex justify-end px-4 mb-4">
+            <button onClick={() => window.dispatchEvent(new CustomEvent('closeSidebar'))} className="p-2 text-white/50 hover:text-white hover:bg-white/5 transition" title="Close Sidebar"><X size={20} /></button>
           </div>
 
-          {/* Collapse button and logo */}
-          <div className={`flex items-center ${isExpanded ? 'justify-between' : 'justify-center'} mb-3`}>
+          <div className={`flex items-center ${isExpanded ? 'justify-between px-6' : 'justify-center'} mb-8`}>
             {isExpanded && (
-              <div className="flex items-center gap-2">
-                <img src="/logo.svg" alt="Relyce AI" className="w-8 h-8 object-contain" />
-                <span className={theme === 'dark' ? 'text-white font-semibold' : 'text-slate-900 font-semibold'}>Relyce AI</span>
+              <div className="flex items-center gap-3">
+                <img src="/logo.svg" alt="Relyce AI" className="w-6 h-6 opacity-80 grayscale" />
+                <span className="text-sm font-semibold tracking-[0.2em] uppercase text-white">RELYCE</span>
               </div>
             )}
-            <button
-              onClick={handleToggleSidebar}
-              className={`p-2 rounded-lg flex-shrink-0 ${theme === 'dark'
-                ? 'text-slate-300 hover:bg-slate-700'
-                : 'text-slate-600 hover:bg-slate-200'
-                }`}
-              title={isExpanded ? "Pin sidebar open" : "Expand sidebar"}
-            >
-              <Menu size={20} />
+            <button onClick={handleToggleSidebar} className="p-2 text-white/50 hover:text-white hover:bg-white/5 transition" title={isExpanded ? "Pin sidebar open" : "Expand sidebar"}>
+              <Menu size={18} />
             </button>
           </div>
 
-          {/* New Chat Button */}
-          <SidebarItem
-            icon={<Plus size={18} />}
-            text="New Chat"
-            onClick={createNewSession}
-            isExpanded={isExpanded}
-            theme={theme}
-          />
+          <div className="px-4 mb-8">
+             <button onClick={createNewSession} className={`group relative w-full flex items-center justify-center gap-2 py-3.5 bg-transparent text-white border border-white/10 hover:border-white/20 transition-all duration-500 ${isExpanded ? '' : 'px-0'}`}>
+                {isExpanded ? (
+                   <span className="text-[11px] font-mono uppercase tracking-[0.2em] group-hover:tracking-[0.25em] transition-all text-white/70 group-hover:text-white duration-500">INIT SEQUENCE</span>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                )}
+             </button>
+          </div>
 
-          {/* Search - Expanded: input field, Collapsed: icon */}
           {isExpanded ? (
-            <div className="relative mb-2">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <Search size={16} className={theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} />
-              </div>
-              <input
-                type="text"
-                placeholder="Search chats..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full rounded-lg py-2 pl-10 pr-3 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition ${theme === 'dark'
-                  ? 'bg-zinc-800 border border-emerald-500/30 text-white'
-                  : 'bg-slate-100 border border-emerald-200 text-slate-800'
-                  }`}
-              />
+            <div className="relative mb-6 px-4">
+              <input type="text" placeholder="QUERY LOGS..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent border-b border-white/10 py-2 pl-2 pr-8 text-[11px] uppercase tracking-wider text-white placeholder-white/30 focus:outline-none focus:border-white/40 transition-colors"
+               />
+               <Search size={12} className="absolute right-6 top-3 text-white/30" />
             </div>
           ) : (
-            <SidebarItem
-              icon={<Search size={18} />}
-              text="Search"
-              onClick={() => {/* Could open search modal in collapsed mode */ }}
-              isExpanded={isExpanded}
-              theme={theme}
-            />
+            <SidebarItem icon={<Search size={16} />} text="Search" onClick={() => {}} isExpanded={isExpanded} />
           )}
         </div>
 
-        {/* Chat History - Scrollable area */}
-        {/* Using calc to subtract header (~160px) and footer (~130px) heights */}
         <style>{`
-          .chat-item {
-            transition: background-color 0.15s ease-out, color 0.15s ease-out;
-          }
-          .chat-list {
-            will-change: auto;
-          }
-          .chat-history-scroll::-webkit-scrollbar {
-            width: 6px;
-          }
-          .chat-history-scroll::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .chat-history-scroll::-webkit-scrollbar-thumb {
-            background: #005a3e;
-            border-radius: 3px;
-          }
-          .chat-history-scroll::-webkit-scrollbar-thumb:hover {
-            background: #007a55;
-          }
-          .chat-history-scroll {
-            scrollbar-width: thin;
-            scrollbar-color: #005a3e transparent;
-          }
+          .chat-item { transition: all 0.2s ease-out; }
+          .chat-list { will-change: auto; }
+          .chat-history-scroll::-webkit-scrollbar { width: 2px; }
+          .chat-history-scroll::-webkit-scrollbar-track { background: transparent; }
+          .chat-history-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+          .chat-history-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+          .chat-history-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
         `}</style>
-        <div 
-          className={`chat-history-scroll overflow-y-auto overflow-x-hidden px-3 py-2 ${isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"}`} 
-          style={{ 
-            height: 'calc(100vh - 300px)',
-            maxHeight: 'calc(100vh - 300px)'
-          }}
-        >
-          {/* Pinned Section */}
+        
+        <div className={`chat-history-scroll overflow-y-auto overflow-x-hidden ${isExpanded ? "opacity-100 px-0" : "opacity-0 pointer-events-none"}`} style={{ height: 'calc(100vh - 280px)', maxHeight: 'calc(100vh - 280px)' }}>
           {pinnedSessions.length > 0 && (
-            <>
-              <h3 className={`px-2 text-xs font-semibold tracking-wider mb-2 flex items-center gap-1 ${theme === 'dark' ? 'text-emerald-400/70' : 'text-emerald-600/70'}`}>
-                <Pin size={12} /> Pinned
+            <div className="mb-6">
+              <h3 className="px-6 text-[10px] uppercase font-mono tracking-widest text-white/30 mb-2 flex items-center gap-2">
+                <Pin size={10} /> PINNED
               </h3>
-              <ul className="space-y-1 text-sm chat-list mb-4">
+              <ul className="chat-list">
                 {pinnedSessions.map((session) => (
                   <li key={session.id} className="relative group">
-                    <div
-                      onClick={() => !editingSessionId && setCurrentSessionId(session.id)}
-                      className={`chat-item w-full flex items-center justify-between px-2 py-2 rounded-lg cursor-pointer ${session.id === currentSessionId
-                        ? (theme === 'dark' ? 'bg-emerald-500/20 text-white' : 'bg-emerald-100 text-emerald-800')
-                        : (theme === 'dark' ? 'hover:bg-zinc-800 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
+                    <div onClick={() => !editingSessionId && setCurrentSessionId(session.id)}
+                      className={`chat-item w-full flex items-center justify-between px-6 py-3 cursor-pointer border-l-2 ${session.id === currentSessionId
+                        ? 'bg-white/[0.03] border-white/20 text-white'
+                        : 'border-transparent hover:bg-white/[0.02] text-white/60 hover:text-white/90'
                       }`}
                     >
-                      <span className="truncate flex-1 flex items-center">
-                        <Pin size={12} className="mr-2 text-emerald-400 flex-shrink-0" />
+                      <span className="truncate flex-1 flex items-center text-xs tracking-wide">
+                        <span className="w-1.5 h-1.5 bg-white/40 rounded-full mr-3 opacity-50 flex-shrink-0"></span>
                         {session.name}
                       </span>
                       {isExpanded && !editingSessionId && (
-                        <button
-                          onClick={(e) => handleMenuClick(e, session)}
-                          className={`p-1 rounded-md ${window.innerWidth < 768 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${theme === 'dark' ? 'hover:bg-emerald-500/20' : 'hover:bg-emerald-100'}`}
-                        >
-                          <MoreVertical size={16} />
+                        <button onClick={(e) => handleMenuClick(e, session)} className={`p-1.5 opacity-0 group-hover:opacity-100 hover:text-white text-white/40 transition-all`}>
+                          <MoreVertical size={14} />
                         </button>
                       )}
                     </div>
                   </li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
 
-          {/* Recent Section - Draggable */}
-          <h3 className={`px-2 text-xs font-semibold tracking-wider mb-2 ${theme === 'dark' ? 'text-emerald-400/70' : 'text-emerald-600/70'}`}>Recent</h3>
-          <ul className="space-y-1 text-sm chat-list">
-            {unpinnedSessions.map((session) => (
-              <li 
-                key={session.id} 
-                className={`relative group ${dragOverSessionId === session.id ? 'border-t-2 border-emerald-500' : ''}`}
-                draggable={!editingSessionId}
-                onDragStart={(e) => handleDragStart(e, session.id)}
-                onDragOver={(e) => handleDragOver(e, session.id)}
-                onDrop={(e) => handleDrop(e, session.id)}
-                onDragEnd={handleDragEnd}
-              >
-                <div
-                  onClick={() => !editingSessionId && setCurrentSessionId(session.id)}
-                  className={`chat-item w-full flex items-center justify-between px-2 py-2 rounded-lg ${editingSessionId === session.id
-                    ? (theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200')
-                    : 'cursor-pointer'
-                    } ${session.id === currentSessionId
-                      ? (theme === 'dark' ? 'bg-emerald-500/20 text-white' : 'bg-emerald-100 text-emerald-800')
-                      : (theme === 'dark' ? 'hover:bg-zinc-800 text-slate-300' : 'hover:bg-slate-200 text-slate-700')
-                    } ${draggedSessionId === session.id ? 'opacity-50' : ''}`}
-                >
-                  {/* Drag handle */}
-                  <GripVertical size={14} className={`mr-1 flex-shrink-0 cursor-grab ${theme === 'dark' ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                  
-                  {editingSessionId === session.id ? (
-                    <input
-                      type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => handleRename(session.id, editValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleRename(session.id, editValue);
-                        if (e.key === 'Escape') setEditingSessionId(null);
-                      }}
-                      autoFocus
-                      className={`w-full bg-transparent outline-none flex-1 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}
-                    />
-                  ) : (
-                    <span className="truncate flex-1">
-                      <MessageSquare size={14} className="inline mr-2 opacity-60" />
-                      {session.name}
-                    </span>
-                  )}
-                  {isExpanded && !editingSessionId && (
-                    <button
-                      onClick={(e) => handleMenuClick(e, session)}
-                      className={`p-1 rounded-md ${window.innerWidth < 768 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${theme === 'dark' ? 'hover:bg-emerald-500/20' : 'hover:bg-emerald-100'}`}
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div>
+             <h3 className="px-6 text-[10px] uppercase font-mono tracking-widest text-white/30 mb-2">RECENT LOGS</h3>
+             <ul className="chat-list">
+               {unpinnedSessions.map((session) => (
+                 <li key={session.id} className={`relative group ${dragOverSessionId === session.id ? 'border-t border-white/20' : ''}`}
+                   draggable={!editingSessionId} onDragStart={(e) => handleDragStart(e, session.id)} onDragOver={(e) => handleDragOver(e, session.id)} onDrop={(e) => handleDrop(e, session.id)} onDragEnd={handleDragEnd}
+                 >
+                   <div onClick={() => !editingSessionId && setCurrentSessionId(session.id)}
+                     className={`chat-item w-full flex items-center justify-between px-6 py-3 cursor-pointer border-l-[1px] ${editingSessionId === session.id
+                       ? 'bg-white/10 border-white'
+                       : ''
+                       } ${session.id === currentSessionId
+                         ? 'bg-white/5 border-white/20 text-white'
+                         : 'border-transparent hover:bg-white/[0.02] text-white/60 hover:text-white/90'
+                       } ${draggedSessionId === session.id ? 'opacity-30' : ''}`}
+                   >
+                     {editingSessionId === session.id ? (
+                       <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={() => handleRename(session.id, editValue)} onKeyDown={(e) => { if (e.key === 'Enter') handleRename(session.id, editValue); if (e.key === 'Escape') setEditingSessionId(null); }} autoFocus
+                         className="w-full bg-transparent outline-none flex-1 text-white text-xs tracking-wide" />
+                     ) : (
+                       <span className="truncate flex-1 flex items-center text-xs tracking-wide">
+                          <span className={`${session.id === currentSessionId ? 'bg-white' : 'bg-transparent border border-white/30'} w-1.5 h-1.5 flex-shrink-0 mr-3 transition-all duration-300`}></span>
+                         {session.name}
+                       </span>
+                     )}
+                     {isExpanded && !editingSessionId && (
+                       <button onClick={(e) => handleMenuClick(e, session)} className={`p-1.5 text-white/40 hover:text-white opacity-0 group-hover:opacity-100 transition-all`}>
+                         <MoreVertical size={14} />
+                       </button>
+                     )}
+                   </div>
+                 </li>
+               ))}
+             </ul>
+          </div>
         </div>
 
-        {/* Absolutely Fixed Bottom Section - User Profile and Controls */}
-        <div className={`absolute bottom-0 left-0 right-0 px-3 py-3 ${theme === 'dark'
-          ? 'border-t border-emerald-500/20 bg-zinc-900'
-          : 'border-t border-emerald-200 bg-white'
-          }`}>
-          <UserProfile
-            user={user}
-            userProfile={userProfile}
-            userName={userName}
-            isExpanded={isExpanded}
-            auth={auth}
-            navigate={navigate}
-            theme={theme}
-          />
+        <div className="absolute bottom-0 left-0 right-0 py-4 border-t border-white/5 bg-[#0a0d14]">
+          <UserProfile user={user} userProfile={userProfile} userName={userName} isExpanded={isExpanded} auth={auth} navigate={navigate} />
         </div>
       </div>
 
-
       {menuSession && menuCoords && (
-        <DropdownMenu
-          coords={menuCoords}
-          session={{ ...menuSession, isPinned: pinnedIds.includes(menuSession.id) }}
-          onClose={() => setMenuSession(null)}
-          onPin={() => handlePin(menuSession.id)}
-          onRename={() => { setEditingSessionId(menuSession.id); setEditValue(menuSession.name); setMenuSession(null); }}
+        <DropdownMenu coords={menuCoords} session={{ ...menuSession, isPinned: pinnedIds.includes(menuSession.id) }} onClose={() => setMenuSession(null)}
+          onPin={() => handlePin(menuSession.id)} onRename={() => { setEditingSessionId(menuSession.id); setEditValue(menuSession.name); setMenuSession(null); }}
           onDelete={() => { setSessionToDelete(menuSession); setMenuSession(null); }}
-          theme={theme}
         />
       )}
 
       {sessionToDelete && (
-        <DeleteConfirmationModal
-          session={sessionToDelete}
-          onConfirm={handleDelete}
-          onCancel={() => setSessionToDelete(null)}
-          theme={theme}
-        />
+        <DeleteConfirmationModal session={sessionToDelete} onConfirm={handleDelete} onCancel={() => setSessionToDelete(null)} />
       )}
     </>
   );
 }, (prevProps, nextProps) => {
-  // Allow re-render ONLY for these specific cases:
-  // 1. When currentSessionId changes (to highlight active chat)
-  // 2. When className changes (for responsive states)
-  // 3. When showHeader changes (for header display)
-  // 4. When chat sessions are added/removed (length changes)
-
   const shouldUpdate = (
     prevProps.currentSessionId !== nextProps.currentSessionId ||
     prevProps.className !== nextProps.className ||
     prevProps.showHeader !== nextProps.showHeader ||
     prevProps.chatSessions.length !== nextProps.chatSessions.length
   );
-
-  // Return true to SKIP re-render, false to allow re-render
   return !shouldUpdate;
 });
 

@@ -22,6 +22,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userPlan, setUserPlan] = useState('free');
+  const [isScrolled, setIsScrolled] = useState(false);
   const dropdownRef = useRef(null);
   const sidebarRef = useRef(null);
   const backdropRef = useRef(null);
@@ -50,6 +51,15 @@ export default function Header() {
       setUserAvatar(null);
     }
   }, [user, userProfile, membership]);
+
+  // Effect for scroll background blur
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Effect to close dropdown when clicking outside
   useEffect(() => {
@@ -109,15 +119,15 @@ export default function Header() {
   ];
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-transparent text-white">
-      <div className="max-w-[90rem] mx-auto flex items-center justify-between px-6 lg:px-12 py-5">
+    <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-[#05060a]/80 backdrop-blur-xl border-b border-white/5' : 'bg-transparent border-transparent'} text-white`}>
+      <div className="max-w-[90rem] mx-auto flex items-center justify-between px-6 lg:px-12 py-3">
         <Link to="/" className="flex items-center">
-          <img src="/logo.svg" alt="Relyce AI" className="w-10 h-10 object-contain opacity-90 hover:opacity-100 transition-opacity" />
+          <img src="/logo.svg" alt="Relyce AI" className="w-12 h-12 object-contain opacity-90 hover:opacity-100 transition-opacity" />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-10">
           {navItems.map(({ label, path }) => (
-            <Link key={label} to={path} className="text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-400 hover:text-white transition-colors duration-200" style={{ fontFamily: "'Geist Mono', monospace" }}>
+            <Link key={label} to={path} className="text-[11px] uppercase tracking-[0.2em] font-medium text-white/50 hover:text-white transition-colors duration-200" style={{ fontFamily: "'Geist Mono', monospace" }}>
               {label}
             </Link>
           ))}
@@ -141,7 +151,7 @@ export default function Header() {
             >
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-3 px-2 py-1.5 rounded-full hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-white/10"
+                className="flex items-center gap-2.5 px-2 py-1.5 rounded-full hover:bg-zinc-800/50 transition-colors border border-transparent hover:border-white/10"
               >
                 {userAvatar ? (
                   <>
@@ -149,84 +159,84 @@ export default function Header() {
                     src={userAvatar}
                     alt="Profile"
                     referrerPolicy="no-referrer"
-                    className="w-10 h-10 rounded-full border border-emerald-500/30"
+                    className="w-8 h-8 rounded-full border border-emerald-500/30"
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'flex';
                     }}
                   />
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 hidden items-center justify-center font-bold text-emerald-300 border border-emerald-500/30 absolute top-1.5 left-1.5 pointer-events-none">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 hidden items-center justify-center font-bold text-emerald-300 border border-emerald-500/30 absolute top-1.5 left-1.5 pointer-events-none text-sm">
                     {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
                   </div>
                   </>
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 border border-emerald-500/30">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 border border-emerald-500/30 text-sm">
                     {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
                   </div>
                 )}
                 <div className="text-left">
-                  <p className="font-semibold text-white truncate max-w-[150px]">{user.displayName || user.email}</p>
-                  <p className="text-xs text-emerald-400 capitalize">
+                  <p className="font-semibold text-white truncate max-w-[150px] text-[13px] leading-none">{user.displayName || user.email}</p>
+                  <p className="text-[10px] text-emerald-400 capitalize mt-1 leading-none">
                     {(role === 'admin' || role === 'superadmin') ? 'Unlimited Access' : `${userPlan} Plan`}
                   </p>
                 </div>
-                <ChevronDown size={20} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''} ml-1`} />
               </button>
 
               {isDropdownOpen && (
                 <div
-                  className="absolute top-full right-0 mt-3 w-64 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden bg-zinc-900 animate-fade-in-down"
+                  className="absolute top-full right-0 mt-3 w-64 border border-white/10 rounded-2xl shadow-2xl overflow-hidden bg-[#0a0d14]/95 backdrop-blur-xl animate-fade-in-down"
                   onMouseEnter={() => setIsDropdownOpen(true)}
                   onMouseLeave={() => setIsDropdownOpen(false)}
                 >
-                  <div className="p-4 border-b border-zinc-700">
-                    <p className="font-semibold text-white truncate">{user.displayName || "User"}</p>
-                    <p className="text-sm text-zinc-400 truncate">{user.email}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">
-                        {(role === 'admin' || role === 'superadmin') ? 'Unlimited Access' : userPlan.charAt(0).toUpperCase() + userPlan.slice(1)}
+                  <div className="p-5 border-b border-white/10">
+                    <p className="font-semibold text-white truncate text-base">{user.displayName || "User"}</p>
+                    <p className="text-sm text-white/50 truncate mt-0.5">{user.email}</p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                        {(role === 'admin' || role === 'superadmin') ? 'Unlimited Access' : userPlan}
                       </span>
                       {role === 'superadmin' && (
-                        <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded-full flex items-center gap-1">
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 flex items-center gap-1">
                           <Crown className="w-3 h-3" />
                           {loading ? '...' : 'Super Admin'}
                         </span>
                       )}
                       {role === 'admin' && (
-                        <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full flex items-center gap-1">
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20 flex items-center gap-1">
                           <Shield className="w-3 h-3" />
                           {loading ? '...' : 'Admin'}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="p-2">
-                    <Link to="/settings" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-                      <Settings size={18} /><span>Settings</span>
+                  <div className="p-2 space-y-0.5">
+                    <Link to="/settings" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
+                      <Settings size={16} /><span>Settings</span>
                     </Link>
-                    <Link to="/files" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-                      <Plus size={18} /><span>My Files</span>
+                    <Link to="/files" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
+                      <Plus size={16} /><span>My Files</span>
                     </Link>
-                    <Link to="/library" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-                      <Library size={18} /><span>Library</span>
+                    <Link to="/library" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
+                      <Library size={16} /><span>Library</span>
                     </Link>
-                    <Link to="/membership" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-                      <CreditCard size={18} /><span>Change Plan</span>
+                    <Link to="/membership" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
+                      <CreditCard size={16} /><span>Change Plan</span>
                     </Link>
                     {(role === 'admin' || role === 'superadmin') && (
-                      <Link to="/super" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200 rounded-md transition-colors">
-                        <Shield size={18} /><span>Admin Dashboard</span>
+                      <Link to="/super" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 rounded-xl transition-colors text-sm font-medium mt-1 border border-emerald-500/0 hover:border-emerald-500/20">
+                        <Shield size={16} /><span>Admin Dashboard</span>
                       </Link>
                     )}
                     {role === 'superadmin' && (
-                      <Link to="/boss" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-200 rounded-md transition-colors">
-                        <Crown size={18} /><span>Super Admin Panel</span>
+                      <Link to="/boss" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 rounded-xl transition-colors text-sm font-medium mt-1 border border-amber-500/0 hover:border-amber-500/20">
+                        <Crown size={16} /><span>Super Admin Panel</span>
                       </Link>
                     )}
                   </div>
-                  <div className="p-2 border-t border-zinc-700">
-                    <button onClick={() => { handleLogout(); setIsDropdownOpen(false); }} className="flex items-center gap-3 w-full px-3 py-2.5 text-red-400 hover:bg-red-500/10 rounded-md transition-colors">
-                      <LogOut size={18} /><span>Logout</span>
+                  <div className="p-2 border-t border-white/10">
+                    <button onClick={() => { handleLogout(); setIsDropdownOpen(false); }} className="flex items-center gap-3 w-full px-3 py-2.5 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl transition-colors text-sm font-medium">
+                      <LogOut size={16} /><span>Logout</span>
                     </button>
                   </div>
                 </div>
@@ -235,7 +245,7 @@ export default function Header() {
           ) : (
             <div className="flex items-center gap-6">
               <button onClick={() => navigate("/login")} type="button" className="text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-400 hover:text-white transition-colors" style={{ fontFamily: "'Geist Mono', monospace" }}>Login</button>
-              <button onClick={() => navigate("/Signup")} type="button" className="flex items-center gap-2 px-6 py-2.5 border border-white/20 rounded-[24px] text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-300 hover:text-white hover:border-white/40 transition-all" style={{ fontFamily: "'Geist Mono', monospace" }}>
+              <button onClick={() => navigate("/Signup")} type="button" className="flex items-center gap-2 px-5 py-2 border border-white/20 rounded-[24px] text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-300 hover:text-white hover:border-white/40 transition-all" style={{ fontFamily: "'Geist Mono', monospace" }}>
                 TRY RELYCE AI ↗
               </button>
             </div>
@@ -257,24 +267,27 @@ export default function Header() {
 
       <aside
         ref={sidebarRef}
-        className={`fixed top-0 left-0 h-screen w-72 z-50 lg:hidden border-r bg-zinc-900 border-zinc-800 text-white`}
+        className={`fixed top-0 left-0 h-screen w-[280px] z-50 lg:hidden border-r bg-[#0a0d14] border-white/5 text-white flex flex-col shadow-2xl`}
       >
-        <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-6 py-6 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="Relyce AI" className="w-8 h-8 object-contain" />
-            <span className="text-xl font-bold">Relyce AI</span>
+            <div className="w-10 h-10 rounded-sm bg-black flex items-center justify-center shrink-0">
+              <img src="/logo.svg" alt="Relyce AI" className="w-8 h-8 object-contain" />
+            </div>
+            <span className="text-lg font-bold tracking-tight">Relyce AI</span>
           </div>
-          <button onClick={toggleMenu} className="text-zinc-400 hover:text-white" aria-label="Close">
-            <X size={22} />
+          <button onClick={toggleMenu} className="text-white/50 hover:text-white transition-colors" aria-label="Close">
+            <X size={20} />
           </button>
         </div>
-        <nav className="p-4 space-y-2">
+        
+        <nav className="p-4 space-y-2 overflow-y-auto flex-grow mt-2">
           {navItems.map(({ label, path }) => (
             <Link
               key={label}
               to={path}
               onClick={() => setIsMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
+              className="block px-4 py-3 font-semibold text-white/80 hover:text-white transition-colors text-[15px]"
             >
               {label}
             </Link>
@@ -283,53 +296,59 @@ export default function Header() {
             <Link
               to="/settings"
               onClick={() => setIsMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
+              className="block px-4 py-3 font-semibold text-white/80 hover:text-white transition-colors text-[15px]"
             >
               Settings
             </Link>
           )}
         </nav>
 
-        <div className="mt-auto p-4 border-t border-zinc-800">
+        <div className="mt-auto p-5 border-t border-white/5">
           {user ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-4 overflow-hidden">
                 {userAvatar ? (
-                  <>
-                  <img 
-                    src={userAvatar} 
-                    alt="Profile" 
-                    referrerPolicy="no-referrer"
-                    className="w-9 h-9 rounded-full border border-emerald-500/30" 
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 hidden items-center justify-center font-bold text-emerald-300 border border-emerald-500/30 absolute">
-                    {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                  <div className="relative shrink-0">
+                    <img 
+                      src={userAvatar} 
+                      alt="Profile" 
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full object-cover" 
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/20 hidden items-center justify-center font-bold text-emerald-300 absolute inset-0">
+                      {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                    </div>
                   </div>
-                  </>
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-300 border border-emerald-500/30">
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-[#111621] flex items-center justify-center font-bold text-white border border-white/10">
                     {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
                   </div>
                 )}
-                <div>
-                  <p className="text-sm font-semibold truncate max-w-[140px]">{user.displayName || user.email}</p>
-                  <p className="text-xs text-emerald-400 capitalize">{(role === 'admin' || role === 'superadmin') ? 'Unlimited Access' : `${userPlan} Plan`}</p>
+                <div className="min-w-0 pr-2">
+                  <p className="text-[15px] font-bold text-white truncate max-w-[120px]">{user.displayName || user.email}</p>
+                  <p className="text-[10px] tracking-widest font-bold text-[#00E599] truncate mt-0.5">
+                    {(role === 'admin' || role === 'superadmin') ? 'UNLIMITED ACCESS' : `${userPlan.toUpperCase()} PLAN`}
+                  </p>
                 </div>
               </div>
-              <button onClick={handleLogout} className="text-red-400 hover:text-red-300" aria-label="Logout">
+              <button 
+                onClick={handleLogout} 
+                className="text-white/40 hover:text-white transition-colors shrink-0" 
+                aria-label="Logout"
+              >
                 <LogOut size={20} />
               </button>
             </div>
           ) : (
-            <div className="flex gap-2">
-              <button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="px-4 py-2 rounded-lg text-zinc-300 bg-zinc-800 hover:bg-zinc-700">
+            <div className="flex gap-2 w-full">
+              <button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="flex-1 py-2.5 rounded-xl text-white bg-white/5 hover:bg-white/10 transition-colors text-sm font-medium border border-white/10">
                 Login
               </button>
-              <button onClick={() => { setIsMenuOpen(false); navigate('/Signup'); }} className="px-4 py-2 rounded-lg bg-emerald-500 text-black font-semibold hover:bg-emerald-400">
+              <button onClick={() => { setIsMenuOpen(false); navigate('/Signup'); }} className="flex-1 py-2.5 rounded-xl bg-[#00E599] text-black font-semibold hover:bg-emerald-400 transition-colors text-sm border border-transparent">
                 Sign Up
               </button>
             </div>

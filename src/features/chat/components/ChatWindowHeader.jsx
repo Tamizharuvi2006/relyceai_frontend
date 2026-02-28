@@ -28,28 +28,28 @@ const DownloadMenu = ({ onDownloadPDF, onDownloadText }) => {
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium hover:bg-white/10 text-white hover:shadow-md ${isOpen ? 'bg-white/10' : ''}`}
+        className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 text-[10px] font-mono uppercase tracking-widest hover:bg-white/[0.05] border border-transparent hover:border-white/10 ${isOpen ? 'text-white bg-white/[0.05]' : 'text-zinc-400 hover:text-white'}`}
         title="Download chat"
       >
-        <Download size={18} />
-        <span className="sm:inline hidden">Download</span>
+        <Download size={14} />
+        <span className="sm:inline hidden">Export</span>
       </button>
 
       {isOpen && (
-        <div className="download-menu-content absolute top-full right-0 mt-2 border rounded-lg shadow-xl py-2 w-48 z-50 bg-[#18181b] border-emerald-500/30 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                <div className="absolute top-full right-0 mt-3 py-2 w-48 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <button
             onClick={() => { onDownloadText(); setIsOpen(false); }}
-            className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm hover:bg-emerald-500/20 text-white"
+            className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] uppercase font-mono tracking-widest hover:bg-white/5 text-zinc-300 hover:text-white"
           >
-            <FileText size={16} />
-            Download as Text
+            <FileText size={14} />
+            As Text File
           </button>
           <button
             onClick={() => { onDownloadPDF(); setIsOpen(false); }}
-            className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm hover:bg-emerald-500/20 text-white"
+            className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] uppercase font-mono tracking-widest hover:bg-white/5 text-zinc-300 hover:text-white border-t border-white/5"
           >
-            <FileText size={16} />
-            Download as PDF
+            <FileText size={14} />
+            As PDF File
           </button>
         </div>
       )}
@@ -99,30 +99,24 @@ const ChatWindowHeader = ({
   const [savingBehaviorMode, setSavingBehaviorMode] = useState(false);
   const [thinkingVisibility, setThinkingVisibility] = useState('auto');
   const [savingThinkingVisibility, setSavingThinkingVisibility] = useState(false);
-  
-
 
   // Close menus on outside click - centralized
   useEffect(() => {
     if (!headerMenuOpen && !modeDropdownOpen && !personalityDropdownOpen && !behaviorDropdownOpen) return;
     
     const handler = (e) => {
-      // Header Menu check
       if (headerMenuOpen && headerMenuRef.current && !headerMenuRef.current.contains(e.target) && !headerMenuButtonRef.current?.contains(e.target)) {
         setHeaderMenuOpen(false);
       }
       
-      // Mode Menu check
       if (modeDropdownOpen && modeButtonRef.current && !modeButtonRef.current.contains(e.target) && !e.target.closest('.mode-dropdown-content')) {
         setModeDropdownOpen(false);
       }
 
-      // Personality Menu check
       if (personalityDropdownOpen && personalityButtonRef.current && !personalityButtonRef.current.contains(e.target) && !e.target.closest('.personality-dropdown-content')) {
         setPersonalityDropdownOpen(false);
       }
 
-      // Behavior Mode Menu check
       if (behaviorDropdownOpen && behaviorButtonRef.current && !behaviorButtonRef.current.contains(e.target) && !e.target.closest('.behavior-dropdown-content')) {
         setBehaviorDropdownOpen(false);
       }
@@ -149,9 +143,11 @@ const ChatWindowHeader = ({
   useEffect(() => {
     if (!activePersonality || activePersonality.id !== 'default_relyce') return;
     if (activePersonality.content_mode !== behaviorMode) {
-      setActivePersonality({ ...activePersonality, content_mode: behaviorMode });
+      // Prevent infinite loop by not updating object reference if the value is essentially the same
+      if (activePersonality.content_mode === behaviorMode) return;
+      setActivePersonality(prev => ({ ...prev, content_mode: behaviorMode }));
     }
-  }, [activePersonality, behaviorMode, setActivePersonality]);
+  }, [activePersonality?.id, activePersonality?.content_mode, behaviorMode, setActivePersonality]);
 
   const handleBehaviorModeChange = async (mode) => {
     if (mode === behaviorMode) {
@@ -192,7 +188,6 @@ const ChatWindowHeader = ({
     }
   };
 
-  // Handler helpers
   const handleShareClick = async () => {
     setIsSharing(true);
     try {
@@ -225,126 +220,66 @@ const ChatWindowHeader = ({
 
   return (
     <>
-    <div className="sticky top-0 left-0 right-0 z-50 backdrop-blur-md bg-zinc-900/80 transition-colors duration-300 border-b border-emerald-500/20 mobile-sticky-header">
-      <div className={`flex items-center justify-between py-3 px-4 transition-all duration-300 ${sidebarExpanded ? 'md:px-4' : 'md:px-8'}`}>
+    <div className="sticky top-0 left-0 right-0 z-50 transition-colors duration-300 mobile-sticky-header">
+      {/* Header glass panel */}
+      <div className="bg-[#0a0d14]/50 backdrop-blur-3xl border-b border-white/[0.04]">
+      <div className={`flex items-center justify-between py-3 px-4 transition-all duration-300 ${sidebarExpanded ? 'md:px-6' : 'md:px-8'}`}>
         
         {/* Left side - Menu & Title & Selectors */}
-        <div className="flex items-center gap-1 sm:gap-3 flex-shrink min-w-0">
-          {/* Mobile: Menu button */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink min-w-0">
           <button
             onClick={onToggleSidebar}
-            className="p-2 rounded-lg transition md:hidden mr-2 hover:bg-white/10 text-white"
+            className="p-2 rounded-full transition-colors md:hidden mr-1 text-zinc-400 hover:text-white hover:bg-white/[0.05]"
             title="Open menu"
           >
             <Menu size={20} />
           </button>
           
-          {/* Mode Selector */}
           <div className="relative">
             <button
               ref={modeButtonRef}
               onClick={() => setModeDropdownOpen(!modeDropdownOpen)}
-              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ${modeDropdownOpen ? 'bg-emerald-500/20' : ''}`}
+              className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 text-[10px] font-mono uppercase tracking-widest border ${modeDropdownOpen ? 'bg-white/[0.05] text-white border-white/10' : 'text-zinc-400 bg-transparent border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/5'}`}
             >
-              <span className="text-emerald-400">
-                {chatMode === 'business' ? 'Business' : 'Generic'}
-              </span>
-              <svg
-                className={`w-4 h-4 transition-transform ${modeDropdownOpen ? 'rotate-180' : ''} text-emerald-400`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <span>{chatMode === 'business' ? 'Business Process' : 'Generic Engine'}</span>
+              <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${modeDropdownOpen ? 'rotate-180 text-white' : 'text-zinc-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" /></svg>
             </button>
 
             {modeDropdownOpen && (
-              <div className="mode-dropdown-content absolute top-full left-0 mt-2 border rounded-lg shadow-xl py-1 w-40 z-50 bg-zinc-800 border-emerald-500/30 animate-in fade-in zoom-in-95 duration-100 origin-top-left">
-                <button
-                  onClick={() => { if(onChatModeChange) onChatModeChange('normal'); setModeDropdownOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${chatMode === 'normal'
-                    ? 'bg-emerald-600 text-white'
-                    : 'hover:bg-emerald-500/20 text-emerald-100'
-                    }`}
-                >
-                  Generic
+              <div className="absolute top-full left-0 mt-3 py-2 w-48 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <button onClick={() => { if(onChatModeChange) onChatModeChange('normal'); setModeDropdownOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${chatMode === 'normal' ? 'bg-white/5 text-white' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
+                  Generic Engine
                 </button>
-                <button
-                  onClick={() => { if(onChatModeChange) onChatModeChange('business'); setModeDropdownOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${chatMode === 'business'
-                    ? 'bg-emerald-600 text-white'
-                    : 'hover:bg-emerald-500/20 text-emerald-100'
-                    }`}
-                >
-                  Business
+                <button onClick={() => { if(onChatModeChange) onChatModeChange('business'); setModeDropdownOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest border-t border-white/[0.05] ${chatMode === 'business' ? 'bg-white/5 text-white' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
+                  Business Process
                 </button>
               </div>
             )}
           </div>
 
-          {/* Personality Selector - Only in Generic/Normal Mode */}
           {chatMode === 'normal' && (
             <div className="relative">
-                <button
-                ref={personalityButtonRef}
-                onClick={(e) => {
-                    e.stopPropagation(); // Prevent immediate close
-                    setPersonalityDropdownOpen(!personalityDropdownOpen);
-                }}
-                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ml-1 sm:ml-2 border border-emerald-500/20 ${personalityDropdownOpen ? 'bg-emerald-500/20' : ''}`}
-                disabled={!personalities || personalities.length === 0}
-                >
-                <User size={14} className="text-emerald-400" />
-                <span className="text-emerald-400 max-w-[60px] sm:max-w-[100px] truncate text-xs sm:text-sm">
-                    {activePersonality ? activePersonality.name : 'Loading...'}
-                </span>
-                <svg
-                    className={`w-4 h-4 transition-transform ${personalityDropdownOpen ? 'rotate-180' : ''} text-emerald-400`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <button ref={personalityButtonRef} onClick={(e) => { e.stopPropagation(); setPersonalityDropdownOpen(!personalityDropdownOpen); }} className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 text-[10px] font-mono uppercase tracking-widest border ${personalityDropdownOpen ? 'bg-white/[0.05] text-white border-white/10' : 'text-zinc-400 bg-transparent border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/5'}`} disabled={!personalities || personalities.length === 0}>
+                <User size={14} className={personalityDropdownOpen ? "text-white" : "text-zinc-500"} />
+                <span className="max-w-[80px] sm:max-w-[120px] truncate">{activePersonality ? activePersonality.name : 'Loading...'}</span>
+                <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${personalityDropdownOpen ? 'rotate-180 text-white' : 'text-zinc-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" /></svg>
                 </button>
 
                 {personalityDropdownOpen && (
-                <div
-                    className="personality-dropdown-content absolute top-full left-0 mt-2 border rounded-lg shadow-xl py-1 w-56 z-50 bg-zinc-800 border-emerald-500/30 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-100 origin-top-left"
-                    onClick={(e) => e.stopPropagation()} // Prevent close when clicking inside
-                >
-                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Select Personality
+                <div className="absolute top-full left-0 mt-3 py-2 w-64 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-chat-scrollbar animate-in fade-in slide-in-from-top-2 duration-200" onClick={(e) => e.stopPropagation()}>
+                    <div className="px-4 py-2.5 text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/[0.05] mb-1">
+                        Select Persona
                     </div>
                     
                     {personalities && personalities.map(p => (
-                        <div key={p.id} className="group relative flex items-center justify-between w-full hover:bg-emerald-500/10 transition rounded-md pr-1">
-                            <button
-                                onClick={() => { setActivePersonality(p); setPersonalityDropdownOpen(false); }}
-                                className={`flex-1 flex items-center justify-between px-4 py-2 text-left text-sm ${
-                                    activePersonality?.id === p.id
-                                    ? 'text-emerald-400'
-                                    : 'text-emerald-100'
-                                }`}
-                            >
+                        <div key={p.id} className="group relative flex items-center justify-between w-full hover:bg-white/5 transition-colors">
+                            <button onClick={() => { setActivePersonality(p); setPersonalityDropdownOpen(false); }} className={`flex-1 flex items-center justify-between px-4 py-3 text-left text-xs font-medium tracking-wide ${activePersonality?.id === p.id ? 'text-white bg-white/[0.02]' : 'text-zinc-400'}`}>
                                 <span className="truncate">{p.name}</span>
-                                {activePersonality?.id === p.id && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>}
                             </button>
                             
-                            {/* Edit/Delete Menu - Only for non-system personalities */}
                             {!p.is_system && (
-                                <div className="relative flex items-center pr-2">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            // Close dropdown and navigate to edit
-                                            setPersonalityDropdownOpen(false);
-                                            navigate(`/personalities/edit/${p.id}`);
-                                        }}
-                                        className="p-1.5 rounded hover:bg-emerald-500/20 text-emerald-400/50 hover:text-emerald-400 transition-colors z-10"
-                                        title="Edit"
-                                    >
+                                <div className="absolute right-2 flex items-center">
+                                    <button onClick={(e) => { e.stopPropagation(); setPersonalityDropdownOpen(false); navigate(`/personalities/edit/${p.id}`); }} className="p-2 rounded-full transition-colors text-zinc-500 hover:text-white hover:bg-white/10" title="Configure">
                                         <Gear size={14} />
                                     </button>
                                 </div>
@@ -352,77 +287,36 @@ const ChatWindowHeader = ({
                         </div>
                     ))}
                     
-                    <div className="my-1 border-t border-gray-700"></div>
+                    <div className="my-1 border-t border-white/[0.05]"></div>
                     
-                    <button
-                        onClick={() => { navigate('/personalities/create'); setPersonalityDropdownOpen(false); }}
-                        className="w-full flex items-center gap-2 px-4 py-3 transition text-left text-sm text-emerald-400 hover:bg-emerald-500/10"
-                    >
-                        <Plus size={14} />
-                        Create New Personality
+                    <button onClick={() => { navigate('/personalities/create'); setPersonalityDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-xs font-medium tracking-wide text-zinc-300 hover:text-white hover:bg-white/5">
+                        <Plus size={14} /> New Persona
                     </button>
                 </div>
                 )}
             </div>
           )}
 
-          {/* Relyce AI Behavior Mode (only for default_relyce) */}
           {chatMode === 'normal' && activePersonality?.id === 'default_relyce' && (
-            <div className="relative">
-              <button
-                ref={behaviorButtonRef}
-                onClick={() => setBehaviorDropdownOpen(!behaviorDropdownOpen)}
-                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-lg transition text-sm font-medium hover:bg-emerald-500/20 text-white ml-1 sm:ml-2 border border-emerald-500/20 ${behaviorDropdownOpen ? 'bg-emerald-500/20' : ''}`}
-                disabled={savingBehaviorMode}
-                title="Behavior mode"
-              >
-                <span className="text-emerald-400 text-xs sm:text-sm">
-                  {behaviorMode === 'web_search' ? 'Web Search' : behaviorMode === 'llm_only' ? 'LLM Only' : 'Smart Hybrid'}
-                </span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${behaviorDropdownOpen ? 'rotate-180' : ''} text-emerald-400`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+            <div className="relative hidden md:block">
+              <button ref={behaviorButtonRef} onClick={() => setBehaviorDropdownOpen(!behaviorDropdownOpen)} className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 text-[10px] font-mono uppercase tracking-widest border ${behaviorDropdownOpen ? 'bg-white/[0.05] text-white border-white/10' : 'text-zinc-500 bg-transparent border-transparent hover:bg-white/[0.02] hover:text-zinc-300 hover:border-white/5'}`} disabled={savingBehaviorMode} title="Cognitive mode">
+                <span>{behaviorMode === 'web_search' ? 'Web Search' : behaviorMode === 'llm_only' ? 'Direct LLM' : 'Hybrid Pipeline'}</span>
+                <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${behaviorDropdownOpen ? 'rotate-180 text-white' : 'text-zinc-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" /></svg>
               </button>
 
               {behaviorDropdownOpen && (
-                <div
-                  className="behavior-dropdown-content absolute top-full left-0 mt-2 border rounded-lg shadow-xl py-1 w-48 z-50 bg-zinc-800 border-emerald-500/30 animate-in fade-in zoom-in-95 duration-100 origin-top-left"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Behavior Mode
+                <div className="absolute top-full left-0 mt-3 py-2 w-56 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" onClick={(e) => e.stopPropagation()}>
+                  <div className="px-4 py-2.5 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border-b border-white/[0.05] mb-1">
+                    Cognitive Protocol
                   </div>
-                  <button
-                    onClick={() => handleBehaviorModeChange('hybrid')}
-                    className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${behaviorMode === 'hybrid'
-                      ? 'bg-emerald-600 text-white'
-                      : 'hover:bg-emerald-500/20 text-emerald-100'
-                      }`}
-                  >
-                    Smart Hybrid
+                  <button onClick={() => handleBehaviorModeChange('hybrid')} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${behaviorMode === 'hybrid' ? 'text-white bg-white/5' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
+                    Hybrid Pipeline
                   </button>
-                  <button
-                    onClick={() => handleBehaviorModeChange('web_search')}
-                    className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${behaviorMode === 'web_search'
-                      ? 'bg-emerald-600 text-white'
-                      : 'hover:bg-emerald-500/20 text-emerald-100'
-                      }`}
-                  >
-                    Web Search
+                  <button onClick={() => handleBehaviorModeChange('web_search')} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${behaviorMode === 'web_search' ? 'text-white bg-white/5' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
+                    Web Search Forced
                   </button>
-                  <button
-                    onClick={() => handleBehaviorModeChange('llm_only')}
-                    className={`w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm ${behaviorMode === 'llm_only'
-                      ? 'bg-emerald-600 text-white'
-                      : 'hover:bg-emerald-500/20 text-emerald-100'
-                      }`}
-                  >
-                    LLM Only
+                  <button onClick={() => handleBehaviorModeChange('llm_only')} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${behaviorMode === 'llm_only' ? 'text-white bg-white/5' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
+                    Direct LLM
                   </button>
                 </div>
               )}
@@ -432,101 +326,67 @@ const ChatWindowHeader = ({
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            {/* Download */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <DownloadMenu onDownloadPDF={onDownloadPDF} onDownloadText={onDownloadText} />
 
-            {/* Share - Hidden on mobile */}
-            <button
-                onClick={handleShareClick}
-                disabled={isSharing}
-                className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg transition text-sm hover:bg-white/10 text-white ${isSharing ? 'opacity-50 cursor-wait' : ''}`}
-            >
-                <Share size={16} className={isSharing ? 'animate-pulse' : ''} />
-                <span>{isSharing ? 'Sharing...' : 'Share'}</span>
+            <button onClick={handleShareClick} disabled={isSharing} className={`hidden sm:flex items-center gap-2 px-4 py-2 border border-transparent hover:border-white/10 transition-all duration-300 text-[10px] font-mono tracking-widest uppercase ${isSharing ? 'bg-white/[0.05] text-white cursor-wait' : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'}`}>
+                <Share size={14} className={isSharing ? 'animate-pulse text-white/50' : ''} />
+                <span>{isSharing ? 'Sharing' : 'Share'}</span>
             </button>
 
-            {/* More Menu */}
             <div className="relative">
-                <button
-                ref={headerMenuButtonRef}
-                onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
-                className={`p-2 rounded-lg transition hover:bg-white/10 text-white ${headerMenuOpen ? 'bg-white/10' : ''}`}
-                >
-                <MoreVertical size={20} />
+                <button ref={headerMenuButtonRef} onClick={() => setHeaderMenuOpen(!headerMenuOpen)} className={`p-2 border border-transparent hover:border-white/10 transition-all duration-300 ${headerMenuOpen ? 'bg-white/[0.05] text-white' : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'}`}>
+                <MoreVertical size={18} />
                 </button>
 
                 {headerMenuOpen && (
-                <div
-                    ref={headerMenuRef}
-                    className="absolute top-full right-0 mt-2 border rounded-lg shadow-xl py-2 w-64 z-50 bg-[#18181b] border-slate-700 animate-in fade-in zoom-in-95 duration-100 origin-top-right"
-                >
-                     {/* Manage Personalities Option */}
+                <div ref={headerMenuRef} className="absolute top-full right-0 mt-3 py-2 w-72 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                      {chatMode === 'normal' && (
-                        <>
-                            <button
-                            onClick={() => {
-                                setHeaderMenuOpen(false);
-                                navigate('/personalities');
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-3 transition text-left text-sm hover:bg-slate-700 text-emerald-400 font-medium border-b border-slate-700/50"
-                            >
-                            <Users size={16} />
-                            Manage Personalities
-                            </button>
-                        </>
+                        <button onClick={() => { setHeaderMenuOpen(false); navigate('/personalities'); }} className="w-full flex items-center gap-3 px-5 py-3.5 transition-colors text-left text-[10px] font-mono tracking-widest uppercase hover:bg-white/5 text-zinc-200 hover:text-white border-b border-white/[0.05]">
+                            <Users size={14} className="text-zinc-400" />
+                            Persona Directory
+                        </button>
                     )}
 
-                    <button
-                    onClick={handleSettingsClick}
-                    className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm hover:bg-slate-700 text-white mt-1"
-                    >
-                    <Settings size={16} />
-                    Settings
+                    <button onClick={handleSettingsClick} className="w-full flex items-center gap-3 px-5 py-3.5 transition-colors text-left text-[10px] font-mono tracking-widest uppercase hover:bg-white/5 text-zinc-300 hover:text-white border-b border-white/[0.05]">
+                        <Settings size={14} className="text-zinc-400" />
+                        System Preferences
                     </button>
 
-                    <div className="border-t border-slate-700/50 mt-2 pt-3 pb-2 px-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                        Thinking Visibility
+                    <div className="pt-4 pb-4 px-5">
+                      <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-3 block">
+                        Trace Visibility Log
                       </div>
-                      <div className="mt-2 flex gap-2">
+                      <div className="flex bg-[#0a0d14] p-1 rounded-xl border border-white/[0.05]">
                         {[
                           { id: 'auto', label: 'Auto' },
-                          { id: 'on', label: 'On' },
-                          { id: 'off', label: 'Off' }
+                          { id: 'on', label: 'Force' },
+                          { id: 'off', label: 'Hide' }
                         ].map((option) => (
                           <button
                             key={option.id}
                             onClick={() => handleThinkingVisibilityChange(option.id)}
                             disabled={savingThinkingVisibility}
-                            className={`px-2.5 py-1 rounded-md text-xs font-medium transition border ${
+                            className={`flex-1 py-1.5 text-xs font-medium tracking-wide transition-all rounded-lg ${
                               thinkingVisibility === option.id
-                                ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40'
-                                : 'bg-zinc-900/40 text-slate-300 border-slate-700 hover:border-slate-500'
-                            } ${savingThinkingVisibility ? 'opacity-60 cursor-wait' : ''}`}
+                                ? 'bg-white/10 text-white shadow-sm'
+                                : 'bg-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.02]'
+                            } ${savingThinkingVisibility ? 'opacity-50 cursor-wait' : ''}`}
                           >
                             {option.label}
                           </button>
                         ))}
                       </div>
-                      <div className="mt-1 text-[11px] text-slate-500">
-                        Auto shows thinking only for coding and technical tasks.
-                      </div>
                     </div>
-                    <button
-                    onClick={handleShareClick}
-                    className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm hover:bg-slate-700 text-white"
-                    disabled={isSharing}
-                    >
-                    <Share size={16} />
-                    {isSharing ? 'Sharing...' : 'Share conversation'}
+                    
+                    <button onClick={handleShareClick} className="w-full flex items-center gap-3 px-5 py-3.5 transition-colors text-left text-xs font-medium tracking-wide hover:bg-white/5 text-zinc-300 hover:text-white border-t border-white/[0.05]" disabled={isSharing}>
+                        <Share size={16} className="text-zinc-400" />
+                        {isSharing ? 'Processing...' : 'Export Public Link'}
                     </button>
-                    <button
-                    onClick={handleCopyLinkClick}
-                    className="w-full flex items-center gap-3 px-4 py-2 transition text-left text-sm hover:bg-slate-700 text-white"
-                    >
-                    <Copy size={16} />
-                    Copy direct link
+                    
+                    <button onClick={handleCopyLinkClick} className="w-full flex items-center gap-3 px-5 py-3.5 transition-colors text-left text-xs font-medium tracking-wide hover:bg-white/5 text-zinc-300 hover:text-white">
+                        <Copy size={16} className="text-zinc-400" />
+                        Copy Direct URL
                     </button>
                     
                 </div>
@@ -534,9 +394,10 @@ const ChatWindowHeader = ({
             </div>
         </div>
       </div>
+      {/* Subtle gradient border at the bottom of header */}
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
+      </div>
     </div>
-    
-    {/* Global Create/Edit Personality Modal */}
     </>
   );
 };
