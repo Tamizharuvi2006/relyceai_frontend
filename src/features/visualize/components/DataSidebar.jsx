@@ -56,7 +56,7 @@ const DataSidebar = ({
             {/* Tooltip Overlay - Rendered outside sidebar */}
             {hoveredMode && (
                 <div
-                    className="hidden md:block fixed bg-zinc-900 border-2 border-emerald-500 rounded-xl px-5 py-4 shadow-2xl"
+                    className="hidden md:block fixed bg-[#0a0d14] border border-white/10 rounded-[2px] px-5 py-4 shadow-2xl"
                     style={{
                         zIndex: 999999,
                         left: '320px',
@@ -67,21 +67,21 @@ const DataSidebar = ({
                 >
                     <div className="flex items-center gap-2 mb-2">
                         <Info size={16} className="text-emerald-400" />
-                        <span className="font-bold text-emerald-400 text-base">{AGGREGATION_INFO[hoveredMode].title}</span>
+                        <span className="font-light tracking-wide text-zinc-200 text-sm">{AGGREGATION_INFO[hoveredMode].title}</span>
                     </div>
-                    <p className="text-gray-300 text-sm leading-relaxed">{AGGREGATION_INFO[hoveredMode].desc}</p>
+                    <p className="text-zinc-500 text-xs font-light leading-relaxed">{AGGREGATION_INFO[hoveredMode].desc}</p>
                 </div>
             )}
 
-            <div className="fixed md:relative inset-y-0 left-0 w-[85%] max-w-xs md:w-72 lg:w-80 border-r border-zinc-800 flex flex-col bg-zinc-950/95 backdrop-blur-sm z-50 md:z-auto">
+            <div className="fixed md:relative inset-y-0 left-0 w-[85%] max-w-xs md:w-72 lg:w-80 border-r border-white/5 flex flex-col bg-[#030508]/95 backdrop-blur-md z-50 md:z-auto">
                 {/* Sidebar Header */}
-                <div className="p-4 border-b border-zinc-800 bg-gradient-to-r from-emerald-600 to-emerald-700">
+                <div className="p-4 border-b border-white/5 bg-transparent">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="font-bold text-white">Data Explorer</h2>
-                            <p className="text-emerald-100 text-xs truncate max-w-[180px]">{fileName}</p>
+                            <h2 className="font-light tracking-widest uppercase text-sm text-zinc-300">Data Explorer</h2>
+                            <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest mt-1 truncate max-w-[180px]">{fileName}</p>
                         </div>
-                        <button onClick={() => setSidebarOpen(false)} className="text-emerald-200 hover:text-white p-1 hover:bg-white/10 rounded">
+                        <button onClick={() => setSidebarOpen(false)} className="text-zinc-500 hover:text-white p-1 hover:bg-white/5 rounded-[2px] transition-colors">
                             <X size={18} />
                         </button>
                     </div>
@@ -96,14 +96,14 @@ const DataSidebar = ({
                             <div>
                                 <label className="text-xs text-gray-500 mb-1.5 block">X-Axis (Category)</label>
                                 <select value={xAxisKey} onChange={e => setXAxisKey(e.target.value)}
-                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-emerald-500">
+                                    className="w-full bg-[#0a0d14] border border-white/10 rounded-[2px] px-3 py-2 text-xs font-light tracking-wide text-zinc-300 outline-none focus:border-emerald-500/50 transition-colors">
                                     {availableCols.all.map(k => <option key={k} value={k}>{k}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="text-xs text-gray-500 mb-1.5 block">Y-Axis (Values)</label>
                                 <select value={yAxisKey} onChange={e => setYAxisKey(e.target.value)}
-                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-emerald-500">
+                                    className="w-full bg-[#0a0d14] border border-white/10 rounded-[2px] px-3 py-2 text-xs font-light tracking-wide text-zinc-300 outline-none focus:border-emerald-500/50 transition-colors">
                                     {availableCols.all.map(k => <option key={k} value={k}>{k}</option>)}
                                 </select>
                             </div>
@@ -113,7 +113,7 @@ const DataSidebar = ({
                                     <span className="text-emerald-400 text-[10px]">(hover info)</span>
                                 </label>
                                 <select value={tooltipKey || ''} onChange={e => setTooltipKey(e.target.value || null)}
-                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-emerald-500">
+                                    className="w-full bg-[#0a0d14] border border-white/10 rounded-[2px] px-3 py-2 text-xs font-light tracking-wide text-zinc-300 outline-none focus:border-emerald-500/50 transition-colors">
                                     <option value="">None</option>
                                     {availableCols.all.filter(k => k !== xAxisKey && k !== yAxisKey).map(k => (
                                         <option key={k} value={k}>{k}</option>
@@ -148,7 +148,7 @@ const DataSidebar = ({
                                         onClick={() => setAggregateMode(mode)}
                                         onMouseEnter={() => setHoveredMode(mode)}
                                         onMouseLeave={() => setHoveredMode(null)}
-                                        className={`w-full py-2 rounded text-xs font-medium uppercase transition-colors ${aggregateMode === mode ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'}`}
+                                        className={`w-full py-2 rounded-[2px] text-[10px] font-mono tracking-widest uppercase transition-all duration-300 ${aggregateMode === mode ? 'bg-emerald-900/20 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)] text-emerald-400' : 'bg-transparent shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] text-zinc-500 hover:text-white hover:bg-white/[0.02]'}`}
                                     >
                                         {mode}
                                     </button>
@@ -162,18 +162,18 @@ const DataSidebar = ({
                         expanded={expandedSections.sort} onToggle={toggleSection}>
                         <div className="space-y-3">
                             <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-emerald-500">
+                                className="w-full bg-[#0a0d14] border border-white/10 rounded-[2px] px-3 py-2 text-xs font-light tracking-wide text-zinc-300 outline-none focus:border-emerald-500/50 transition-colors">
                                 <option value="">No sorting</option>
                                 {availableCols.all.map(k => <option key={k} value={k}>{k}</option>)}
                             </select>
                             <div className="flex gap-2">
                                 <button onClick={() => setSortOrder("asc")}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex flex-col items-center justify-center gap-0.5 ${sortOrder === 'asc' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'}`}>
+                                    className={`flex-1 py-2 rounded-[2px] text-xs font-light tracking-wide flex flex-col items-center justify-center gap-1 transition-all duration-300 ${sortOrder === 'asc' ? 'bg-emerald-900/20 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)] text-emerald-400' : 'bg-transparent shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] text-zinc-500 hover:text-white hover:bg-white/[0.02]'}`}>
                                     <span className="flex items-center gap-1"><SortAsc size={14} /> Ascending</span>
                                     <span className="text-[10px] opacity-70">1→9 / A→Z</span>
                                 </button>
                                 <button onClick={() => setSortOrder("desc")}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex flex-col items-center justify-center gap-0.5 ${sortOrder === 'desc' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'}`}>
+                                    className={`flex-1 py-2 rounded-[2px] text-xs font-light tracking-wide flex flex-col items-center justify-center gap-1 transition-all duration-300 ${sortOrder === 'desc' ? 'bg-emerald-900/20 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)] text-emerald-400' : 'bg-transparent shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] text-zinc-500 hover:text-white hover:bg-white/[0.02]'}`}>
                                     <span className="flex items-center gap-1"><SortDesc size={14} /> Descending</span>
                                     <span className="text-[10px] opacity-70">9→1 / Z→A</span>
                                 </button>
@@ -187,13 +187,13 @@ const DataSidebar = ({
                         <div className="space-y-3">
                             <input type="text" value={filterValue} onChange={e => setFilterValue(e.target.value)}
                                 placeholder={`Search in ${xAxisKey}...`}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-emerald-500" />
+                                className="w-full bg-[#0a0d14] border border-white/10 rounded-[2px] px-3 py-2 text-xs font-light tracking-wide text-zinc-300 placeholder-zinc-600 outline-none focus:border-emerald-500/50 transition-colors" />
                             <div>
                                 <p className="text-xs text-gray-500 mb-2">Top N Records</p>
                                 <div className="flex gap-1">
                                     {[0, 5, 10, 25, 50, 100].map(n => (
                                         <button key={n} onClick={() => setShowTop(n)}
-                                            className={`flex-1 py-1.5 rounded text-xs font-medium ${showTop === n ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'}`}>
+                                            className={`flex-1 py-1.5 rounded-[2px] text-[10px] font-mono transition-all duration-300 ${showTop === n ? 'bg-emerald-900/20 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)] text-emerald-400' : 'bg-transparent shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] text-zinc-500 hover:text-white hover:bg-white/[0.02]'}`}>
                                             {n === 0 ? 'All' : n}
                                         </button>
                                     ))}
@@ -218,19 +218,19 @@ const DataSidebar = ({
                 </div>
 
                 {/* Sidebar Footer */}
-                <div className="p-4 border-t border-zinc-800 space-y-2">
+                <div className="p-4 border-t border-white/5 space-y-3">
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-zinc-800 rounded-lg p-2 text-center">
-                            <p className="text-gray-500">Showing</p>
-                            <p className="text-emerald-400 font-bold text-lg">{processedDataLength}</p>
+                        <div className="bg-[#0a0d14] border border-white/5 rounded-[2px] p-2 text-center">
+                            <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest">Showing</p>
+                            <p className="text-emerald-400 font-light text-xl mt-1">{processedDataLength}</p>
                         </div>
-                        <div className="bg-zinc-800 rounded-lg p-2 text-center">
-                            <p className="text-gray-500">Total</p>
-                            <p className="text-white font-bold text-lg">{originalDataLength || 0}</p>
+                        <div className="bg-[#0a0d14] border border-white/5 rounded-[2px] p-2 text-center">
+                            <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest">Total</p>
+                            <p className="text-zinc-300 font-light text-xl mt-1">{originalDataLength || 0}</p>
                         </div>
                     </div>
                     <button onClick={resetAll}
-                        className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm text-gray-300 flex items-center justify-center gap-2 transition-colors">
+                        className="w-full py-2.5 bg-transparent border border-white/5 hover:bg-white/[0.02] rounded-[2px] text-[10px] uppercase tracking-widest font-mono text-zinc-400 flex items-center justify-center gap-2 transition-colors">
                         <RefreshCw size={14} /> Reset All Filters
                     </button>
                 </div>

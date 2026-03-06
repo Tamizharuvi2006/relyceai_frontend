@@ -13,7 +13,6 @@ const PersonalityEditorPage = () => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [prompt, setPrompt] = useState('');
-    const [contentMode, setContentMode] = useState('hybrid');
     const [specialty, setSpecialty] = useState('general');
     const [isSystemPersona, setIsSystemPersona] = useState(false);
     
@@ -51,7 +50,6 @@ const PersonalityEditorPage = () => {
                             setName(persona.name);
                             setDescription(persona.description);
                             setPrompt(persona.prompt);
-                            setContentMode(persona.content_mode || 'hybrid');
                             setSpecialty(persona.specialty || 'general');
                             setIsSystemPersona(persona.is_system === true);
                         } else {
@@ -92,7 +90,6 @@ Keep answers concise and helpful.`);
                     name, 
                     description, 
                     prompt, 
-                    contentMode,
                     specialty
                 );
             } else {
@@ -101,7 +98,6 @@ Keep answers concise and helpful.`);
                     name, 
                     description, 
                     prompt, 
-                    contentMode,
                     specialty
                 );
             }
@@ -228,75 +224,6 @@ Keep answers concise and helpful.`);
                         </section>
                     )}
 
-                    {/* Content Mode Selector */}
-                    {!isSystemPersona && (
-                        <section>
-                            <label className="block text-sm font-medium text-zinc-400 mb-3">
-                                Behavior Mode
-                            </label>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {/* Hybrid Mode */}
-                                <button
-                                    onClick={() => setContentMode('hybrid')}
-                                    className={`relative p-4 rounded-xl border text-left transition-all duration-200
-                                        ${contentMode === 'hybrid' 
-                                            ? 'bg-emerald-500/10 border-emerald-500/50 ring-1 ring-emerald-500/50' 
-                                            : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800'
-                                        }`}
-                                >
-                                    <div className={`mb-2 ${contentMode === 'hybrid' ? 'text-emerald-400' : 'text-zinc-400'}`}>
-                                        <Sparkles size={20} />
-                                    </div>
-                                    <h3 className={`font-semibold text-sm mb-1 ${contentMode === 'hybrid' ? 'text-emerald-300' : 'text-zinc-300'}`}>
-                                        Smart Hybrid
-                                    </h3>
-                                    <p className="text-xs text-zinc-500 leading-relaxed">
-                                        Intelligently switches between internal knowledge and web search.
-                                    </p>
-                                </button>
-
-                                {/* Web Search Only */}
-                                <button
-                                    onClick={() => setContentMode('web_search')}
-                                    className={`relative p-4 rounded-xl border text-left transition-all duration-200
-                                        ${contentMode === 'web_search' 
-                                            ? 'bg-blue-500/10 border-blue-500/50 ring-1 ring-blue-500/50' 
-                                            : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800'
-                                        }`}
-                                >
-                                    <div className={`mb-2 ${contentMode === 'web_search' ? 'text-blue-400' : 'text-zinc-400'}`}>
-                                        <Globe size={20} />
-                                    </div>
-                                    <h3 className={`font-semibold text-sm mb-1 ${contentMode === 'web_search' ? 'text-blue-300' : 'text-zinc-300'}`}>
-                                        Web Search
-                                    </h3>
-                                    <p className="text-xs text-zinc-500 leading-relaxed">
-                                        Prioritizes live web results for every query.
-                                    </p>
-                                </button>
-
-                                {/* LLM Only */}
-                                <button
-                                    onClick={() => setContentMode('llm_only')}
-                                    className={`relative p-4 rounded-xl border text-left transition-all duration-200
-                                        ${contentMode === 'llm_only' 
-                                            ? 'bg-purple-500/10 border-purple-500/50 ring-1 ring-purple-500/50' 
-                                            : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800'
-                                        }`}
-                                >
-                                    <div className={`mb-2 ${contentMode === 'llm_only' ? 'text-purple-400' : 'text-zinc-400'}`}>
-                                        <Brain size={20} />
-                                    </div>
-                                    <h3 className={`font-semibold text-sm mb-1 ${contentMode === 'llm_only' ? 'text-purple-300' : 'text-zinc-300'}`}>
-                                        Pure LLM
-                                    </h3>
-                                    <p className="text-xs text-zinc-500 leading-relaxed">
-                                        Uses internal knowledge only. Fast and focused.
-                                    </p>
-                                </button>
-                            </div>
-                        </section>
-                    )}
 
                     {/* System Prompt */}
                     <section className="flex-1 flex flex-col min-h-[400px]">

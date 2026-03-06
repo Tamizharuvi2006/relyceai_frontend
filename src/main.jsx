@@ -5,6 +5,7 @@ import router from './router.jsx';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from './context/ThemeContext';
 import { registerSW, unregisterSW, clearCache } from './utils/serviceWorker.js';
+import { GovernanceBanner } from './components/GovernanceBanner';
 import './index.css';
 
 class AppErrorBoundary extends React.Component {
@@ -67,6 +68,7 @@ root.render(
   <HelmetProvider>
     <AppErrorBoundary>
       <ThemeProvider>
+        <GovernanceBanner />
         <RouterProvider router={router} />
       </ThemeProvider>
     </AppErrorBoundary>

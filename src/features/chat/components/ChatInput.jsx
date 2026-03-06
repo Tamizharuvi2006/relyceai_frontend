@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Plus, Upload, Search, X, FileText, Image, Square, Globe, Send } from 'lucide-react';
-import { uploadFile, deleteFile } from '../../../utils/api.js';
+import { uploadFile } from '../../../utils/api.js';
 import { uploadChatFileToFirebase } from '../../files/services/fileService.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 
@@ -137,8 +137,8 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         };
 
         if (shouldPromptReactChecklist(payload.text) && !showReactChecklist) {
-            setPendingSend(payload);
-            setShowReactChecklist(true);
+            // Send directly without checklist intercept
+            finalizeSend(payload);
             return;
         }
 
@@ -147,7 +147,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
 
     const handleStop = () => {
         if (onStop) {
-            onStop();
+            onStop(); 
         }
     };
 
@@ -195,22 +195,8 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         }
     };
 
-    const removeFile = async (fileId) => {
-        const fileToRemove = uploadedFiles.find(file => file.id === fileId);
-        if (fileToRemove) {
-            setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
-            if (user) {
-                try {
-                    const response = await deleteFile(fileToRemove.name);
-                    if (response && response.success) {
-                    } else {
-                        console.warn('⚠️ Failed to delete file');
-                    }
-                } catch (error) {
-                    console.error('❌ Error deleting file');
-                }
-            }
-        }
+    const removeFile = (fileId) => {
+        setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
     };
 
     const getFileIcon = (fileType) => {
@@ -479,7 +465,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                     </div>
                 )}
 
-                <div className="flex items-end px-2 sm:px-4 py-2 sm:py-3 w-full">
+                <div className="flex items-center px-2 sm:px-4 py-2 sm:py-3 w-full">
                     {/* File Upload Button (Desktop) */}
                     <div className="relative static" ref={dropdownRef}>
                         <button onClick={() => setDropdownOpen(prev => !prev)} className="group p-2 transition-all text-white/50 hover:text-white hover:bg-white/5" title="Add content">

@@ -43,7 +43,7 @@ export default function AboutPage() {
       <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 lg:px-12">
           
         {/* --- Hero: The Human Element --- */}
-        <section className="min-h-[85vh] flex flex-col justify-end pb-24 lg:pb-32 border-b border-white/5 relative">
+        <section className="min-h-[85vh] flex flex-col justify-end pt-32 pb-24 lg:pb-32 border-b border-white/5 relative">
             
             <div className="max-w-[1200px]">
                 <div className="mb-10 flex items-center gap-4">
@@ -71,10 +71,10 @@ export default function AboutPage() {
         <section className="py-24 border-b border-white/5">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-px bg-white/[0.02]">
                 {[
-                    { val: '50K+', lbl: 'Active Users' },
-                    { val: '10M+', lbl: 'Questions Answered' },
+                    { val: '500+', lbl: 'Active Users' },
+                    { val: '1000+', lbl: 'Questions Answered' },
                     { val: '99.9%', lbl: 'Uptime' },
-                    { val: '100%', lbl: 'Data Privacy' },
+                    { val: '99.9%', lbl: 'Data Privacy' },
                 ].map((stat, i) => (
                     <div key={i} className="bg-[#030508] p-10 flex flex-col justify-between aspect-[3/2] group hover:bg-white/[0.01] transition-colors duration-700">
                         <span className="text-[10px] font-mono text-zinc-600">0{i + 1}</span>

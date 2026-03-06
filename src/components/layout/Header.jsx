@@ -114,7 +114,7 @@ export default function Header() {
     { label: "About", path: "/about" },
     { label: "Contact", path: "/contact" },
     { label: "Pricing", path: "/membership" },
-    { label: "Visualize", path: "/visualize" },
+    { label: "Workspace", path: "/workspace" },
     { label: "Chat", path: "/chat" },
   ];
 
@@ -214,8 +214,8 @@ export default function Header() {
                     <Link to="/settings" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
                       <Settings size={16} /><span>Settings</span>
                     </Link>
-                    <Link to="/files" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
-                      <Plus size={16} /><span>My Files</span>
+                    <Link to="/workspace?tab=files" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
+                      <Plus size={16} /><span>Library (Upload)</span>
                     </Link>
                     <Link to="/library" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
                       <Library size={16} /><span>Library</span>

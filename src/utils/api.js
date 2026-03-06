@@ -8,8 +8,12 @@ import { auth } from './firebaseConfig';
  * Set VITE_API_BASE_URL in your .env file
  */
 const normalizeLocalhost = (url) => url.replace(/:\/\/localhost(?=[:/]|$)/, '://127.0.0.1');
-const API_BASE_URL = normalizeLocalhost(
+export const API_BASE_URL = normalizeLocalhost(
   import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080'
+);
+
+const RAG_BASE_URL = normalizeLocalhost(
+  import.meta.env.VITE_RAG_BASE_URL || 'http://127.0.0.1:8081'
 );
 
 const WS_BASE_URL = API_BASE_URL.startsWith('https')
@@ -85,7 +89,6 @@ function normalizePersonalityForSend(personality) {
     name,
     prompt,
     description,
-    content_mode,
     specialty = 'general',
     temperature,
   } = personality;
@@ -112,21 +115,19 @@ function normalizePersonalityForSend(personality) {
     name,
     prompt,
     description,
-    content_mode,
     specialty,
     temperature: temp,
     ...sampling,
   };
 }
 
-export async function sendChatMessage(message, sessionId, userId, chatMode = 'normal', fileIds = [], personality = null, userSettings = null) {
+export async function sendChatMessage(message, sessionId, userId, chatMode = 'normal', personality = null, userSettings = null) {
   try {
     const body = {
       message,
       session_id: sessionId,
       user_id: userId,
       chat_mode: chatMode,
-      file_ids: fileIds,
       user_settings: userSettings
     };
 
@@ -159,14 +160,13 @@ export async function sendChatMessage(message, sessionId, userId, chatMode = 'no
 /**
  * Streaming Chat API - For Server-Sent Events (SSE) streaming
  */
-export async function* streamChatMessage(message, sessionId, userId, chatMode = 'normal', fileIds = [], personality = null, userSettings = null) {
+export async function* streamChatMessage(message, sessionId, userId, chatMode = 'normal', personality = null, userSettings = null) {
   try {
     const body = { 
       message, 
       session_id: sessionId, 
       user_id: userId, 
       chat_mode: chatMode, 
-      file_ids: fileIds,
       user_settings: userSettings
     };
 
@@ -185,8 +185,13 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
     });
     
     if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error('Rate limited. Please wait a minute and try again.');
+      if ([429, 503, 402].includes(response.status)) {
+        let type = 'default';
+        if (response.status === 429) type = '429';
+        if (response.status === 503) type = '503';
+        if (response.status === 402) type = 'spend_guard';
+        window.dispatchEvent(new CustomEvent('governance_alert', { detail: { type } }));
+        throw new Error(`GOVERNANCE_BLOCK_${type}`);
       }
       throw new Error(`HTTP ${response.status}`);
     }
@@ -211,7 +216,13 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
         try {
           const data = JSON.parse(line.slice(6));
           if (data.type === 'token') {
-            yield data.content;
+            yield { type: 'token', content: data.content };
+          } else if (data.type === 'info') {
+            try {
+              yield { type: 'info', payload: JSON.parse(data.content) };
+            } catch (e) {
+              yield { type: 'info', payload: data.content };
+            }
           } else if (data.type === 'done') {
             return;
           } else if (data.type === 'error') {
@@ -224,7 +235,7 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
     }
   } catch (error) {
     console.error('streamChatMessage error:', error);
-    yield `Error: ${error.message}`;
+    throw error;
   }
 }
 
@@ -258,7 +269,7 @@ export class WebSocketChatManager {
    * @param {object} callbacks - {onToken, onDone, onError, onInfo}
    */
   async connect(chatId, tokenProvider = null, callbacks = {}) {
-    // Prevent duplicate connection attempts to same chat
+    // Prevent duplicate connection attempts to same chat if already connecting or connected
     if (this.chatId === chatId && (this.isConnected() || this.isConnecting())) {
         return;
     }
@@ -484,8 +495,12 @@ export class WebSocketChatManager {
         this.reconnectTimeout = null;
     }
     if (this.socket) {
+      if (this.socket.readyState === WebSocket.CONNECTING) {
+        // Suppress browser error for closing a socket that hasn't connected yet
+        this.socket.onerror = () => {};
+      }
       this.socket.onclose = null;
-      this.socket.close();
+      this.socket.close(1000); // 1000 = Normal Closure
       this.socket = null;
     }
   }
@@ -532,17 +547,18 @@ export async function webSearch(query, tools = ['Search']) {
 }
 
 /**
- * File Upload API
+ * File Upload API — routes to RAG server for document indexing
  */
-export async function uploadFile(file) {
+export async function uploadFile(file, sessionId = 'general') {
   try {
     const formData = new FormData();
     formData.append('file', file);
-    const authHeaders = await getAuthHeaders();
+    formData.append('session_id', sessionId);
     
-    const response = await fetch(`${API_BASE_URL}/upload`, {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/files/upload`, {
       method: 'POST',
-      headers: authHeaders,
+      headers: { ...authHeaders },
       body: formData,
     });
     
@@ -550,26 +566,6 @@ export async function uploadFile(file) {
     return await response.json();
   } catch (error) {
     console.error('uploadFile error:', error);
-    return { error: error.message };
-  }
-}
-
-/**
- * File Delete API
- */
-export async function deleteFile(fileName) {
-  try {
-    if (!auth.currentUser) {
-      throw new Error('User not authenticated');
-    }
-    const uid = auth.currentUser.uid;
-    const authHeaders = await getAuthHeaders();
-    return await apiFetch(`/delete/${uid}/${encodeURIComponent(fileName)}`, {
-      method: 'DELETE',
-      headers: authHeaders,
-    });
-  } catch (error) {
-    console.error('deleteFile error:', error);
     return { error: error.message };
   }
 }
@@ -627,7 +623,7 @@ export async function fetchPersonalities(userId) {
 /**
  * Create Personality
  */
-export async function createPersonality(userId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
+export async function createPersonality(userId, name, description, prompt, specialty = 'general') {
   try {
     const authHeaders = await getAuthHeaders();
     return await apiFetch(`/personalities`, {
@@ -637,7 +633,6 @@ export async function createPersonality(userId, name, description, prompt, conte
         name,
         description,
         prompt,
-        content_mode: contentMode,
         specialty
       }),
     });
@@ -650,7 +645,7 @@ export async function createPersonality(userId, name, description, prompt, conte
 /**
  * Update Personality
  */
-export async function updatePersonality(userId, personalityId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
+export async function updatePersonality(userId, personalityId, name, description, prompt, specialty = 'general') {
     try {
       const authHeaders = await getAuthHeaders();
       return await apiFetch(`/personalities/${personalityId}`, {
@@ -660,7 +655,6 @@ export async function updatePersonality(userId, personalityId, name, description
           name,
           description,
           prompt,
-          content_mode: contentMode,
           specialty
         }),
       });
@@ -709,5 +703,5 @@ export async function checkBackendHealth() {
   return lastHealthPromise;
 }
 
-// Export API base URL for other modules
-export { API_BASE_URL, WS_BASE_URL };
+// Export API base URLs for other modules
+export { RAG_BASE_URL, WS_BASE_URL };

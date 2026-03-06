@@ -156,3 +156,49 @@
 .animate-slideDown {
   animation: slideDown 0.4s ease-out forwards;
 }
+
+/* CSS-based streaming cursor — uses data attribute to avoid layout shifts from class toggling */
+[data-streaming="true"] .prose > *:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 0.625rem;
+  height: 1rem;
+  background-color: rgba(52, 211, 153, 0.8);
+  margin-left: 0.375rem;
+  vertical-align: middle;
+  border-radius: 2px;
+  animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0; }
+}
+
+/* --- Execution Stepper Styles --- */
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+.execution-stepper-container {
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+}
+
+.group\/agent:hover .relative.pl-8::before {
+  opacity: 1;
+}
+
+/* Specific Stepper Dot Glow */
+.relative.pl-8 > div:last-child::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 18px;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+}
+
+.mask-fade-bottom {
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}

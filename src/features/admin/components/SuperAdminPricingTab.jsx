@@ -23,23 +23,25 @@ const SuperAdminPricingTab = ({
             exit="exit"
             className="space-y-6"
         >
-            <div className="rounded-lg shadow-sm border p-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-                <h2 className="text-lg font-semibold mb-4 flex items-center text-zinc-900 dark:text-white">
-                    <CreditCard className="h-5 w-5 mr-2 text-emerald-500" />
-                    Pricing Settings
+            <div className="bg-[#030508]/40 backdrop-blur-3xl rounded-2xl shadow-2xl border border-white/5 p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
+                <h2 className="text-[13px] font-mono tracking-widest uppercase flex items-center text-white mb-8 relative z-10">
+                    <CreditCard className="h-4 w-4 mr-3 text-emerald-400" />
+                    Pricing Configuration
                 </h2>
 
-                <div className="space-y-6">
+                <div className="space-y-6 relative z-10">
                     {editingPrices ? (
                         <div className="space-y-4">
                             {Object.entries(tempPrices).map(([planId, plan]) => (
-                                <div key={planId} className="p-4 rounded-lg border border-zinc-700">
-                                    <h3 className="font-medium mb-3 text-white">
-                                        {plan.name} Plan
+                                <div key={planId} className="p-8 rounded-2xl border border-white/5 bg-white/5 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[40px] rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <h3 className="text-[13px] font-mono tracking-widest uppercase text-white mb-6">
+                                        {plan.name} Tier
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                                         <div>
-                                            <label className="block text-sm font-medium mb-1 text-zinc-300">
+                                            <label className="block text-[10px] font-mono uppercase tracking-widest text-emerald-400/80 mb-3">
                                                 Monthly Price (₹)
                                             </label>
                                             <input
@@ -52,11 +54,11 @@ const SuperAdminPricingTab = ({
                                                         monthly: parseFloat(e.target.value) || 0
                                                     }
                                                 }))}
-                                                className="w-full px-3 py-2 border rounded-md border-zinc-600 bg-zinc-700 text-white"
+                                                className="w-full px-4 py-3 border rounded-xl border-white/10 bg-black text-white focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all font-mono text-[13px] tracking-wide"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1 text-zinc-300">
+                                            <label className="block text-[10px] font-mono uppercase tracking-widest text-emerald-400/80 mb-3">
                                                 Yearly Price (₹)
                                             </label>
                                             <input
@@ -69,25 +71,25 @@ const SuperAdminPricingTab = ({
                                                         yearly: parseFloat(e.target.value) || 0
                                                     }
                                                 }))}
-                                                className="w-full px-3 py-2 border rounded-md border-zinc-600 bg-zinc-700 text-white"
+                                                className="w-full px-4 py-3 border rounded-xl border-white/10 bg-black text-white focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all font-mono text-[13px] tracking-wide"
                                             />
                                         </div>
                                     </div>
                                 </div>
                             ))}
-                            <div className="flex space-x-3">
+                            <div className="flex space-x-4 pt-4">
                                 <button
                                     onClick={savePricingChanges}
-                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center space-x-2"
+                                    className="px-6 py-3 bg-emerald-500 text-black rounded-xl hover:bg-emerald-400 flex items-center space-x-3 font-medium text-[13px] tracking-wide shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
                                 >
-                                    <Save className="h-4 w-4" />
-                                    <span>Save Changes</span>
+                                    <Save className="h-4 w-4" strokeWidth={2} />
+                                    <span>Save Configuration</span>
                                 </button>
                                 <button
                                     onClick={() => setEditingPrices(false)}
-                                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600 flex items-center space-x-2"
+                                    className="px-6 py-3 bg-transparent border border-white/10 text-zinc-400 hover:text-white rounded-xl hover:bg-white/5 flex items-center space-x-3 font-medium text-[13px] tracking-wide transition-all"
                                 >
-                                    <X className="h-4 w-4" />
+                                    <X className="h-4 w-4" strokeWidth={2} />
                                     <span>Cancel</span>
                                 </button>
                             </div>
@@ -95,26 +97,29 @@ const SuperAdminPricingTab = ({
                     ) : (
                         <div className="space-y-4">
                             {Object.entries(MEMBERSHIP_PLANS).map(([planId, plan]) => (
-                                <div key={planId} className="p-4 rounded-lg border border-zinc-700">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="font-medium text-white">
-                                            {plan.name} Plan
+                                <div key={planId} className="p-6 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors group relative overflow-hidden">
+                                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[40px] rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="flex justify-between items-center relative z-10">
+                                        <h3 className="text-[13px] font-mono tracking-widest uppercase text-white">
+                                            {plan.name} Tier
                                         </h3>
-                                        <span className="text-lg font-semibold text-emerald-400">
-                                            ₹{plan.monthly}/month
-                                        </span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xl font-mono tracking-wide text-emerald-400">
+                                                ₹{plan.monthly}/mo
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="mt-2 text-sm text-zinc-400">
-                                        Yearly: ₹{plan.yearly} ({plan.yearlyDiscountPercentage}% discount)
+                                    <div className="mt-3 text-[10px] font-mono text-zinc-500 uppercase tracking-widest relative z-10">
+                                        Yearly: ₹{plan.yearly} <span className="text-emerald-500 ml-2">[{plan.yearlyDiscountPercentage}% discount]</span>
                                     </div>
                                 </div>
                             ))}
                             <button
                                 onClick={() => setEditingPrices(true)}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center space-x-2 mt-4"
+                                className="px-6 py-3.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 flex items-center justify-center space-x-3 w-full mt-8 font-medium text-[13px] tracking-wide transition-all"
                             >
-                                <Edit className="h-4 w-4" />
-                                <span>Edit Pricing</span>
+                                <Edit className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
+                                <span>Modify Configuration</span>
                             </button>
                         </div>
                     )}

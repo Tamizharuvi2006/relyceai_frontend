@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
+import { createBrowserRouter, Outlet, useLocation, Navigate } from "react-router-dom";
 import React, { Suspense, memo, useEffect } from "react";
 import { useTheme } from "./context/ThemeContext";
 import { useAuth } from "./context/AuthContext";
@@ -42,6 +42,7 @@ const AdminDashboard = createLazyComponent(() => import("./features/admin/pages/
 const SuperAdminDashboard = createLazyComponent(() => import("./features/admin/pages/SuperAdminDashboard.jsx"), 'SuperAdminDashboard');
 const VisualizeData = createLazyComponent(() => import("./features/visualize/pages/NivoVisualizeData.jsx"), 'VisualizeData');
 const LibraryPage = createLazyComponent(() => import("./features/library/pages/LibraryPage.jsx"), 'LibraryPage');
+const Workspace = createLazyComponent(() => import("./pages/WorkspacePage.jsx"), 'Workspace');
 
 // Wrapper for lazy loaded routes
 const LazyWrapper = memo(({ children, useHeroSkeleton = false }) => {
@@ -82,9 +83,9 @@ const AppLayoutContent = memo(() => {
 
   if (isAppPage) {
     return (
-        <div className="flex flex-col h-screen bg-black text-slate-100">
+        <div className="flex flex-col min-h-screen bg-black text-slate-100">
           {roleErrorBanner}
-          <main className="flex-1 overflow-hidden"><Outlet /></main>
+          <main className="flex-1 flex flex-col min-h-0"><Outlet /></main>
         </div>
     );
   }
@@ -136,14 +137,15 @@ const router = createBrowserRouter([
       // Protected App Pages
       { path: "/chat", element: <ProtectedRoute><LazyWrapper><Chat /></LazyWrapper></ProtectedRoute> },
       { path: "/chat/:chatId", element: <ProtectedRoute><LazyWrapper><Chat /></LazyWrapper></ProtectedRoute> },
-      { path: "/visualize", element: <LazyWrapper><VisualizeData /></LazyWrapper> },
+      { path: "/workspace", element: <ProtectedRoute><LazyWrapper><Workspace /></LazyWrapper></ProtectedRoute> },
+      { path: "/visualize", element: <Navigate to="/workspace?tab=visualize" replace /> },
       { path: "/personalities", element: <ProtectedRoute><LazyWrapper><Personalities /></LazyWrapper></ProtectedRoute> },
       { path: "/personalities/create", element: <ProtectedRoute><LazyWrapper><PersonalityEditor /></LazyWrapper></ProtectedRoute> },
       { path: "/personalities/edit/:id", element: <ProtectedRoute><LazyWrapper><PersonalityEditor /></LazyWrapper></ProtectedRoute> },
       { path: "/membership", element: <ProtectedRoute><LazyWrapper><Membership /></LazyWrapper></ProtectedRoute> },
       
       { path: "/settings", element: <LazyWrapper><Settings /></LazyWrapper> },
-      { path: "/files", element: <LazyWrapper><UserFiles /></LazyWrapper> },
+      { path: "/files", element: <Navigate to="/workspace?tab=files" replace /> },
       { path: "/library", element: <ProtectedRoute><LazyWrapper><LibraryPage /></LazyWrapper></ProtectedRoute> },
       { path: "/shared/:shareId", element: <LazyWrapper><SharedChat /></LazyWrapper> },
       

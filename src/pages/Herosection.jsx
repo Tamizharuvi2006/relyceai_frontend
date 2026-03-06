@@ -75,23 +75,23 @@ const HeroSection = () => {
           ref={video1Ref}
           muted
           playsInline
-          className={`transition-opacity duration-1000 ease-in-out absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto max-w-none max-h-none -translate-x-1/2 -translate-y-1/2 object-cover ${activeVideo === 1 ? 'opacity-[0.25]' : 'opacity-0'}`}
+          className={`transition-opacity duration-1000 ease-in-out absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto max-w-none max-h-none -translate-x-1/2 -translate-y-1/2 object-cover ${activeVideo === 1 ? 'opacity-[0.45]' : 'opacity-0'}`}
           src="/herosection.webm"
         />
         <video
           ref={video2Ref}
           muted
           playsInline
-          className={`transition-opacity duration-1000 ease-in-out absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto max-w-none max-h-none -translate-x-1/2 -translate-y-1/2 object-cover ${activeVideo === 2 ? 'opacity-[0.25]' : 'opacity-0'}`}
+          className={`transition-opacity duration-1000 ease-in-out absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto max-w-none max-h-none -translate-x-1/2 -translate-y-1/2 object-cover ${activeVideo === 2 ? 'opacity-[0.45]' : 'opacity-0'}`}
           src="/herosection.webm"
         />
         
         {/* Deep, Premium Atmospheric Overlays */}
         {/* Base dark mask */}
-        <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
         
         {/* Soft radial vignette focusing perfectly on the center */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(3,5,8,0.95)_100%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(3,5,8,0.8)_100%)] pointer-events-none" />
         
         {/* Colored ambient glows to simulate "AI breathing" */}
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] mix-blend-screen pointer-events-none animate-[pulse_6s_ease-in-out_infinite]" />

@@ -6,6 +6,7 @@ import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Download, Image, FileText, Globe, ExternalLink, Search, Sparkles, BrainCircuit, ChevronDown, ChevronUp } from 'lucide-react';
 import { getFileIcon, formatFileSize } from '../../../utils/chatHelpers';
 import IntelligenceBar from './IntelligenceBar';
+import AgentMetaBlock from './AgentMetaBlock';
 import './MessageComponent.css';
 
 const THINKING_START = "[THINKING]";
@@ -226,7 +227,7 @@ const ThinkingLoader = () => (
 );
 
 const ProcessingIndicator = ({ query, showSearch, holdFinalStep }) => (
-  <div className="py-2">
+  <div className="py-6 min-h-[120px] flex items-center">
     {showSearch ? (
       <div className="flex items-center gap-4 py-3 min-h-[44px]">
         <div className="relative flex h-3 w-3 mt-1.5">
@@ -277,6 +278,8 @@ const SourcesDisplay = ({ sources }) => (
   </div>
 );
 
+// Legacy StateBadge, ExecutionLogAccordion, AgentStateHeader removed to favor external AgentMetaBlock
+
 const ThinkingDropdown = ({ formattedContent, currentHeading, isStreaming, hasAnswer }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasUserToggled, setHasUserToggled] = useState(false);
@@ -320,7 +323,7 @@ const ThinkingDropdown = ({ formattedContent, currentHeading, isStreaming, hasAn
       {isOpen && (
         <div className="border border-white/5 bg-[#0a0d14]/50 backdrop-blur-md rounded-2xl p-5 mt-3 shadow-inner">
           <div className="prose prose-sm prose-invert max-w-none text-zinc-400 prose-p:leading-relaxed text-[13px] font-light">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
               {formattedContent}
             </ReactMarkdown>
           </div>
@@ -339,6 +342,108 @@ const isSafeUrl = (url) => {
   }
 };
 
+// --- Hoisted to module scope to prevent React from re-mounting markdown DOM on every streaming tick ---
+
+const CodeBlockWithCopy = ({ code, language, ...props }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(String(code).replace(/\n$/, ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code: ', err);
+    }
+  };
+
+  return (
+    <div className="overflow-hidden my-6 border border-white/[0.05] bg-[#0a0d14] rounded-2xl shadow-xl group/code">
+      <div className="flex items-center justify-between px-5 py-3 bg-[#030508]/80 backdrop-blur-sm border-b border-white/[0.02]">
+        <span className="text-[11px] text-zinc-500 font-medium tracking-wider">
+          {language || 'code'}
+        </span>
+        <button
+          onClick={handleCopy}
+          className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5 opacity-0 group-hover/code:opacity-100"
+        >
+          {copied ? <span className="text-emerald-400">Copied</span> : <>Copy code</>}
+        </button>
+      </div>
+      
+      <div className="overflow-x-auto relative" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent' }}>
+        <SyntaxHighlighter
+          style={atomDark}
+          language={language === 'text' ? 'text' : language}
+          PreTag="div"
+          customStyle={{
+            margin: 0,
+            background: 'transparent',
+            padding: '1.25rem 1.5rem',
+            fontSize: '13px',
+            lineHeight: '1.7',
+            fontFamily: '"JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
+          }}
+          {...props}
+        >
+          {String(code).replace(/\n$/, "")}
+        </SyntaxHighlighter>
+      </div>
+    </div>
+  );
+};
+
+const MarkdownComponents = {
+  code({ _node, inline, className, children, ...props }) {
+    const match = /language-(\w+)/.exec(className || "");
+    const language = match ? match[1] : "text";
+
+    const isBlock = !inline || String(children).includes('\n');
+    return isBlock ? (
+      <CodeBlockWithCopy code={children} language={language} {...props} />
+    ) : (
+      <code className="bg-white/5 text-white/90 px-1.5 py-0.5 border border-white/10 text-sm font-mono" {...props}>
+        {children}
+      </code>
+    );
+  },
+  h1: ({ _node, ...props }) => <h1 className="text-2xl sm:text-3xl font-normal tracking-tight mt-10 mb-6 text-white" {...props} />,
+  h2: ({ _node, ...props }) => <h2 className="text-xl sm:text-2xl font-light tracking-wide mt-10 mb-6 border-b border-white/5 pb-3 text-zinc-100" {...props} />,
+  h3: ({ _node, ...props }) => <h3 className="text-lg font-medium tracking-wide mt-8 mb-4 text-zinc-200" {...props} />,
+  h4: ({ _node, ...props }) => <h4 className="text-base font-medium mt-6 mb-3 text-zinc-300" {...props} />,
+  h5: ({ _node, ...props }) => <h5 className="text-sm tracking-wide mt-5 mb-2 text-zinc-400" {...props} />,
+  h6: ({ _node, ...props }) => <h6 className="text-[12px] font-medium mt-4 mb-2 uppercase tracking-wider text-zinc-500" {...props} />,
+  ul: ({ _node, ...props }) => <ul className="list-disc list-outside space-y-3 mb-6 ml-6 marker:text-zinc-500 text-zinc-300" {...props} />,
+  ol: ({ _node, ...props }) => <ol className="list-decimal list-outside space-y-3 mb-6 ml-6 marker:text-zinc-500 text-zinc-300" {...props} />,
+  li: ({ _node, ...props }) => <li className="my-1.5 leading-relaxed pl-1" {...props} />,
+  hr: ({ _node, ...props }) => <hr className="my-10 border-white/5" {...props} />,
+  p: ({ _node, ...props }) => <div className="leading-relaxed mb-6 last:mb-0 text-zinc-300 font-light" {...props} />,
+  blockquote: ({ _node, ...props }) => <blockquote className="border-l-2 border-emerald-500/30 bg-emerald-500/5 rounded-r-2xl px-5 py-4 mb-6 italic text-zinc-400" {...props} />,
+  a: ({ _node, href, children, ...props }) => {
+    const safeHref = isSafeUrl(href) ? href : '#';
+    return (
+      <a className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 border-b border-emerald-500/30 hover:border-emerald-400 transition-colors" target="_blank" rel="noopener noreferrer" href={safeHref} {...props}>
+        {children}
+        <ExternalLink size={12} className="opacity-70" />
+      </a>
+    );
+  },
+  table: ({ _node, ...props }) => (
+    <div className="my-8 w-full overflow-x-auto border border-white/5 bg-[#0a0d14] rounded-2xl shadow-lg">
+      <table className="w-full border-collapse text-sm text-left" {...props} />
+    </div>
+  ),
+  thead: ({ _node, ...props }) => <thead className="bg-[#030508]/80 backdrop-blur-sm border-b border-white/5 text-[11px] uppercase tracking-wider font-medium text-zinc-500" {...props} />,
+  th: ({ _node, ...props }) => <th className="px-6 py-4 font-medium" {...props} />,
+  td: ({ _node, ...props }) => <td className="border-t border-white/[0.02] px-6 py-4 text-zinc-300 font-light" {...props} />,
+  tr: ({ _node, ...props }) => <tr className="hover:bg-white/[0.02] transition-colors" {...props} />,
+  img: ({ _node, ...props }) => <img className="my-8 max-w-full h-auto border border-white/5 rounded-2xl shadow-xl" {...props} />,
+  strong: ({ _node, ...props }) => <strong className="font-medium text-white" {...props} />,
+  em: ({ _node, ...props }) => <em className="italic text-zinc-400" {...props} />,
+};
+
+// --- End hoisted components ---
+
 const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, onContinue, continueMeta, isLastMessage, chatMode, thinkingVisibility = 'auto' }, ref) => {
   const [showCopyButton, setShowCopyButton] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -353,104 +458,8 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const ghostTimeoutRef = useRef(null);
 
   const isGeneric = chatMode === 'normal' || !chatMode;
+  const isStreaming = msg.isStreaming;
 
-  const MarkdownComponents = {
-    code({ _node, inline, className, children, ...props }) {
-      const match = /language-(\w+)/.exec(className || "");
-      const language = match ? match[1] : "text";
-
-      const CodeBlockWithCopy = ({ code, language, isGenericMode }) => {
-        const [copied, setCopied] = useState(false);
-
-        const handleCopy = async () => {
-          try {
-            await navigator.clipboard.writeText(String(code).replace(/\n$/, ""));
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          } catch (err) {
-            console.error('Failed to copy code: ', err);
-          }
-        };
-
-        return (
-          <div className="overflow-hidden my-6 border border-white/[0.05] bg-[#0a0d14] rounded-2xl shadow-xl group/code">
-            <div className="flex items-center justify-between px-5 py-3 bg-[#030508]/80 backdrop-blur-sm border-b border-white/[0.02]">
-              <span className="text-[11px] text-zinc-500 font-medium tracking-wider">
-                {language || 'code'}
-              </span>
-              <button
-                onClick={handleCopy}
-                className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5 opacity-0 group-hover/code:opacity-100"
-              >
-                {copied ? <span className="text-emerald-400">Copied</span> : <>Copy code</>}
-              </button>
-            </div>
-            
-            <div className="overflow-x-auto relative" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent' }}>
-              <SyntaxHighlighter
-                style={atomDark}
-                language={language === 'text' ? 'text' : language}
-                PreTag="div"
-                customStyle={{
-                  margin: 0,
-                  background: 'transparent',
-                  padding: '1.25rem 1.5rem',
-                  fontSize: '13px',
-                  lineHeight: '1.7',
-                  fontFamily: '"JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace'
-                }}
-                {...props}
-              >
-                {String(code).replace(/\n$/, "")}
-              </SyntaxHighlighter>
-            </div>
-          </div>
-        );
-      };
-
-      const isBlock = !inline || String(children).includes('\n');
-      return isBlock ? (
-        <CodeBlockWithCopy code={children} language={language} isGenericMode={isGeneric} />
-      ) : (
-        <code className="bg-white/5 text-white/90 px-1.5 py-0.5 border border-white/10 text-sm font-mono" {...props}>
-          {children}
-        </code>
-      );
-    },
-    h1: ({ _node, ...props }) => <h1 className="text-2xl sm:text-3xl font-normal tracking-tight mt-10 mb-5 text-white" {...props} />,
-    h2: ({ _node, ...props }) => <h2 className="text-xl sm:text-2xl font-light tracking-wide mt-10 mb-5 border-b border-white/5 pb-3 text-zinc-100" {...props} />,
-    h3: ({ _node, ...props }) => <h3 className="text-lg font-medium tracking-wide mt-8 mb-4 text-zinc-200" {...props} />,
-    h4: ({ _node, ...props }) => <h4 className="text-base font-medium mt-6 mb-3 text-zinc-300" {...props} />,
-    h5: ({ _node, ...props }) => <h5 className="text-sm tracking-wide mt-5 mb-2 text-zinc-400" {...props} />,
-    h6: ({ _node, ...props }) => <h6 className="text-[12px] font-medium mt-4 mb-2 uppercase tracking-wider text-zinc-500" {...props} />,
-    ul: ({ _node, ...props }) => <ul className="list-disc list-outside space-y-2 my-5 ml-6 marker:text-zinc-500 text-zinc-300" {...props} />,
-    ol: ({ _node, ...props }) => <ol className="list-decimal list-outside space-y-2 my-5 ml-6 marker:text-zinc-500 text-zinc-300" {...props} />,
-    li: ({ _node, ...props }) => <li className="my-1.5 leading-relaxed pl-1" {...props} />,
-    hr: ({ _node, ...props }) => <hr className="my-10 border-white/5" {...props} />,
-    p: ({ _node, ...props }) => <p className="leading-relaxed my-5 text-zinc-300 font-light" {...props} />,
-    blockquote: ({ _node, ...props }) => <blockquote className="border-l-2 border-emerald-500/30 bg-emerald-500/5 rounded-r-2xl px-5 py-3 my-6 italic text-zinc-400" {...props} />,
-    a: ({ _node, href, children, ...props }) => {
-      const safeHref = isSafeUrl(href) ? href : '#';
-      return (
-        <a className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 border-b border-emerald-500/30 hover:border-emerald-400 transition-colors" target="_blank" rel="noopener noreferrer" href={safeHref} {...props}>
-          {children}
-          <ExternalLink size={12} className="opacity-70" />
-        </a>
-      );
-    },
-    table: ({ _node, ...props }) => (
-      <div className="my-8 w-full overflow-x-auto border border-white/5 bg-[#0a0d14] rounded-2xl shadow-lg">
-        <table className="w-full border-collapse text-sm text-left" {...props} />
-      </div>
-    ),
-    thead: ({ _node, ...props }) => <thead className="bg-[#030508]/80 backdrop-blur-sm border-b border-white/5 text-[11px] uppercase tracking-wider font-medium text-zinc-500" {...props} />,
-    th: ({ _node, ...props }) => <th className="px-6 py-4 font-medium" {...props} />,
-    td: ({ _node, ...props }) => <td className="border-t border-white/[0.02] px-6 py-4 text-zinc-300 font-light" {...props} />,
-    tr: ({ _node, ...props }) => <tr className="hover:bg-white/[0.02] transition-colors" {...props} />,
-    img: ({ _node, ...props }) => <img className="my-8 max-w-full h-auto border border-white/5 rounded-2xl shadow-xl" {...props} />,
-    strong: ({ _node, ...props }) => <strong className="font-medium text-white" {...props} />,
-    em: ({ _node, ...props }) => <em className="italic text-zinc-400" {...props} />,
-  };
 
   const stripContinueMarkers = (content) => {
     if (!content) return content;
@@ -474,6 +483,26 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const preprocessContent = (content) => {
     if (!content) return content;
     let processed = stripContinueMarkers(content);
+
+    // Transform raw TOOL_CALL: tool_name("args") into an elegant Agent inline text
+    processed = processed.replace(
+      /TOOL_CALL:\s*([a-zA-Z0-9_]+)\((.*?)\)/gi,
+      (match, toolName, args) => {
+        let displayArgs = args;
+        try {
+          if (args.startsWith('"') || args.startsWith("'")) {
+             displayArgs = args.replace(/^["'](.*)["']$/, '$1');
+          }
+        } catch(e) {}
+        
+        // Strip newlines to guarantee this is processed by ReactMarkdown as inline <code> not block <CodeBlockWithCopy>
+        displayArgs = displayArgs.replace(/\\n|\n/g, ' '); 
+        
+        const friendlyName = toolName === 'search_web' ? 'Web Search' : toolName.replace(/_/g, ' ');
+        // Use bold and code tags (inline elements) instead of blockquotes to avoid ReactDOM nested <p> errors
+        return `**⚡ Agent Action: ${friendlyName}** \`${displayArgs}\``;
+      }
+    );
 
     const codePatterns = [
       /^(mkdir|cd|npm|npm run|npm install|git|sudo|apt-get|docker|pip|pip install|python|node|ls|cat|chmod|chown)\s+.+$/i,
@@ -511,13 +540,14 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
         }
       }
     );
-
     return processed;
   };
 
+  const [thinkingDurationMs, setThinkingDurationMs] = useState(0);
+  const thinkingStartTimeRef = useRef(null);
+  
   const isSearching = msg.isSearching;
   const isGenerating = msg.isGenerating;
-  const isStreaming = msg.isStreaming;
   const sources = msg.sources || [];
 
   const parsedContent = useMemo(() => parseThinkingContent(msg.content || ""), [msg.content]);
@@ -529,11 +559,9 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const thinkingContent = parsedContent.thinkingContent || "";
   const normalizedThinking = useMemo(() => normalizeThinkingContent(thinkingContent), [thinkingContent]);
   const formattedThinking = useMemo(() => formatThinkingForDisplay(normalizedThinking), [normalizedThinking]);
-  const currentHeading = useMemo(() => extractCurrentHeading(formattedThinking), [formattedThinking]);
   const preprocessedDisplay = useMemo(() => preprocessContent(displayContent), [displayContent]);
 
   const hasVisibleContent = Boolean(displayContent && displayContent.trim().length > 0);
-  const allowThinkingPanel = thinkingVisibility !== 'off' && Boolean(formattedThinking);
   const indicatorActive = Boolean((isSearching || isGenerating) && !hasVisibleContent && !formattedThinking);
 
   useEffect(() => {
@@ -560,6 +588,13 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
 
     const elapsed = indicatorStartRef.current ? Date.now() - indicatorStartRef.current : minDurationMs;
     const remaining = Math.max(0, minDurationMs - elapsed);
+
+    // Track thinking duration
+    if (formattedThinking && !thinkingStartTimeRef.current) {
+      thinkingStartTimeRef.current = Date.now();
+    } else if (!isStreaming && thinkingStartTimeRef.current && !thinkingDurationMs) {
+      setThinkingDurationMs(Date.now() - thinkingStartTimeRef.current);
+    }
 
     indicatorTimeoutRef.current = setTimeout(() => {
       setIndicatorFade(true);
@@ -593,7 +628,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
 
   if (msg.role === "user") {
     return (
-      <div ref={ref} className="flex justify-end mb-10 animate-fade-in group w-full px-4 md:px-0" style={{ animationDelay: `${index * 0.03}s` }}>
+      <div ref={ref} className={`flex justify-end mb-10 group w-full px-4 md:px-0`} >
         <div className="max-w-[90%] md:max-w-[75%] lg:max-w-[65%] flex flex-col items-end">
           {msg.files && msg.files.length > 0 && (
             <div className="mb-3 space-y-2 inline-flex flex-col items-end w-full">
@@ -639,39 +674,42 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   return (
     <div
       ref={ref}
-      className={`flex items-start gap-6 mb-12 animate-fade-in group w-full ${isLastMessage ? 'pb-8' : 'border-b border-white/5 pb-10'}`}
+      className={`flex items-start gap-6 mb-12 group w-full ${isLastMessage ? 'pb-8' : 'border-b border-white/5 pb-10'}`}
       onMouseEnter={() => setShowCopyButton(true)}
       onMouseLeave={() => setShowCopyButton(false)}
-      style={{ animationDelay: `${index * 0.03}s` }}
     >
       <div className="flex-1 min-w-0 px-2 lg:px-8 max-w-4xl mx-auto w-full">
+
         <div className="text-white/80 leading-loose text-[15px] font-light font-['Inter',sans-serif]">
-          {(!displayContent && !formattedThinking) && (isSearching || isGenerating) && (
+          {(!displayContent && !formattedThinking) && (isSearching || isGenerating) && !msg.agentMeta?.agent_state && (
             <ProcessingIndicator query={msg.searchQuery} showSearch={isSearching} holdFinalStep={holdFinalStep} />
           )}
+
+          {/* Integrated Methodology & Process Card (now at top) */}
+          <AgentMetaBlock 
+              meta={msg.agentMeta} 
+              logs={msg.executionLog} 
+              thinkingContent={formattedThinking}
+              thinkingDurationMs={thinkingDurationMs}
+              isStreaming={isStreaming}
+          />
 
           {sources.length > 0 && !showIndicator && !indicatorFade && !ghostSpace && (
             <SourcesDisplay sources={sources} />
           )}
 
-          {allowThinkingPanel && (
-            <ThinkingDropdown formattedContent={formattedThinking} currentHeading={currentHeading} isStreaming={Boolean(isStreaming && !hasVisibleContent)} hasAnswer={hasVisibleContent} />
-          )}
 
           {msg.intelligence && (
             <IntelligenceBar intelligence={msg.intelligence} isStreaming={isStreaming} />
           )}
 
           {displayContent && (
-            <div className="relative">
-              <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0">
+            <div className="relative" data-streaming={isStreaming ? 'true' : undefined}>
+              <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 mt-4">
                 <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
                   {preprocessedDisplay}
                 </ReactMarkdown>
               </div>
-              {isStreaming && (
-                <span className="inline-block w-2.5 h-4 bg-emerald-400 ml-2 animate-pulse align-middle opacity-80 decoration-blink rounded-sm"></span>
-              )}
             </div>
           )}
         </div>

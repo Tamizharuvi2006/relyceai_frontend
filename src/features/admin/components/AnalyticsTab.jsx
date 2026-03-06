@@ -17,7 +17,7 @@ const AnalyticsTab = ({ tabVariants, statistics = {}, users = [] }) => {
     }, {});
 
     const StatCard = ({ title, value, change, positive, icon: Icon }) => (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl p-6 hover:border-zinc-700 transition-all">
+        <div className="rounded-2xl border border-white/5 bg-white/5 backdrop-blur-xl p-6 hover:border-white/10 transition-all">
             <div className="flex items-center justify-between mb-4">
                 <div className="p-2.5 rounded-xl bg-emerald-500/10">
                     <Icon className="h-5 w-5 text-emerald-500" />
@@ -29,8 +29,8 @@ const AnalyticsTab = ({ tabVariants, statistics = {}, users = [] }) => {
                     </span>
                 )}
             </div>
-            <p className="text-sm text-zinc-400 mb-1">{title}</p>
-            <p className="text-2xl font-bold text-white">{value}</p>
+            <p className="text-sm font-light text-zinc-400 mb-1">{title}</p>
+            <p className="text-2xl font-light text-white">{value}</p>
         </div>
     );
 
@@ -39,10 +39,10 @@ const AnalyticsTab = ({ tabVariants, statistics = {}, users = [] }) => {
         return (
             <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                    <span className="text-zinc-400">{label}</span>
-                    <span className="font-medium text-zinc-200">{count} users</span>
+                    <span className="text-zinc-400 font-light">{label}</span>
+                    <span className="font-light text-zinc-200">{count} users</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-zinc-800">
+                <div className="h-2 w-full rounded-full bg-white/5">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${percentage}%` }}
@@ -65,8 +65,8 @@ const AnalyticsTab = ({ tabVariants, statistics = {}, users = [] }) => {
         >
             {/* Header */}
             <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Analytics Overview</h2>
-                <p className="text-zinc-400 mt-1">Track user engagement and growth metrics</p>
+                <h2 className="text-2xl font-light text-white tracking-tight">Analytics Overview</h2>
+                <p className="text-zinc-400 font-light mt-1">Track user engagement and growth metrics</p>
             </div>
 
             {/* Stats Grid */}
@@ -100,10 +100,10 @@ const AnalyticsTab = ({ tabVariants, statistics = {}, users = [] }) => {
             </div>
 
             {/* Plan Distribution */}
-            <div className="rounded-2xl border border-zinc-800 bg-black/40 backdrop-blur-sm p-6">
+            <div className="rounded-2xl border border-white/5 bg-white/5 backdrop-blur-sm p-6">
                 <div className="flex items-center gap-2 mb-6">
                     <BarChart2 className="h-5 w-5 text-emerald-500" />
-                    <h3 className="text-lg font-semibold text-white">User Distribution by Plan</h3>
+                    <h3 className="text-lg font-light text-white">User Distribution by Plan</h3>
                 </div>
                 <div className="space-y-5">
                     <PlanBar label="Free" count={planCounts.free || 0} total={totalUsers} color="bg-zinc-500" />
@@ -116,9 +116,9 @@ const AnalyticsTab = ({ tabVariants, statistics = {}, users = [] }) => {
 
             {/* Quick Insights */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">Growth Insights</h3>
-                    <ul className="space-y-3 text-sm text-zinc-400">
+                <div className="rounded-2xl border border-white/5 bg-white/5 p-6">
+                    <h3 className="text-lg font-light text-white mb-4">Growth Insights</h3>
+                    <ul className="space-y-3 text-sm font-light text-zinc-400">
                         <li className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-emerald-500" />
                             User signups increased by 15% this month
@@ -133,8 +133,8 @@ const AnalyticsTab = ({ tabVariants, statistics = {}, users = [] }) => {
                         </li>
                     </ul>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">Top Performing Days</h3>
+                <div className="rounded-2xl border border-white/5 bg-white/5 p-6">
+                    <h3 className="text-lg font-light text-white mb-4">Top Performing Days</h3>
                     <div className="grid grid-cols-7 gap-2">
                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
                             <div key={day} className="text-center">

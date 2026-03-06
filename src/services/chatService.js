@@ -63,9 +63,9 @@ class ChatService {
     }
   }
 
-  static async sendMessage(message, sessionId, userId, chatMode = 'standard', fileIds = [], personality = null) {
+  static async sendMessage(message, sessionId, userId, chatMode = 'standard', personality = null) {
     try {
-      const result = await sendChatMessage(message, sessionId, userId, chatMode, fileIds, personality);
+      const result = await sendChatMessage(message, sessionId, userId, chatMode, personality);
       return result;
     } catch (error) {
       console.error('ChatService.sendMessage error:', error);
@@ -83,18 +83,18 @@ class ChatService {
     }
   }
 
-  static async createPersonality(userId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
+  static async createPersonality(userId, name, description, prompt, specialty = 'general') {
     try {
-      return await createPersonality(userId, name, description, prompt, contentMode, specialty);
+      return await createPersonality(userId, name, description, prompt, specialty);
     } catch (error) {
       console.error('ChatService.createPersonality error:', error);
       return { success: false, error: error.message };
     }
   }
 
-  static async updatePersonality(userId, personalityId, name, description, prompt, contentMode = 'hybrid', specialty = 'general') {
+  static async updatePersonality(userId, personalityId, name, description, prompt, specialty = 'general') {
     try {
-      return await updatePersonality(userId, personalityId, name, description, prompt, contentMode, specialty);
+      return await updatePersonality(userId, personalityId, name, description, prompt, specialty);
     } catch (error) {
         console.error('ChatService.updatePersonality error:', error);
         return { success: false, error: error.message };

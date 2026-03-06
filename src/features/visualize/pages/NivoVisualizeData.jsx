@@ -15,7 +15,7 @@ import { exportDashboardAsPDF } from "../components/ExportPDF";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const VisualizeData = memo(() => {
+const VisualizeData = memo(({ isEmbedded = false }) => {
     // Data State
     const [data, setData] = useState(null);
     const [originalData, setOriginalData] = useState(null);
@@ -301,7 +301,7 @@ const VisualizeData = memo(() => {
 
     // --- RENDER ---
     return (
-        <div className={`flex h-screen bg-black text-white font-sans ${fullscreen ? 'fixed inset-0 z-50' : ''}`}>
+        <div className={`flex ${isEmbedded ? 'h-full' : 'h-screen'} bg-[#030508] text-white font-sans ${fullscreen ? 'fixed inset-0 z-50' : ''}`}>
             {/* Sidebar */}
             {data && (
                 <DataSidebar
@@ -341,30 +341,30 @@ const VisualizeData = memo(() => {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
                 {data && (
-                    <div className="h-14 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800/60 flex items-center justify-between px-3 md:px-6">
+                    <div className="h-14 bg-[#030508]/95 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-3 md:px-6">
                         <div className="flex items-center gap-2 md:gap-4">
-                            <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                                <Filter size={18} className="text-gray-400" />
+                            <button onClick={() => setSidebarOpen(true)} className="p-2 text-zinc-500 hover:text-white hover:bg-white/[0.02] rounded-[2px] transition-colors">
+                                <Filter size={18} />
                             </button>
-                            <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 bg-zinc-800/40 rounded-lg border border-zinc-700/50">
+                            <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 bg-transparent rounded-none border border-white/5">
                                 <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                                <span className="text-sm text-gray-300 truncate max-w-[120px] md:max-w-[180px] font-medium">{fileName}</span>
-                                <span className="text-xs text-gray-500">• {processedData.length}</span>
+                                <span className="text-sm text-zinc-300 truncate max-w-[120px] md:max-w-[180px] font-light tracking-wide">{fileName}</span>
+                                <span className="text-xs text-zinc-500 font-mono">• {processedData.length}</span>
                             </div>
                             {/* Mobile file badge */}
-                            <div className="sm:hidden flex items-center gap-1.5 px-2 py-1 bg-zinc-800/40 rounded-lg border border-zinc-700/50">
+                            <div className="sm:hidden flex items-center gap-1.5 px-2 py-1 bg-transparent rounded-none border border-white/5">
                                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-xs text-gray-400">{processedData.length}</span>
+                                <span className="text-xs text-zinc-400 font-mono">{processedData.length}</span>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-1 md:gap-2">
-                            <div className="flex bg-zinc-800/60 rounded-lg p-0.5 md:p-1 border border-zinc-700/30">
+                            <div className="flex bg-black/40 rounded-[2px] p-0.5 md:p-1 border border-white/5">
                                 <button
                                     onClick={() => setActiveTab("dashboard")}
-                                    className={`px-2 md:px-4 py-1 md:py-1.5 rounded-md text-xs md:text-sm font-medium transition-all duration-200 ${activeTab === 'dashboard'
-                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
-                                        : 'text-gray-400 hover:text-white'
+                                    className={`px-2 md:px-4 py-1.5 md:py-2 rounded-[2px] text-[10px] md:text-xs font-mono uppercase tracking-widest transition-all duration-300 ${activeTab === 'dashboard'
+                                        ? 'bg-emerald-900/20 text-emerald-400 border border-emerald-500/20'
+                                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border border-transparent'
                                         }`}
                                 >
                                     <span className="hidden sm:inline">Dashboard</span>
@@ -372,9 +372,9 @@ const VisualizeData = memo(() => {
                                 </button>
                                 <button
                                     onClick={() => setActiveTab("table")}
-                                    className={`px-2 md:px-4 py-1 md:py-1.5 rounded-md text-xs md:text-sm font-medium transition-all duration-200 ${activeTab === 'table'
-                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
-                                        : 'text-gray-400 hover:text-white'
+                                    className={`px-2 md:px-4 py-1.5 md:py-2 rounded-[2px] text-[10px] md:text-xs font-mono uppercase tracking-widest transition-all duration-300 ${activeTab === 'table'
+                                        ? 'bg-emerald-900/20 text-emerald-400 border border-emerald-500/20'
+                                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border border-transparent'
                                         }`}
                                 >
                                     <span className="hidden sm:inline">Data Grid</span>
@@ -383,21 +383,21 @@ const VisualizeData = memo(() => {
                             </div>
                             <button
                                 onClick={() => setFullscreen(!fullscreen)}
-                                className="hidden md:block p-2 text-gray-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="hidden md:block p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-[2px] border border-transparent hover:border-white/10 transition-colors"
                                 title="Fullscreen"
                             >
                                 {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                             </button>
                             <button
                                 onClick={exportDashboard}
-                                className="hidden md:block p-2 text-gray-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="hidden md:block p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-[2px] border border-transparent hover:border-white/10 transition-colors"
                                 title="Export PDF"
                             >
                                 <Download size={18} />
                             </button>
                             <button
                                 onClick={clearData}
-                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-[2px] border border-transparent hover:border-red-500/20 transition-colors"
                                 title="Clear Data"
                             >
                                 <Trash2 size={16} />
@@ -407,16 +407,19 @@ const VisualizeData = memo(() => {
                 )}
 
                 {/* Content Area */}
-                <div className="flex-1 overflow-y-auto smooth-scroll bg-gradient-to-br from-black via-zinc-950 to-black">
+                <div className="flex-1 overflow-y-auto smooth-scroll bg-[#030508] relative">
+                    <div className="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay z-0" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
                     {!data ? (
-                        <UploadDisclaimer
-                            onAccept={processFile}
-                            isLoading={isLoading}
-                            fileRef={fileRef}
-                        />
+                        <div className="relative z-10 w-full h-full">
+                            <UploadDisclaimer
+                                onAccept={processFile}
+                                isLoading={isLoading}
+                                fileRef={fileRef}
+                            />
+                        </div>
                     ) : activeTab === 'table' ? (
-                        <div className="h-full p-4">
-                            <div className="h-full bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
+                        <div className="h-full p-4 relative z-10">
+                            <div className="h-full bg-[#0a0d14] rounded-[2px] border border-white/5 overflow-hidden">
                                 <AgGridReact
                                     rowData={processedData}
                                     columnDefs={visibleColumns}
@@ -428,7 +431,7 @@ const VisualizeData = memo(() => {
                             </div>
                         </div>
                     ) : (
-                        <div ref={chartRef} className="space-y-4 md:space-y-6 max-w-7xl mx-auto p-3 md:p-6">
+                        <div ref={chartRef} className="space-y-4 md:space-y-6 max-w-7xl mx-auto p-3 md:p-6 relative z-10">
                             {/* KPI Cards */}
                             {kpiData && (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">

@@ -337,15 +337,15 @@ const AdminDashboard = () => {
     }
   }, [users, searchTerm]);
 
-  const handleMembershipChange = async (userId, newPlan) => {
+  const handleMembershipChange = async (userId, newPlan, duration = 'monthly') => {
     try {
-      await updateUserMembership(userId, newPlan, 'monthly', null, user.uid);
+      await updateUserMembership(userId, newPlan, duration, null, user.uid);
       setUsers(prev => prev.map(u =>
         u.id === userId
-          ? { ...u, membership: { ...u.membership, plan: newPlan } }
+          ? { ...u, membership: { ...u.membership, plan: newPlan, billingCycle: duration } }
           : u
       ));
-      toast.success(`Membership updated to ${newPlan}`);
+      toast.success(`Membership updated to ${newPlan} (${duration})`);
     } catch (error) {
       console.error('Error updating membership:', error);
       toast.error('Failed to update membership');

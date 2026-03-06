@@ -26,15 +26,13 @@ const SuperAdminPaymentsTab = ({ tabVariants, paymentAnalytics, onSyncSuccess })
 
             {/* Analytics Section */}
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                <DollarSign className="h-5 w-5" />
-                            </div>
+                        <h2 className="text-[14px] font-mono tracking-widest uppercase text-white flex items-center gap-3">
+                            <DollarSign className="h-5 w-5 text-emerald-400" />
                             Revenue Intelligence
                         </h2>
-                        <p className="text-zinc-500 mt-1 font-medium text-sm">Real-time payment performance and plan insights.</p>
+                        <p className="text-zinc-500 mt-2 font-light text-sm tracking-wide">Real-time payment performance and plan insights.</p>
                     </div>
                 </div>
 
@@ -71,50 +69,54 @@ const SuperAdminPaymentsTab = ({ tabVariants, paymentAnalytics, onSyncSuccess })
             </div>
 
             {/* Transactions Table */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-                 <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center">
-                    <h3 className="text-xl font-bold text-white tracking-tight">Transaction History</h3>
-                    <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Live Data Feed</span>
+            <div className="bg-[#030508]/40 backdrop-blur-3xl rounded-2xl shadow-2xl border border-white/5 relative overflow-hidden flex flex-col max-h-[600px]">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
+                 <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center relative z-10 flex-shrink-0">
+                    <h3 className="text-[13px] font-mono tracking-widest uppercase text-white">Transaction Ledger</h3>
+                    <div className="flex items-center gap-3 bg-emerald-500/5 border border-emerald-500/20 rounded-full px-3 py-1.5">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-[9px] font-mono text-emerald-400 uppercase tracking-[0.2em]">Live Data</span>
                     </div>
                  </div>
                 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-white/5">
-                        <thead className="bg-white/[0.03]">
+                <div className="overflow-y-auto theme-scrollbar relative z-10">
+                    <table className="min-w-full divide-y divide-white/5 relative">
+                        <thead className="bg-[#030508]/90 backdrop-blur-md sticky top-0 z-20">
                             <tr>
-                                <th className="px-6 py-5 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">User ID</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Plan</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Amount</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Method</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Date</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-mono font-medium text-zinc-500 uppercase tracking-widest whitespace-nowrap">User ID</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-mono font-medium text-zinc-500 uppercase tracking-widest whitespace-nowrap">Plan</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-mono font-medium text-zinc-500 uppercase tracking-widest whitespace-nowrap">Amount</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-mono font-medium text-zinc-500 uppercase tracking-widest whitespace-nowrap">Method</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-mono font-medium text-zinc-500 uppercase tracking-widest whitespace-nowrap">Date</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5 bg-transparent">
                             {paymentAnalytics.payments.length > 0 ? (
                                 paymentAnalytics.payments.map((payment) => (
-                                <tr key={payment.id} className="hover:bg-white/[0.03] transition-colors group">
-                                    <td className="px-6 py-5 whitespace-nowrap text-xs text-zinc-400 font-mono group-hover:text-emerald-400 transition-colors">
+                                <tr key={payment.id} className="hover:bg-white/5 transition-colors group">
+                                    <td className="px-8 py-5 text-[11px] text-zinc-400 font-mono tracking-widest uppercase group-hover:text-emerald-400 transition-colors">
                                         {payment.userId}
                                     </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${
-                                            (payment.plan || payment.planId) === 'plus' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                            (payment.plan || payment.planId) === 'pro' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' :
-                                            (payment.plan || payment.planId) === 'business' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
+                                    <td className="px-8 py-5 whitespace-nowrap">
+                                        <span className={`px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-widest border ${
+                                            (payment.plan || payment.planId) === 'plus' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                            (payment.plan || payment.planId) === 'pro' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' :
+                                            (payment.plan || payment.planId) === 'business' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                             'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
                                         }`}>
-                                            {payment.plan || payment.planId || 'Unknown'}
+                                            {payment.plan || payment.planId || 'UNKNOWN'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-5 whitespace-nowrap text-sm text-white font-bold">
+                                    <td className="px-8 py-5 whitespace-nowrap text-[13px] font-mono text-white tracking-widest">
                                         ₹{payment.amount?.toLocaleString() || '0'}
                                     </td>
-                                    <td className="px-6 py-5 whitespace-nowrap text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                                        {payment.method || 'Unknown'}
+                                    <td className="px-8 py-5 whitespace-nowrap text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+                                        {payment.method || 'UNKNOWN'}
                                     </td>
-                                    <td className="px-6 py-5 whitespace-nowrap text-xs text-zinc-500 font-medium">
+                                    <td className="px-8 py-5 whitespace-nowrap text-[10px] text-zinc-500 font-mono tracking-widest uppercase">
                                         {payment.timestamp?.toDate?.()?.toLocaleString() || 'N/A'}
                                     </td>
                                 </tr>

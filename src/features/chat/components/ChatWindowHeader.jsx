@@ -36,7 +36,7 @@ const DownloadMenu = ({ onDownloadPDF, onDownloadText }) => {
       </button>
 
       {isOpen && (
-                <div className="absolute top-full right-0 mt-3 py-2 w-48 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-3 py-2 w-48 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 download-menu-content">
           <button
             onClick={() => { onDownloadText(); setIsOpen(false); }}
             className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] uppercase font-mono tracking-widest hover:bg-white/5 text-zinc-300 hover:text-white"
@@ -92,17 +92,13 @@ const ChatWindowHeader = ({
   const [personalityDropdownOpen, setPersonalityDropdownOpen] = useState(false);
   const personalityButtonRef = useRef(null);
 
-  // Relyce AI Behavior Mode (Only for default_relyce)
-  const [behaviorDropdownOpen, setBehaviorDropdownOpen] = useState(false);
-  const behaviorButtonRef = useRef(null);
-  const [behaviorMode, setBehaviorMode] = useState('hybrid');
-  const [savingBehaviorMode, setSavingBehaviorMode] = useState(false);
+  // Relyce AI Behavioral Logic
   const [thinkingVisibility, setThinkingVisibility] = useState('auto');
   const [savingThinkingVisibility, setSavingThinkingVisibility] = useState(false);
 
   // Close menus on outside click - centralized
   useEffect(() => {
-    if (!headerMenuOpen && !modeDropdownOpen && !personalityDropdownOpen && !behaviorDropdownOpen) return;
+    if (!headerMenuOpen && !modeDropdownOpen && !personalityDropdownOpen) return;
     
     const handler = (e) => {
       if (headerMenuOpen && headerMenuRef.current && !headerMenuRef.current.contains(e.target) && !headerMenuButtonRef.current?.contains(e.target)) {
@@ -116,61 +112,21 @@ const ChatWindowHeader = ({
       if (personalityDropdownOpen && personalityButtonRef.current && !personalityButtonRef.current.contains(e.target) && !e.target.closest('.personality-dropdown-content')) {
         setPersonalityDropdownOpen(false);
       }
-
-      if (behaviorDropdownOpen && behaviorButtonRef.current && !behaviorButtonRef.current.contains(e.target) && !e.target.closest('.behavior-dropdown-content')) {
-        setBehaviorDropdownOpen(false);
-      }
     };
     
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [headerMenuOpen, modeDropdownOpen, personalityDropdownOpen, behaviorDropdownOpen]);
+  }, [headerMenuOpen, modeDropdownOpen, personalityDropdownOpen]);
 
-  useEffect(() => {
-    const mode = userProfile?.settings?.personalization?.behaviorMode;
-    if (mode && mode !== behaviorMode) {
-      setBehaviorMode(mode);
-    }
-  }, [userProfile?.settings?.personalization?.behaviorMode, behaviorMode]);
 
   useEffect(() => {
     const visibility = userProfile?.settings?.personalization?.thinkingVisibility;
-    if (visibility && visibility !== thinkingVisibility) {
+    if (visibility) {
       setThinkingVisibility(visibility);
     }
-  }, [userProfile?.settings?.personalization?.thinkingVisibility, thinkingVisibility]);
+  }, [userProfile?.settings?.personalization?.thinkingVisibility]);
 
-  useEffect(() => {
-    if (!activePersonality || activePersonality.id !== 'default_relyce') return;
-    if (activePersonality.content_mode !== behaviorMode) {
-      // Prevent infinite loop by not updating object reference if the value is essentially the same
-      if (activePersonality.content_mode === behaviorMode) return;
-      setActivePersonality(prev => ({ ...prev, content_mode: behaviorMode }));
-    }
-  }, [activePersonality?.id, activePersonality?.content_mode, behaviorMode, setActivePersonality]);
 
-  const handleBehaviorModeChange = async (mode) => {
-    if (mode === behaviorMode) {
-      setBehaviorDropdownOpen(false);
-      return;
-    }
-    setBehaviorMode(mode);
-    setBehaviorDropdownOpen(false);
-    if (activePersonality?.id === 'default_relyce') {
-      setActivePersonality({ ...activePersonality, content_mode: mode });
-    }
-    if (!user?.uid) return;
-    try {
-      setSavingBehaviorMode(true);
-      await updateDoc(doc(db, 'users', user.uid), {
-        'settings.personalization.behaviorMode': mode
-      });
-    } catch (err) {
-      console.error('[BehaviorMode] Failed to save setting:', err);
-    } finally {
-      setSavingBehaviorMode(false);
-    }
-  };
 
   const handleThinkingVisibilityChange = async (value) => {
     if (value === thinkingVisibility) return;
@@ -241,17 +197,20 @@ const ChatWindowHeader = ({
               onClick={() => setModeDropdownOpen(!modeDropdownOpen)}
               className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 text-[10px] font-mono uppercase tracking-widest border ${modeDropdownOpen ? 'bg-white/[0.05] text-white border-white/10' : 'text-zinc-400 bg-transparent border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/5'}`}
             >
-              <span>{chatMode === 'business' ? 'Business Process' : 'Generic Engine'}</span>
+              <span>{chatMode === 'business' ? 'Business Process' : chatMode === 'agent' ? 'Structured Agent' : 'Generic Engine'}</span>
               <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${modeDropdownOpen ? 'rotate-180 text-white' : 'text-zinc-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" /></svg>
             </button>
 
             {modeDropdownOpen && (
-              <div className="absolute top-full left-0 mt-3 py-2 w-48 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute top-full left-0 mt-3 py-2 w-48 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 mode-dropdown-content">
                 <button onClick={() => { if(onChatModeChange) onChatModeChange('normal'); setModeDropdownOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${chatMode === 'normal' ? 'bg-white/5 text-white' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
                   Generic Engine
                 </button>
                 <button onClick={() => { if(onChatModeChange) onChatModeChange('business'); setModeDropdownOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest border-t border-white/[0.05] ${chatMode === 'business' ? 'bg-white/5 text-white' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
                   Business Process
+                </button>
+                <button onClick={() => { if(onChatModeChange) onChatModeChange('agent'); setModeDropdownOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest border-t border-white/[0.05] ${chatMode === 'agent' ? 'bg-white/5 text-white' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
+                  Structured Agent
                 </button>
               </div>
             )}
@@ -266,7 +225,7 @@ const ChatWindowHeader = ({
                 </button>
 
                 {personalityDropdownOpen && (
-                <div className="absolute top-full left-0 mt-3 py-2 w-64 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-chat-scrollbar animate-in fade-in slide-in-from-top-2 duration-200" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute top-full left-0 mt-3 py-2 w-64 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-chat-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 personality-dropdown-content" onClick={(e) => e.stopPropagation()}>
                     <div className="px-4 py-2.5 text-[10px] text-zinc-500 font-mono uppercase tracking-widest border-b border-white/[0.05] mb-1">
                         Select Persona
                     </div>
@@ -297,31 +256,6 @@ const ChatWindowHeader = ({
             </div>
           )}
 
-          {chatMode === 'normal' && activePersonality?.id === 'default_relyce' && (
-            <div className="relative hidden md:block">
-              <button ref={behaviorButtonRef} onClick={() => setBehaviorDropdownOpen(!behaviorDropdownOpen)} className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 text-[10px] font-mono uppercase tracking-widest border ${behaviorDropdownOpen ? 'bg-white/[0.05] text-white border-white/10' : 'text-zinc-500 bg-transparent border-transparent hover:bg-white/[0.02] hover:text-zinc-300 hover:border-white/5'}`} disabled={savingBehaviorMode} title="Cognitive mode">
-                <span>{behaviorMode === 'web_search' ? 'Web Search' : behaviorMode === 'llm_only' ? 'Direct LLM' : 'Hybrid Pipeline'}</span>
-                <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${behaviorDropdownOpen ? 'rotate-180 text-white' : 'text-zinc-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" /></svg>
-              </button>
-
-              {behaviorDropdownOpen && (
-                <div className="absolute top-full left-0 mt-3 py-2 w-56 z-50 bg-[#0a0d14] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" onClick={(e) => e.stopPropagation()}>
-                  <div className="px-4 py-2.5 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border-b border-white/[0.05] mb-1">
-                    Cognitive Protocol
-                  </div>
-                  <button onClick={() => handleBehaviorModeChange('hybrid')} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${behaviorMode === 'hybrid' ? 'text-white bg-white/5' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
-                    Hybrid Pipeline
-                  </button>
-                  <button onClick={() => handleBehaviorModeChange('web_search')} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${behaviorMode === 'web_search' ? 'text-white bg-white/5' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
-                    Web Search Forced
-                  </button>
-                  <button onClick={() => handleBehaviorModeChange('llm_only')} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest ${behaviorMode === 'llm_only' ? 'text-white bg-white/5' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
-                    Direct LLM
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
         </div>
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, memo } from 'react';
 import {
   Zap, Brain, Target, Shield, Search, Code2, BookOpen,
   MessageSquare, Wrench, Lightbulb, TrendingUp, ChevronDown,
-  Sparkles, AlertTriangle, CheckCircle2, HelpCircle, X
+  Sparkles, AlertTriangle, CheckCircle2, HelpCircle, X, Cpu
 } from 'lucide-react';
 
 // ── Mode Config ──────────────────────────────────────────────
@@ -17,6 +17,7 @@ const MODE_CONFIG = {
   creative:       { icon: Sparkles,      label: 'Creative Mode',    color: 'from-pink-500 to-rose-500',      text: 'text-pink-400',    bg: 'bg-pink-500/10',    border: 'border-pink-500/20',    glow: 'shadow-pink-500/20' },
   system_design:  { icon: Target,        label: 'Architecture',     color: 'from-indigo-500 to-blue-500',    text: 'text-indigo-400',  bg: 'bg-indigo-500/10',  border: 'border-indigo-500/20',  glow: 'shadow-indigo-500/20' },
   education:      { icon: BookOpen,      label: 'Learning Mode',    color: 'from-green-500 to-emerald-500',  text: 'text-green-400',   bg: 'bg-green-500/10',   border: 'border-green-500/20',   glow: 'shadow-green-500/20' },
+  agent:          { icon: Cpu,           label: 'Agent Mode',       color: 'from-cyan-500 to-blue-500',      text: 'text-cyan-400',    bg: 'bg-cyan-500/10',    border: 'border-cyan-500/20',    glow: 'shadow-cyan-500/20' },
   general:        { icon: MessageSquare, label: 'Assistant',        color: 'from-zinc-500 to-zinc-400',      text: 'text-zinc-400',    bg: 'bg-zinc-500/10',    border: 'border-zinc-500/20',    glow: 'shadow-zinc-500/10' },
 };
 
@@ -160,6 +161,14 @@ const IntelligenceBar = memo(({ intelligence, isStreaming }) => {
 
         {/* Confidence */}
         <ConfidenceBadge confidence={confidence} />
+
+        {/* Reasoning Tokens */}
+        {intelligence.reasoning_tokens > 0 && (
+          <div className="flex items-center gap-1 text-[10px] text-amber-500/80 tracking-wide font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+            <Cpu size={10} className="text-amber-500" />
+            <span>{intelligence.reasoning_tokens.toLocaleString()} tokens</span>
+          </div>
+        )}
 
         {/* Skill Level Dot */}
         {skill_level > 0.7 && (

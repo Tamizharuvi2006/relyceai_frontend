@@ -65,22 +65,22 @@ const ChartCard = memo(({ type, title, data, rawData, xAxisKey, yAxisKey, toolti
     return (
         <>
             {/* Regular Card */}
-            <div className="group bg-zinc-900/60 backdrop-blur-sm rounded-xl md:rounded-2xl border border-zinc-800/80 overflow-hidden hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-900/10">
-                <div className="px-3 md:px-5 py-3 md:py-4 border-b border-zinc-800/60 flex items-center justify-between bg-gradient-to-r from-zinc-900/50 to-transparent">
-                    <h3 className="font-semibold text-gray-200 text-sm md:text-base truncate pr-2">{title}</h3>
-                    <div className="flex items-center gap-1 md:gap-2 shrink-0">
+            <div className="group bg-[#0a0d14] backdrop-blur-sm rounded-[2px] border border-white/5 overflow-hidden hover:border-white/20 transition-all duration-300">
+                <div className="px-3 md:px-5 py-3 md:py-4 border-b border-white/5 flex items-center justify-between bg-transparent">
+                    <h3 className="font-light tracking-widest uppercase text-zinc-300 text-xs truncate pr-2">{title}</h3>
+                    <div className="flex items-center gap-1 md:gap-3 shrink-0">
                         {tooltipKey && (
-                            <span className="hidden md:flex text-[10px] text-emerald-400/60 items-center gap-1">
+                            <span className="hidden md:flex text-[10px] font-mono uppercase tracking-widest text-emerald-400/60 items-center gap-1">
                                 <Info size={10} />
                                 {tooltipKey}
                             </span>
                         )}
-                        <span className="text-[10px] md:text-xs text-emerald-400/80 bg-emerald-500/10 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-full font-medium">
+                        <span className="text-[10px] text-emerald-400 font-mono bg-emerald-900/20 px-2 py-0.5 rounded-[2px] border border-emerald-500/20">
                             {data.length}
                         </span>
                         <button
                             onClick={() => setIsFullscreen(true)}
-                            className="p-1 md:p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-zinc-800/80 rounded-lg transition-all duration-200 md:opacity-0 md:group-hover:opacity-100"
+                            className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-[2px] transition-all duration-200 md:opacity-0 md:group-hover:opacity-100"
                             title="Enlarge chart"
                         >
                             <Maximize2 size={14} className="md:w-4 md:h-4" />
@@ -95,7 +95,7 @@ const ChartCard = memo(({ type, title, data, rawData, xAxisKey, yAxisKey, toolti
             {/* Fullscreen Modal */}
             {isFullscreen && (
                 <div
-                    className="fixed inset-0 z-50 bg-black/98 backdrop-blur-xl flex animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 bg-[#030508]/98 backdrop-blur-xl flex animate-in fade-in duration-200"
                     onClick={() => { setIsFullscreen(false); setDetailsPanelOpen(false); }}
                 >
                     {/* Main Chart Area */}
@@ -104,37 +104,37 @@ const ChartCard = memo(({ type, title, data, rawData, xAxisKey, yAxisKey, toolti
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-zinc-800/60 flex items-center justify-between bg-gradient-to-r from-zinc-950 to-zinc-900 shrink-0">
+                        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/5 flex items-center justify-between bg-[#0a0d14] shrink-0">
                             <div className="min-w-0 flex-1">
-                                <h2 className="text-base md:text-xl font-bold text-white truncate">{title}</h2>
-                                <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1">
-                                    <p className="text-xs md:text-sm text-gray-500">
+                                <h2 className="text-base md:text-xl font-light tracking-widest uppercase text-white truncate">{title}</h2>
+                                <div className="flex flex-wrap items-center gap-4 mt-2 font-mono text-[10px] tracking-widest uppercase">
+                                    <p className="text-zinc-500">
                                         {data.length} points • {aggregateMode?.toUpperCase()}
                                     </p>
-                                    <div className="hidden sm:flex items-center gap-2 text-xs">
-                                        <span className="text-gray-600">X:</span>
+                                    <div className="hidden sm:flex items-center gap-2">
+                                        <span className="text-zinc-600">X:</span>
                                         <span className="text-emerald-400">{xAxisKey}</span>
-                                        <span className="text-gray-600 ml-2">Y:</span>
+                                        <span className="text-zinc-600 ml-2">Y:</span>
                                         <span className="text-emerald-400">{yAxisKey}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-3 shrink-0">
                                 {/* Details Panel Toggle - More Visible */}
                                 <button
                                     onClick={() => setDetailsPanelOpen(!detailsPanelOpen)}
-                                    className={`px-3 py-2 rounded-xl transition-colors flex items-center gap-2 text-sm font-medium ${detailsPanelOpen ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-600/50'}`}
+                                    className={`px-4 py-2 rounded-[2px] transition-all duration-300 flex items-center gap-2 text-[10px] font-mono tracking-widest uppercase border ${detailsPanelOpen ? 'bg-emerald-900/30 border-emerald-500/50 text-emerald-400' : 'bg-transparent border-white/10 text-zinc-500 hover:text-white hover:border-white/20'}`}
                                     title="Show data details"
                                 >
                                     <List size={16} />
                                     <span className="hidden sm:inline">Details</span>
                                 </button>
-                                <span className="hidden md:inline text-xs text-gray-500">ESC to close</span>
+                                <span className="hidden md:inline font-mono text-[10px] tracking-widest uppercase text-zinc-600">ESC to close</span>
                                 <button
                                     onClick={() => { setIsFullscreen(false); setDetailsPanelOpen(false); }}
-                                    className="p-2 md:p-2.5 text-gray-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+                                    className="p-2 md:p-2.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-[2px] transition-colors"
                                 >
-                                    <X size={20} className="md:w-6 md:h-6" />
+                                    <X size={20} className="md:w-6 md:h-6" strokeWidth={1} />
                                 </button>
                             </div>
                         </div>
@@ -149,29 +149,29 @@ const ChartCard = memo(({ type, title, data, rawData, xAxisKey, yAxisKey, toolti
 
                     {/* Details Side Panel - Uses rawData to show ALL columns */}
                     <div
-                        className={`fixed inset-y-0 right-0 w-full md:w-80 bg-zinc-900/98 border-l border-zinc-700/50 flex flex-col transition-transform duration-300 z-10 ${detailsPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                        className={`fixed inset-y-0 right-0 w-full md:w-80 bg-[#0a0d14]/98 border-l border-white/5 flex flex-col transition-transform duration-300 z-10 ${detailsPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Panel Header */}
-                        <div className="p-4 border-b border-zinc-800 bg-zinc-950 shrink-0">
-                            <div className="flex items-center justify-between mb-3">
+                        <div className="p-4 border-b border-white/5 bg-[#030508] shrink-0">
+                            <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h3 className="font-bold text-white">Data Details</h3>
-                                    <p className="text-xs text-gray-500">{detailsData.length} items • All columns</p>
+                                    <h3 className="font-light tracking-widest uppercase text-sm text-zinc-300">Data Details</h3>
+                                    <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mt-1">{detailsData.length} items • All cols</p>
                                 </div>
                                 <button
                                     onClick={() => setDetailsPanelOpen(false)}
-                                    className="md:hidden p-2 text-gray-400 hover:text-white hover:bg-zinc-800 rounded-lg"
+                                    className="md:hidden p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-[2px]"
                                 >
-                                    <X size={18} />
+                                    <X size={18} strokeWidth={1} />
                                 </button>
                             </div>
                             {/* Show All Toggle */}
                             <button
                                 onClick={() => setShowAllDetails(!showAllDetails)}
-                                className={`w-full py-2 px-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${showAllDetails ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700 hover:text-white'}`}
+                                className={`w-full py-2 px-3 rounded-[2px] text-[10px] font-mono tracking-widest uppercase flex items-center justify-center gap-2 transition-all duration-300 border ${showAllDetails ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-400' : 'bg-transparent border-white/10 text-zinc-500 hover:bg-white/5 hover:text-white'}`}
                             >
-                                {showAllDetails ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                {showAllDetails ? <ChevronDown size={14} strokeWidth={1.5} /> : <ChevronRight size={14} strokeWidth={1.5} />}
                                 {showAllDetails ? 'Collapse All' : 'Show All Details'}
                             </button>
                         </div>
@@ -188,12 +188,12 @@ const ChartCard = memo(({ type, title, data, rawData, xAxisKey, yAxisKey, toolti
                                 <div
                                     key={index}
                                     onClick={() => !showAllDetails && setSelectedItem(selectedItem === index ? null : index)}
-                                    className={`border-b border-zinc-800/50 transition-colors ${!showAllDetails ? 'cursor-pointer' : ''} ${shouldShowDetails(index) ? 'bg-emerald-600/10' : 'hover:bg-zinc-800/50'}`}
+                                    className={`border-b border-white/5 transition-colors ${!showAllDetails ? 'cursor-pointer' : ''} ${shouldShowDetails(index) ? 'bg-emerald-900/10' : 'hover:bg-white/[0.02]'}`}
                                 >
                                     {/* Item Summary */}
                                     <div className="p-3 flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shrink-0">
-                                            <User size={14} className="text-white" />
+                                        <div className="w-8 h-8 rounded-[2px] bg-emerald-900/20 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                                            <User size={14} className="text-emerald-500" strokeWidth={1.5} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium text-white truncate">
@@ -210,11 +210,11 @@ const ChartCard = memo(({ type, title, data, rawData, xAxisKey, yAxisKey, toolti
 
                                     {/* Expanded Details - Shows ALL columns from rawData */}
                                     {shouldShowDetails(index) && (
-                                        <div className="px-3 pb-3 space-y-1.5 bg-zinc-950/50">
+                                        <div className="px-3 pb-3 space-y-1.5 bg-[#030508]/50 pt-2 border-t border-white/5 mt-2">
                                             {Object.entries(item).map(([key, val]) => (
-                                                <div key={key} className="flex items-center justify-between text-xs py-1.5 px-2 bg-zinc-900/50 rounded">
-                                                    <span className="text-gray-500 shrink-0">{key}</span>
-                                                    <span className="text-gray-200 font-medium truncate max-w-[150px] ml-2">
+                                                <div key={key} className="flex items-center justify-between text-[10px] font-mono tracking-wider py-1.5 px-2 bg-[#0a0d14]/50 border border-white/5 rounded-[2px]">
+                                                    <span className="text-zinc-500 shrink-0 uppercase">{key}</span>
+                                                    <span className="text-zinc-300 truncate max-w-[150px] ml-2">
                                                         {formatValue(val)}
                                                     </span>
                                                 </div>

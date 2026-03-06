@@ -8,6 +8,7 @@ import MessageComponent from './MessageComponent';
 import TypingIndicator from './TypingIndicator';
 import { LoadingSpinner } from '../../../components/loading';
 import BotSkeletonLoader from './BotSkeletonLoader';
+import { FloatingAgentStatus } from './FloatingAgentStatus';
 // removed logo import
 
 const AnimatedGradientText = ({ children, className }) => (
@@ -102,6 +103,8 @@ const ChatWindow = memo(function ChatWindow({
   personalities: externalPersonalities,
   activePersonality: externalActivePersonality,
   setActivePersonality: externalSetActivePersonality,
+  initialMessage,
+  onInitialMessageConsumed,
 }) {
   const theme = 'dark';
   const { currentUser: user, userProfile, loading: authLoading } = useAuth();
@@ -144,6 +147,16 @@ const ChatWindow = memo(function ChatWindow({
     prevSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
+  // Auto-send initialMessage from Memory Manager ("See what Relyce learned")
+  useEffect(() => {
+    if (!initialMessage || !currentSessionId || loading) return;
+    const timer = setTimeout(() => {
+      handleSend({ text: initialMessage });
+      if (onInitialMessageConsumed) onInitialMessageConsumed();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [initialMessage, currentSessionId]);
+
   const scrollToMessage = (element) => {
     if (!messagesContainerRef.current || !element) return;
     const container = messagesContainerRef.current;
@@ -177,41 +190,60 @@ const ChatWindow = memo(function ChatWindow({
     }
   };
 
+  // Scroll to bottom when new messages are added
   useEffect(() => {
     if (!messagesContainerRef.current || messages.length === 0) return;
     const container = messagesContainerRef.current;
     const isNewMessage = messages.length > prevMessagesLengthRef.current;
     if (isNewMessage) {
       isAutoScrollingRef.current = true;
-      requestAnimationFrame(() => { container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' }); });
+      requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages]);
 
+  // RAF-based auto-scroll during streaming — only follows if user hasn't scrolled away
   useEffect(() => {
-    if (!messagesContainerRef.current || !botTyping || !isAutoScrollingRef.current) return;
+    if (!botTyping) return;
     const container = messagesContainerRef.current;
-    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-    const scrollInterval = setInterval(() => {
-      if (container && isAutoScrollingRef.current) {
-        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
-        if (isNearBottom) container.scrollTop = container.scrollHeight;
+    if (!container) return;
+
+    let rafId = null;
+    const scrollTick = () => {
+      if (!isAutoScrollingRef.current || !container) {
+        // User scrolled away — stop the loop entirely
+        return;
       }
-    } , 100);
-    return () => clearInterval(scrollInterval);
+      container.scrollTop = container.scrollHeight;
+      rafId = requestAnimationFrame(scrollTick);
+    };
+    // Only start if we're near the bottom
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+    if (isNearBottom) {
+      isAutoScrollingRef.current = true;
+      rafId = requestAnimationFrame(scrollTick);
+    }
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, [botTyping]);
 
+  // Track user scroll — user can always opt out during streaming by scrolling up
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
     const handleScroll = () => {
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-      if (!isNearBottom && !botTyping) isAutoScrollingRef.current = false;
-      else if (isNearBottom) isAutoScrollingRef.current = true;
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+      if (!isNearBottom) {
+        isAutoScrollingRef.current = false;
+      } else {
+        isAutoScrollingRef.current = true;
+      }
     };
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [botTyping]);
+  }, []);
 
   if (authLoading) {
     return <div className="flex-1 flex items-center justify-center bg-transparent"><LoadingSpinner size="default" message="Loading..." /></div>;
@@ -289,6 +321,8 @@ const ChatWindow = memo(function ChatWindow({
           </button>
         )}
       </div>
+
+      <FloatingAgentStatus messages={messages} isTyping={botTyping} />
 
       <div className={`absolute left-0 right-0 z-20 pointer-events-none transition-all duration-300 ease-in-out ${
          (!loading && !isTransitioning && !isSessionSwitchingRef.current && messages.length === 0)

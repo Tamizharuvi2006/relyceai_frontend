@@ -4,7 +4,7 @@ import { db, auth } from '../../utils/firebaseConfig';
 import ShareService from '../../services/shareService';
 import PDFService from '../../services/pdfService';
 import ChatService from '../../services/chatService';
-import { WebSocketChatManager, streamChatMessage } from '../../utils/api';
+import { WebSocketChatManager, streamChatMessage, API_BASE_URL } from '../../utils/api';
 
 let sharedWsManager = null;
 let currentSessionId = null;
@@ -98,6 +98,41 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         streamingMessageIdRef.current = null;
     }, [finalizeStream, messagesRef, setMessages, setBotTyping, setIsDeepSearchActive, setCurrentMessageId]);
 
+    // --- UI Control Global Wiring ---
+    useEffect(() => {
+        window.handleAgentConfirm = async (confirmStatus, executionId) => {
+            if (!executionId) return;
+            try {
+                await fetch(`${API_BASE_URL}/agent/confirm/${executionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: confirmStatus })
+                });
+                
+                // Optimistically update the UI to avoid lag
+                setMessages(prev => prev.map(msg => {
+                    if (msg.agentMeta?.execution_id === executionId) {
+                        return {
+                            ...msg,
+                            agentMeta: {
+                                ...msg.agentMeta,
+                                agent_state: confirmStatus ? "using_tool" : "cancelled",
+                                completed: !confirmStatus
+                            }
+                        };
+                    }
+                    return msg;
+                }));
+            } catch (err) {
+                console.warn('Failed to send confirm signal:', err);
+            }
+        };
+        
+        return () => {
+            delete window.handleAgentConfirm;
+        };
+    }, [setMessages]);
+
 
     useEffect(() => {
         let isActive = true;
@@ -164,6 +199,9 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         let isSearching = msg.isSearching;
                         let searchQuery = msg.searchQuery;
                         let intelligence = msg.intelligence || null;
+                        
+                        let agentMeta = msg.agentMeta || {};
+                        let executionLog = msg.executionLog || [];
 
                         if (infoText === "processing") {
                             isSearching = false;
@@ -176,9 +214,41 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         } else if (infoText.startsWith("INTEL:")) {
                             // Intelligence metadata from backend
                             try {
-                                intelligence = JSON.parse(infoText.slice(6));
+                                const newIntel = JSON.parse(infoText.slice(6));
+                                intelligence = intelligence ? { ...intelligence, ...newIntel } : newIntel;
                             } catch (e) {
                                 console.warn('[WS] Failed to parse INTEL payload:', e);
+                            }
+                        } else {
+                            try {
+                                const parsedInfo = JSON.parse(infoText);
+                                
+                                // GUARD: Only merge into agentMeta if this is an actual agent signal
+                                // (contains agent_state). Prevents non-agent mode JSON from
+                                // accidentally triggering AgentMetaBlock/FloatingAgentStatus.
+                                if (!parsedInfo.agent_state && !agentMeta?.agent_state) {
+                                    return msg; // Skip — not an agent payload
+                                }
+                                
+                                const nextMeta = { ...agentMeta, ...parsedInfo };
+
+                                if (JSON.stringify(nextMeta) === JSON.stringify(agentMeta)) {
+                                    return msg;
+                                }
+
+                                agentMeta = nextMeta;
+                                
+                                const buildLogEntry = (info) => {
+                                  if (!info.agent_state) return null;
+                                  return `[${info.agent_state}] ${info.tool || info.topic || info.trust || info.freshness || ''}`.trim();
+                                };
+                                
+                                const newLog = buildLogEntry(parsedInfo);
+                                if (newLog && !executionLog.includes(newLog)) {
+                                    executionLog = [...executionLog, newLog].slice(-50); // Cap at 50 entries
+                                }
+                            } catch (e) {
+                                // Not JSON or fallback string
                             }
                         }
 
@@ -186,7 +256,9 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                             ...msg,
                             isSearching,
                             searchQuery,
-                            intelligence
+                            intelligence,
+                            agentMeta,
+                            executionLog
                         };
                     }));
                 },
@@ -231,9 +303,46 @@ useEffect(() => {
 
         let animationFrameId = null;
         let lastFlushTime = 0;
-        const FLUSH_INTERVAL_MS = 50;
+        const FLUSH_INTERVAL_MS = 16; 
         let pendingContent = '';
         let isScheduled = false;
+
+        const performFlush = (timestamp) => {
+            isScheduled = false;
+            animationFrameId = null;
+
+            const chunk = tokenBufferRef.current;
+            if (chunk) {
+                tokenBufferRef.current = '';
+                pendingContent += chunk;
+            }
+
+            if (pendingContent.length > 0 && streamingMessageIdRef.current) {
+                const botMsgId = streamingMessageIdRef.current;
+                const contentToFlush = pendingContent;
+                pendingContent = '';
+                lastFlushTime = timestamp;
+
+                const setMessages = setMessagesRef.current;
+                setMessages(prev => {
+                    const idx = prev.findIndex(msg => msg.id === botMsgId);
+                    if (idx === -1) return prev;
+                    if (prev[idx].content === (prev[idx].content || '') + contentToFlush) return prev;
+                    const newArr = [...prev];
+                    newArr[idx] = {
+                        ...prev[idx],
+                        content: (prev[idx].content || '') + contentToFlush,
+                        isStreaming: true
+                    };
+                    return newArr;
+                });
+            }
+
+            // Continuously schedule next frame if there is still data or streaming is active
+            if (tokenBufferRef.current || pendingContent || streamingMessageIdRef.current) {
+                scheduleFlush();
+            }
+        };
 
         const scheduleFlush = () => {
             if (isScheduled) return;
@@ -241,57 +350,15 @@ useEffect(() => {
             animationFrameId = requestAnimationFrame(performFlush);
         };
 
-        const performFlush = () => {
-            isScheduled = false;
-            animationFrameId = null;
-
-            const now = Date.now();
-            const chunk = tokenBufferRef.current;
-            
-            if (chunk) {
-                tokenBufferRef.current = '';
-                pendingContent += chunk;
-            }
-
-            const hasPendingContent = pendingContent.length > 0;
-            const timeSinceLastFlush = now - lastFlushTime;
-            const shouldFlushNow = hasPendingContent && (timeSinceLastFlush >= FLUSH_INTERVAL_MS || pendingContent.length > 100);
-
-            if (shouldFlushNow && streamingMessageIdRef.current) {
-                const botMsgId = streamingMessageIdRef.current;
-                const contentToFlush = pendingContent;
-                pendingContent = '';
-                lastFlushTime = now;
-
-                const setMessages = setMessagesRef.current;
-                setMessages(prev => {
-                    const idx = prev.findIndex(msg => msg.id === botMsgId);
-                    if (idx === -1) return prev;
-                    const msg = prev[idx];
-                    if (msg.content === (msg.content || '') + contentToFlush) return prev;
-                    const newMsg = {
-                        ...msg,
-                        content: (msg.content || '') + contentToFlush,
-                        isStreaming: true
-                    };
-                    const newArr = prev.slice();
-                    newArr[idx] = newMsg;
-                    return newArr;
-                });
-            }
-
-            if (chunk || pendingContent) {
-                scheduleFlush();
-            }
-        };
-
+        // When a token arrives, we now just ensure a flush is scheduled
+        // The actual scheduling is triggered by the onToken callback via the manager
         const checkBuffer = () => {
             if (tokenBufferRef.current || pendingContent) {
                 scheduleFlush();
             }
         };
 
-        const bufferCheckInterval = setInterval(checkBuffer, 30);
+        const bufferCheckInterval = setInterval(checkBuffer, 16); // Check more frequently
 
         return () => {
             clearInterval(pingInterval);
@@ -313,7 +380,25 @@ useEffect(() => {
         finally { setIsReconnecting(false); }
     };
 
-    const handleStop = useCallback(() => {
+    const handleStop = useCallback(async () => {
+        // Find the execution ID of the current streaming message
+        const botMsgId = streamingMessageIdRef.current;
+        let activeExecutionId = null;
+        if (botMsgId) {
+            const currentMsg = messagesRef.current?.find(m => m.id === botMsgId);
+            if (currentMsg?.agentMeta?.execution_id) {
+                activeExecutionId = currentMsg.agentMeta.execution_id;
+            }
+        }
+        
+        if (activeExecutionId) {
+            try {
+                await fetch(`${API_BASE_URL}/agent/cancel/${activeExecutionId}`, { method: 'POST' });
+            } catch (err) {
+                console.warn('Failed to send cancel signal to agent execution branch', err);
+            }
+        }
+        
         if (wsManagerRef.current) {
             wsManagerRef.current.stopGeneration();
         }
@@ -322,7 +407,7 @@ useEffect(() => {
         setIsDeepSearchActive(false);
         setCurrentMessageId(null);
         streamingMessageIdRef.current = null;
-    }, [setBotTyping, setCurrentMessageId, setIsDeepSearchActive]);
+    }, [setBotTyping, setCurrentMessageId, setIsDeepSearchActive, messagesRef]);
 
     const handleFileUpload = useCallback((fileName) => {
         const uploadId = `${fileName}-${Date.now()}`;
@@ -428,23 +513,47 @@ useEffect(() => {
 
                 setWsConnected(false);
 
-                for await (const token of streamChatMessage(
+                for await (const chunk of streamChatMessage(
                     text,
                     currentSessionId,
                     userId,
                     effectiveMode,
-                    fileIds,
                     personalityToSend,
                     userSettings
                 )) {
-                    tokenBufferRef.current += token;
+                    if (chunk.type === 'token') {
+                        tokenBufferRef.current += chunk.content;
+                    } else if (chunk.type === 'info') {
+                        // Dispatch to the message's agentMeta to be tracked by AgentMetaBlock
+                        setMessages(prev => prev.map(msg => {
+                            if (msg.id === streamingMessageIdRef.current) {
+                                const currentLogs = msg.executionLog || [];
+                                const newLog = chunk.payload.agent_state 
+                                  ? `[${chunk.payload.agent_state}] ${chunk.payload.tool || chunk.payload.topic || ''}`.trim()
+                                  : null;
+                                
+                                return {
+                                    ...msg,
+                                    agentMeta: { ...msg.agentMeta, ...chunk.payload },
+                                    executionLog: newLog && !currentLogs.includes(newLog) 
+                                      ? [...currentLogs, newLog] 
+                                      : currentLogs
+                                };
+                            }
+                            return msg;
+                        }));
+                    }
                 }
 
                 finalizeStream();
 
             } catch (error) {
                 console.error('Error sending message via WS/SSE:', error);
-                failStream(error?.message || 'Failed to send message.');
+                if (error?.message?.includes('GOVERNANCE_BLOCK')) {
+                    finalizeStream();
+                } else {
+                    failStream(error?.message || 'Failed to send message.');
+                }
             }
         }
     }, [userId, currentSessionId, chatMode, userUniqueId, setMessages, setBotTyping, setCurrentMessageId, setIsDeepSearchActive, activePersonality, userProfile, setWsConnected, finalizeStream, failStream]);

@@ -30,48 +30,46 @@ const BotSkeletonLoader = ({ isDeepSearch = false, searchStatus = null }) => {
   const CurrentSourceIcon = deepSearchSources[currentSource].icon;
   
   return (
-    <div className="flex items-start gap-3 mb-6 animate-fade-in">
-      {/* Spacer to align with avatar position on desktop */}
-      <div className="w-8 hidden md:block flex-shrink-0"></div>
-
-      {/* Message Bubble Skeleton */}
-      <div className="relative w-full max-w-[80%] sm:max-w-2xl md:max-w-3xl">
-        <div className="px-4 py-4 rounded-2xl rounded-bl-none bg-zinc-800/50 border border-emerald-500/20">
+    <div className="flex items-start gap-6 mb-12 w-full animate-fade-in pb-10">
+      <div className="flex-1 min-w-0 px-2 lg:px-8 max-w-4xl mx-auto w-full">
+        <div className="text-white/80 leading-loose text-[15px] font-light font-['Inter',sans-serif]">
           {/* Status indicator */}
           <div className="flex items-center gap-2 mb-3">
             {isDeepSearch ? (
-              <>
-                <Search size={16} className="text-emerald-400 animate-pulse" />
-                <span className="text-sm font-medium text-emerald-400">
-                  Deep searching...
-                </span>
-              </>
+              <div className="flex items-center gap-4 py-3 min-h-[44px]">
+                <div className="relative flex h-3 w-3 mt-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20"></span>
+                  <Search size={14} className="text-emerald-400 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <span className="text-[13px] font-sans tracking-wide text-emerald-400 font-light animate-pulse mt-1">Deep searching...</span>
+              </div>
             ) : (
-              <>
-                <Sparkles size={16} className="text-emerald-400 animate-pulse" />
-                <span className="text-sm font-medium text-emerald-400">
-                  Thinking...
-                </span>
-              </>
+              <div className="flex items-center gap-4 py-3 min-h-[44px]">
+                <div className="relative flex h-3 w-3 mt-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]"></span>
+                </div>
+                <span className="text-[13px] font-sans tracking-wide text-zinc-400 font-light animate-pulse mt-1">Thinking...</span>
+              </div>
             )}
           </div>
           
           {/* Deep Search Sources Animation */}
           {isDeepSearch && (
-            <div className="mb-3 p-2 rounded-lg bg-zinc-900/50 border border-zinc-700/50">
-              <div className="flex items-center gap-2 text-xs">
-                <CurrentSourceIcon size={14} className={`${deepSearchSources[currentSource].color} animate-bounce`} />
-                <span className="text-zinc-400">
+            <div className="mb-4 p-3 rounded-xl bg-white/[0.02] border border-white/5 shadow-inner max-w-md">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider font-mono text-white/50 mb-3">
+                <CurrentSourceIcon size={12} className={`${deepSearchSources[currentSource].color}`} />
+                <span>
                   Searching {deepSearchSources[currentSource].name}...
                 </span>
               </div>
               {/* Source progress dots */}
-              <div className="flex gap-1 mt-2">
+              <div className="flex gap-1.5 mt-2">
                 {deepSearchSources.map((_, idx) => (
                   <div 
                     key={idx}
-                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                      idx <= currentSource ? 'bg-emerald-500' : 'bg-zinc-600'
+                    className={`h-1 rounded-full transition-all duration-300 ${
+                      idx <= currentSource ? 'w-4 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'w-1 bg-white/10'
                     }`}
                   />
                 ))}
@@ -79,27 +77,12 @@ const BotSkeletonLoader = ({ isDeepSearch = false, searchStatus = null }) => {
             </div>
           )}
           
-          {/* Skeleton text lines - cleaner design */}
-          <div className="space-y-2.5 animate-pulse">
-            <div className="h-3 rounded-full w-[90%] bg-zinc-700/50"></div>
-            <div className="h-3 rounded-full w-[75%] bg-zinc-700/50"></div>
-            <div className="h-3 rounded-full w-[60%] bg-zinc-700/50"></div>
-          </div>
-          
-          {/* Animated thinking dots at the bottom */}
-          <div className="mt-4 flex gap-1.5 items-center">
-            <div 
-              className="w-2 h-2 rounded-full bg-emerald-500/70 animate-bounce" 
-              style={{ animationDelay: '0ms', animationDuration: '0.8s' }}
-            />
-            <div 
-              className="w-2 h-2 rounded-full bg-emerald-500/70 animate-bounce" 
-              style={{ animationDelay: '150ms', animationDuration: '0.8s' }}
-            />
-            <div 
-              className="w-2 h-2 rounded-full bg-emerald-500/70 animate-bounce" 
-              style={{ animationDelay: '300ms', animationDuration: '0.8s' }}
-            />
+          {/* Skeleton text lines - cleaner design matching MessageComponent typography */}
+          <div className="space-y-4 animate-pulse mt-6">
+            <div className="h-2 rounded-full w-full bg-white/[0.03]"></div>
+            <div className="h-2 rounded-full w-[85%] bg-white/[0.03]"></div>
+            <div className="h-2 rounded-full w-[95%] bg-white/[0.03]"></div>
+            <div className="h-2 rounded-full w-[60%] bg-white/[0.03]"></div>
           </div>
         </div>
       </div>

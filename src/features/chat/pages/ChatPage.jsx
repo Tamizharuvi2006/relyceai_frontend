@@ -29,12 +29,20 @@ function AppContent() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [shareLoading, setShareLoading] = useState(false);
-  const [chatMode, setChatMode] = useState('normal');
+  const [pendingMessage, setPendingMessage] = useState(null);
+  const [chatMode, setChatModeRaw] = useState(() => {
+    try { return localStorage.getItem('relyce_chat_mode') || 'normal'; } catch { return 'normal'; }
+  });
+  const setChatMode = useCallback((mode) => {
+    setChatModeRaw(mode);
+    try { localStorage.setItem('relyce_chat_mode', mode); } catch {}
+  }, []);
   const [personalities, setPersonalities] = useState([]);
   const [activePersonality, setActivePersonality] = useState(null);
 
   const isNavigatingRef = useRef(false);
   const lastUrlSessionRef = useRef(chatId);
+  const userSelectedPersonalityRef = useRef(false);
 
   useEffect(() => {
     const uid = userProfile?.uniqueUserId;
@@ -65,14 +73,20 @@ function AppContent() {
   }, [userProfile?.uniqueUserId]);
 
   const handleSetActivePersonality = useCallback((persona) => {
+      userSelectedPersonalityRef.current = Date.now();
       setActivePersonality(persona);
       if (currentSessionId && user?.uid && persona?.id) {
           ChatService.updateSessionPersonality(user.uid, currentSessionId, persona.id);
       }
   }, [currentSessionId, user]);
 
+  // Sync personality from session data — but never override a recent manual selection
   useEffect(() => {
     if (!currentSessionId || !chatSessions.length || !personalities.length) return;
+    // Skip if user manually selected a personality within the last 3 seconds
+    const timeSinceManualSelect = Date.now() - (userSelectedPersonalityRef.current || 0);
+    if (timeSinceManualSelect < 3000) return;
+
     const currentSession = chatSessions.find(s => s.id === currentSessionId);
     
     if (currentSession?.personalityId) {
@@ -80,14 +94,10 @@ function AppContent() {
         if (savedPersona && savedPersona.id !== activePersonality?.id) {
             setActivePersonality(savedPersona);
         }
-    } else {
-        if (activePersonality?.id !== 'default_relyce') {
-             const defaultPersona = personalities.find(p => p.is_default && p.id === 'default_relyce') || personalities[0];
-             // Prevent infinite loop: Only set if the ID actually changed
-             if (defaultPersona && activePersonality?.id !== defaultPersona.id) {
-                 setActivePersonality(defaultPersona);
-             }
-        }
+    } else if (!activePersonality) {
+        // Only set default if no personality is selected at all
+        const defaultPersona = personalities.find(p => p.is_default && p.id === 'default_relyce') || personalities[0];
+        if (defaultPersona) setActivePersonality(defaultPersona);
     }
   }, [currentSessionId, chatSessions, personalities, activePersonality?.id]);
 
@@ -206,6 +216,26 @@ function AppContent() {
 
   const handleMessagesUpdate = useCallback((newMessages) => setMessages(newMessages), []);
 
+  // Listen for 'relyce-start-chat' event (from Settings > Manage Memory > See what Relyce learned)
+  useEffect(() => {
+    const handler = async (e) => {
+      const msg = e.detail?.message;
+      if (!msg || !user) return;
+      // Create a brand new session
+      const newId = crypto.randomUUID();
+      setCurrentSessionId(newId);
+      setMessages([]);
+      navigate(`/chat/${newId}`, { replace: true });
+      try {
+        await setDoc(doc(db, 'users', user.uid, 'chatSessions', newId), { name: 'Memory Review', createdAt: serverTimestamp() });
+      } catch (er) { console.error(er); }
+      // Set pending message so ChatWindow auto-sends it
+      setPendingMessage(msg);
+    };
+    window.addEventListener('relyce-start-chat', handler);
+    return () => window.removeEventListener('relyce-start-chat', handler);
+  }, [user, navigate]);
+
   if (loadingChats) return <ChatSkeleton />;
 
   return (
@@ -242,7 +272,8 @@ function AppContent() {
             <ChatWindow
               currentSessionId={currentSessionId} userId={user?.uid} chatSessions={memoizedChatSessions} sidebarExpanded={sidebarExpanded}
               onToggleSidebar={() => { if (window.innerWidth < 768) setShowSidebar(true); else setSidebarExpanded(!sidebarExpanded); }}
-              onMessagesUpdate={handleMessagesUpdate} chatMode={chatMode} onChatModeChange={setChatMode} activePersonality={activePersonality} setActivePersonality={handleSetActivePersonality} personalities={personalities} showHeader={false} 
+              onMessagesUpdate={handleMessagesUpdate} chatMode={chatMode} onChatModeChange={setChatMode} activePersonality={activePersonality} setActivePersonality={handleSetActivePersonality} personalities={personalities} showHeader={false}
+              initialMessage={pendingMessage} onInitialMessageConsumed={() => setPendingMessage(null)}
             />
           )}
         </main>

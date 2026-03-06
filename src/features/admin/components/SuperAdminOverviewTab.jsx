@@ -8,23 +8,26 @@ import {
 import { useTheme } from '../../../context/ThemeContext';
 
 const StatCard = ({ title, value, subtext, icon: Icon, color, trend }) => (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl p-6 group hover:border-zinc-700 transition-all duration-300">
-        <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-${color}-500/10 blur-2xl group-hover:bg-${color}-500/20 transition-all`} />
+    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#030508]/40 backdrop-blur-3xl p-6 group transition-all duration-300 hover:bg-white/5">
+        <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full bg-${color}-500/10 blur-[40px] group-hover:bg-${color}-500/20 transition-all duration-500`} />
+        {/* Subtle accent line on top */}
+        <div className={`absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-${color}-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+        
         <div className="relative flex justify-between items-start">
             <div>
-                <p className="text-sm font-medium text-zinc-400">{title}</p>
-                <h3 className="mt-2 text-3xl font-bold text-white tracking-tight">{value}</h3>
+                <p className="text-[11px] font-mono tracking-widest uppercase text-zinc-500">{title}</p>
+                <h3 className="mt-3 text-3xl font-light text-white tracking-tight font-mono">{value}</h3>
                 {subtext && (
-                    <div className="mt-2 flex items-center text-xs">
-                        {trend === 'up' && <ArrowUpRight className="h-3 w-3 mr-1 text-emerald-500" />}
-                        <span className={trend === 'up' ? "text-emerald-500" : "text-zinc-500"}>
+                    <div className="mt-3 flex items-center text-[11px] font-medium tracking-wide">
+                        {trend === 'up' && <ArrowUpRight className="h-3 w-3 mr-1 text-emerald-400" />}
+                        <span className={trend === 'up' ? "text-emerald-400" : "text-zinc-500"}>
                             {subtext}
                         </span>
                     </div>
                 )}
             </div>
-            <div className={`p-3 rounded-xl bg-${color}-500/10 text-${color}-500 shadow-inner ring-1 ring-inset ring-${color}-500/20`}>
-                <Icon className="h-6 w-6" />
+            <div className={`p-3 rounded-xl bg-white/5 text-${color}-400 shadow-inner border border-white/5 group-hover:border-${color}-500/30 transition-colors`}>
+                <Icon className="h-5 w-5" strokeWidth={1.5} />
             </div>
         </div>
     </div>
@@ -33,18 +36,23 @@ const StatCard = ({ title, value, subtext, icon: Icon, color, trend }) => (
 const PlanBar = ({ label, count, total, color }) => {
     const percentage = total > 0 ? (count / total) * 100 : 0;
     return (
-        <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">{label}</span>
-                <span className="font-medium text-zinc-200">{count} ({percentage.toFixed(1)}%)</span>
+        <div className="space-y-3">
+            <div className="flex justify-between items-end">
+                <span className="text-xs font-light text-zinc-400 tracking-wide">{label}</span>
+                <div className="flex items-baseline gap-2">
+                    <span className="text-xs font-mono text-white">{count}</span>
+                    <span className="text-[10px] font-mono text-zinc-600">({percentage.toFixed(1)}%)</span>
+                </div>
             </div>
-            <div className="h-2 w-full rounded-full bg-zinc-800">
+            <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
                 <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className={`h-full rounded-full bg-${color}-500`}
-                />
+                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                    className={`h-full bg-gradient-to-r from-${color}-600 to-${color}-400 rounded-full relative`}
+                >
+                    <div className="absolute inset-0 bg-white/20 w-full h-full animate-pulse blur-[2px]" />
+                </motion.div>
             </div>
         </div>
     );
@@ -53,12 +61,13 @@ const PlanBar = ({ label, count, total, color }) => {
 const QuickAction = ({ label, icon: Icon, onClick, color }) => (
     <button
         onClick={onClick}
-        className="flex flex-col items-center justify-center p-4 rounded-xl border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800/50 hover:border-zinc-700 transition-all group"
+        className="flex flex-col items-center justify-center p-5 rounded-xl border border-white/5 bg-[#030508]/40 hover:bg-white/10 transition-all duration-300 group backdrop-blur-3xl relative overflow-hidden"
     >
-        <div className={`p-3 rounded-full bg-${color}-500/10 text-${color}-500 mb-3 group-hover:scale-110 transition-transform`}>
-            <Icon className="h-6 w-6" />
+        <div className={`absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
+        <div className={`p-3 rounded-xl bg-white/5 border border-white/5 text-${color}-400 mb-4 group-hover:border-${color}-500/30 group-hover:text-${color}-300 transition-all duration-300 relative z-10`}>
+            <Icon className="h-5 w-5" strokeWidth={1.5} />
         </div>
-        <span className="text-sm font-medium text-zinc-300 group-hover:text-white">{label}</span>
+        <span className="text-[11px] font-medium tracking-widest uppercase text-zinc-400 group-hover:text-white transition-colors relative z-10">{label}</span>
     </button>
 );
 
@@ -89,8 +98,8 @@ const SuperAdminOverviewTab = ({
         >
             {/* Header Section */}
             <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Executive Dashboard</h2>
-                <p className="text-zinc-400 mt-1">Real-time system overview and performance metrics.</p>
+                <h2 className="text-2xl font-light text-white tracking-widest uppercase text-[15px]">Executive Dashboard</h2>
+                <p className="text-zinc-500 font-light mt-1.5 text-sm">Real-time system overview and performance metrics.</p>
             </div>
 
             {/* Key Metrics Grid */}
@@ -132,13 +141,14 @@ const SuperAdminOverviewTab = ({
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Subscription Distribution */}
-                <div className="lg:col-span-2 rounded-2xl border border-zinc-800 bg-black/40 backdrop-blur-sm p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                            <CreditCard className="h-5 w-5 text-indigo-500" />
+                <div className="lg:col-span-2 rounded-2xl border border-white/5 bg-[#030508]/40 p-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] rounded-full pointer-events-none" />
+                    <div className="flex items-center justify-between mb-8 relative z-10">
+                        <h3 className="text-[13px] font-mono tracking-widest text-white flex items-center gap-3 uppercase">
+                            <CreditCard className="h-4 w-4 text-indigo-400" />
                             Subscription Distribution
                         </h3>
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-zinc-800 text-zinc-400">
+                        <span className="text-[10px] font-mono tracking-widest px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-zinc-400 uppercase">
                             {totalSubs} Active Plans
                         </span>
                     </div>
@@ -153,28 +163,29 @@ const SuperAdminOverviewTab = ({
                 {/* Quick Actions & Role Stats */}
                 <div className="space-y-6">
                     {/* Role Stats */}
-                    <div className="rounded-2xl border border-zinc-800 bg-black/40 backdrop-blur-sm p-6">
-                        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                            <Crown className="h-5 w-5 text-amber-500" />
+                    <div className="rounded-2xl border border-white/5 bg-[#030508]/40 p-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 blur-[50px] rounded-full pointer-events-none" />
+                        <h3 className="text-[13px] font-mono tracking-widest text-white mb-6 flex items-center gap-3 uppercase relative z-10">
+                            <Crown className="h-4 w-4 text-amber-400" />
                             Administrative Access
                         </h3>
-                        <div className="flex justify-between items-center mb-4 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
-                                    <Crown className="h-4 w-4" />
+                        <div className="flex justify-between items-center mb-4 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/20 transition-colors group relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 text-amber-500 shadow-inner group-hover:border-amber-500/30 transition-colors">
+                                    <Crown className="h-4 w-4" strokeWidth={1.5} />
                                 </div>
-                                <span className="text-sm font-medium text-zinc-300">Super Admins</span>
+                                <span className="text-xs font-mono tracking-widest text-zinc-400 uppercase">Super Admins</span>
                             </div>
-                            <span className="text-lg font-bold text-white">{superadmins.length}</span>
+                            <span className="text-xl font-light text-white font-mono">{superadmins.length}</span>
                         </div>
-                        <div className="flex justify-between items-center p-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-                                    <ShieldCheck className="h-4 w-4" />
+                        <div className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/20 transition-colors group relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 text-blue-500 shadow-inner group-hover:border-blue-500/30 transition-colors">
+                                    <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
                                 </div>
-                                <span className="text-sm font-medium text-zinc-300">Admins</span>
+                                <span className="text-xs font-mono tracking-widest text-zinc-400 uppercase">Admins</span>
                             </div>
-                            <span className="text-lg font-bold text-white">{admins.length}</span>
+                            <span className="text-xl font-light text-white font-mono">{admins.length}</span>
                         </div>
                     </div>
 

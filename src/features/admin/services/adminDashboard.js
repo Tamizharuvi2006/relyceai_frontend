@@ -17,11 +17,23 @@ export const getAllUsers = async (requesterId) => {
   if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized access to user data');
 
   const snapshot = await getDocs(collection(db, 'users'));
-  const users = snapshot.docs.map(userDoc => ({
-    id: userDoc.id, 
-    ...userDoc.data(),
-    stats: { filesUploaded: 0, conversations: 0, folders: 0 } // Default stats to avoid UI breaking
-  }));
+  const users = snapshot.docs.map(userDoc => {
+    const data = userDoc.data();
+    // Inline downgrade so admin sees accurate active state before cron
+    if (data.membership && data.membership.plan !== 'free' && data.membership.expiryDate) {
+        if (new Date(data.membership.expiryDate) < new Date()) {
+            data.membership.plan = 'free';
+            data.membership.planName = 'Free';
+            data.membership.status = 'expired';
+            data.membership.isExpired = true;
+        }
+    }
+    return {
+      id: userDoc.id, 
+      ...data,
+      stats: { filesUploaded: 0, conversations: 0, folders: 0 } // Default stats to avoid UI breaking
+    };
+  });
 
   return users.sort((a, b) => {
     const idA = a.uniqueUserId ? parseInt(a.uniqueUserId.replace('RA', '')) : 0;
@@ -65,6 +77,12 @@ export const getUserStatistics = async (requesterId) => {
       if (createdAt?.getMonth() === now.getMonth() && createdAt?.getFullYear() === now.getFullYear()) newUsersThisMonth++;
 
       const membership = userData.membership;
+      if (membership && membership.plan !== 'free' && membership.expiryDate) {
+          if (new Date(membership.expiryDate) < new Date()) {
+              membership.plan = 'free';
+          }
+      }
+
       if (membership?.plan && membership.plan !== 'free') {
         premiumUsers++;
         const plan = membership.plan, billingCycle = membership.billingCycle || 'monthly';
@@ -106,8 +124,17 @@ export const getUsersByPlan = async (planType, requesterId) => {
   try {
     const { isAdmin, isSuperAdmin, error } = await verifyAdminAccess(requesterId);
     if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized access to user data');
-    const q = query(collection(db, 'users'), where('membership.plan', '==', planType), orderBy('createdAt', 'desc'));
-    return (await getDocs(q)).docs.map(d => ({ id: d.id, ...d.data() }));
+    const snapshot = await getDocs(collection(db, 'users'));
+    return snapshot.docs.map(d => {
+        const data = d.data();
+        if (data.membership && data.membership.plan !== 'free' && data.membership.expiryDate) {
+            if (new Date(data.membership.expiryDate) < new Date()) {
+                data.membership.plan = 'free';
+            }
+        }
+        return { id: d.id, ...data };
+    }).filter(d => (d.membership?.plan || 'free') === planType)
+      .sort((a,b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0));
   } catch { return []; }
 };
 
@@ -143,7 +170,13 @@ export const getRevenueAnalytics = async (requesterId) => {
     const analytics = { daily: {}, monthly: {}, planBreakdown: { starter: { count: 0, revenue: 0 }, plus: { count: 0, revenue: 0 }, business: { count: 0, revenue: 0 } }, totalRevenue: 0 };
 
     (await getDocs(collection(db, 'users'))).docs.forEach(d => {
-      const membership = d.data().membership;
+      const data = d.data();
+      const membership = data.membership;
+      if (membership && membership.plan !== 'free' && membership.expiryDate) {
+          if (new Date(membership.expiryDate) < new Date()) {
+              membership.plan = 'free';
+          }
+      }
       if (membership?.plan && membership.plan !== 'free' && planPricing[membership.plan]) {
         const revenue = (membership.billingCycle || 'monthly') === 'yearly' ? planPricing[membership.plan].yearly : planPricing[membership.plan].monthly;
         analytics.planBreakdown[membership.plan].count++;
@@ -311,7 +344,16 @@ export const getUsersByMembership = async (membershipType, requesterId) => {
   try {
     const { isAdmin, isSuperAdmin, error } = await verifyAdminAccess(requesterId);
     if (error || (!isAdmin && !isSuperAdmin)) throw new Error('Unauthorized');
-    return (await getDocs(q)).docs.map(d => ({ id: d.id, ...d.data() }));
+    const snapshot = await getDocs(collection(db, 'users'));
+    return snapshot.docs.map(d => {
+        const data = d.data();
+        if (data.membership && data.membership.plan !== 'free' && data.membership.expiryDate) {
+            if (new Date(data.membership.expiryDate) < new Date()) {
+                data.membership.plan = 'free';
+            }
+        }
+        return { id: d.id, ...data };
+    }).filter(d => (d.membership?.plan || 'free') === membershipType);
   } catch { return []; }
 };
 

@@ -92,6 +92,24 @@ export default function AuthProvider({ children }) {
           membershipData = userData.membership || null;
         }
 
+        // Inline UI Fallback for immediate degradation before backend sync
+        if (membershipData && membershipData.plan !== 'free' && membershipData.expiryDate) {
+            if (new Date(membershipData.expiryDate) < new Date()) {
+                membershipData.plan = 'free';
+                membershipData.planName = 'Free';
+                membershipData.status = 'expired';
+                membershipData.isExpired = true;
+                
+                // Mute this on the user profile as well so UI elements tracking userData directly match
+                if (userData.membership) {
+                    userData.membership.plan = 'free';
+                    userData.membership.planName = 'Free';
+                    userData.membership.status = 'expired';
+                    userData.membership.isExpired = true;
+                }
+            }
+        }
+
         userProfileCache.set(cacheKey, {
           userProfile: userData,
           membership: membershipData,

@@ -41,34 +41,36 @@ const SuperAdminUsersTab = ({
                 variants={cardVariants}
                 initial="hidden"
                 animate="visible"
-                className="rounded-lg shadow-sm border p-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                className="rounded-2xl shadow-2xl border p-8 bg-[#030508]/40 border-white/5 backdrop-blur-3xl relative overflow-hidden"
             >
-                <h2 className="text-lg font-semibold mb-4 flex items-center text-zinc-900 dark:text-white">
-                    <Search className="h-5 w-5 mr-2 text-emerald-500" />
-                    Search & Manage Users (All Users)
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
+                <h2 className="text-[13px] font-mono tracking-widest uppercase mb-8 flex items-center text-white relative z-10">
+                    <Search className="h-4 w-4 mr-3 text-emerald-400" />
+                    Search & Manage Users
                 </h2>
 
-                <div className="flex space-x-4 mb-6">
-                    <div className="flex-1">
+                <div className="flex space-x-4 mb-6 relative z-10">
+                    <div className="flex-1 relative group/input">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 w-5 h-5 group-focus-within/input:text-emerald-500/80 transition-colors" />
                         <input
                             type="email"
                             placeholder="Enter user email to search..."
                             value={searchEmail}
                             onChange={(e) => handleSearchInput(e.target.value)}
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent border-zinc-600 bg-zinc-700 text-white placeholder-zinc-400"
+                            className="w-full pl-14 pr-4 py-3.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 border-white/10 bg-white/5 text-white placeholder-zinc-600 transition-all font-mono tracking-wide"
                         />
                     </div>
                     <button
                         onClick={searchUserByEmail}
                         disabled={isSearching}
-                        className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                        className="px-8 py-3.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-white/5 disabled:border disabled:border-white/10 disabled:text-zinc-500 text-black font-medium rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center space-x-2"
                     >
                         {isSearching ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
                         ) : (
-                            <Search className="h-4 w-4" />
+                            <Search className="h-5 w-5" />
                         )}
-                        <span>Search</span>
+                        <span>Search Directory</span>
                     </button>
                 </div>
 
@@ -77,10 +79,10 @@ const SuperAdminUsersTab = ({
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="border-t border-gray-200 dark:border-gray-700 pt-6"
+                        className="border-t border-white/5 pt-8 mt-8 relative z-10"
                     >
-                        <h3 className="text-md font-medium mb-4 text-zinc-900 dark:text-white">Search Results ({searchResults.length} found)</h3>
-                        <div className="max-h-64 overflow-y-auto theme-scrollbar space-y-4">
+                        <h3 className="text-[11px] font-mono tracking-widest text-zinc-500 uppercase mb-6">Search Results ({searchResults.length} found)</h3>
+                        <div className="max-h-64 overflow-y-auto theme-scrollbar space-y-4 pr-2">
                             {searchResults.map((user) => (
                                 <SearchUserCard
                                     key={user.id}
@@ -95,25 +97,30 @@ const SuperAdminUsersTab = ({
                 )}
             </motion.div>
 
-            {/* Admin and Super Admin Management - 2 Grid Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Admin Users Section */}
                 <motion.div
                     variants={cardVariants}
                     initial="hidden"
                     animate="visible"
-                    className="rounded-lg shadow-sm border p-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                    className="rounded-2xl shadow-2xl border p-8 bg-[#030508]/40 border-white/5 backdrop-blur-3xl flex flex-col h-[600px] relative overflow-hidden"
                 >
-                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-zinc-900 dark:text-white">
-                        <UserCheck className="h-5 w-5 text-emerald-500" />
-                        Admin Users ({admins.length})
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 blur-[50px] rounded-full pointer-events-none" />
+                    <h2 className="text-[13px] font-mono tracking-widest uppercase mb-8 flex items-center justify-between text-white relative z-10">
+                        <div className="flex items-center gap-3">
+                            <UserCheck className="h-4 w-4 text-blue-400" />
+                            Admin Users
+                        </div>
+                        <span className="text-[10px] px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-zinc-400">
+                            {admins.length} ACTIVE
+                        </span>
                     </h2>
                     {loading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                        <div className="flex items-center justify-center py-8 flex-1 relative z-10">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                         </div>
                     ) : (
-                        <div className="max-h-80 overflow-y-auto theme-scrollbar space-y-3">
+                        <div className="overflow-y-auto theme-scrollbar space-y-3 flex-1 pr-2 relative z-10">
                             {admins.length > 0 ? (
                                 admins.map((admin) => (
                                     <AdminUserCard
@@ -125,9 +132,9 @@ const SuperAdminUsersTab = ({
                                     />
                                 ))
                             ) : (
-                                <div className="text-center py-8">
-                                    <UserCheck className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                <div className="text-center py-8 h-full flex flex-col items-center justify-center">
+                                    <UserCheck className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                                    <p className="text-sm text-zinc-500 font-light">
                                         No admin users found
                                     </p>
                                 </div>
@@ -141,18 +148,24 @@ const SuperAdminUsersTab = ({
                     variants={cardVariants}
                     initial="hidden"
                     animate="visible"
-                    className="rounded-lg shadow-sm border p-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                    className="rounded-2xl shadow-2xl border p-8 bg-[#030508]/40 border-white/5 backdrop-blur-3xl flex flex-col h-[600px] relative overflow-hidden"
                 >
-                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-zinc-900 dark:text-white">
-                        <Crown className="h-5 w-5 text-yellow-500" />
-                        Super Admin Users ({superadmins.length})
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 blur-[50px] rounded-full pointer-events-none" />
+                    <h2 className="text-[13px] font-mono tracking-widest uppercase mb-8 flex items-center justify-between text-white relative z-10">
+                        <div className="flex items-center gap-3">
+                            <Crown className="h-4 w-4 text-amber-400" />
+                            Super Admin Users
+                        </div>
+                        <span className="text-[10px] px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-zinc-400">
+                            {superadmins.length} ACTIVE
+                        </span>
                     </h2>
                     {loading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                        <div className="flex items-center justify-center py-8 flex-1 relative z-10">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
                         </div>
                     ) : (
-                        <div className="max-h-80 overflow-y-auto theme-scrollbar space-y-3">
+                        <div className="overflow-y-auto theme-scrollbar space-y-3 flex-1 pr-2 relative z-10">
                             {superadmins.length > 0 ? (
                                 superadmins.map((superadmin) => (
                                     <AdminUserCard
@@ -164,9 +177,9 @@ const SuperAdminUsersTab = ({
                                     />
                                 ))
                             ) : (
-                                <div className="text-center py-8">
-                                    <Crown className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                <div className="text-center py-8 h-full flex flex-col items-center justify-center">
+                                    <Crown className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                                    <p className="text-sm text-zinc-500 font-light">
                                         No super admin users found
                                     </p>
                                 </div>
