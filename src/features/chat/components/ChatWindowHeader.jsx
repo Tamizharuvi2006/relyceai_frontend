@@ -75,7 +75,9 @@ const ChatWindowHeader = ({
   activePersonality,
   setActivePersonality,
   setPersonalities,
-  userUniqueId
+  userUniqueId,
+  canUseFullAgent = false,
+  membershipPlan = 'free'
 }) => {
   const { currentUser: user, userProfile } = useAuth();
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
@@ -197,7 +199,7 @@ const ChatWindowHeader = ({
               onClick={() => setModeDropdownOpen(!modeDropdownOpen)}
               className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 text-[10px] font-mono uppercase tracking-widest border ${modeDropdownOpen ? 'bg-white/[0.05] text-white border-white/10' : 'text-zinc-400 bg-transparent border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/5'}`}
             >
-              <span>{chatMode === 'business' ? 'Business Process' : chatMode === 'agent' ? 'Structured Agent' : 'Generic Engine'}</span>
+              <span>{chatMode === 'business' ? 'Business Process' : chatMode === 'agent' ? (canUseFullAgent ? 'Structured Agent' : 'Agent Trial') : 'Generic Engine'}</span>
               <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${modeDropdownOpen ? 'rotate-180 text-white' : 'text-zinc-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" /></svg>
             </button>
 
@@ -210,7 +212,7 @@ const ChatWindowHeader = ({
                   Business Process
                 </button>
                 <button onClick={() => { if(onChatModeChange) onChatModeChange('agent'); setModeDropdownOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left text-[10px] font-mono uppercase tracking-widest border-t border-white/[0.05] ${chatMode === 'agent' ? 'bg-white/5 text-white' : 'hover:bg-white/5 text-zinc-400 hover:text-white'}`}>
-                  Structured Agent
+                  {canUseFullAgent ? 'Structured Agent' : 'Structured Agent (Trial)'}
                 </button>
               </div>
             )}
@@ -337,3 +339,4 @@ const ChatWindowHeader = ({
 };
 
 export default ChatWindowHeader;
+

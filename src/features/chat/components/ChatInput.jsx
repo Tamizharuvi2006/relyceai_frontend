@@ -4,7 +4,7 @@ import { uploadFile } from '../../../utils/api.js';
 import { uploadChatFileToFirebase } from '../../files/services/fileService.js';
 import { useAuth } from '../../../context/AuthContext.jsx';
 
-export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, botTyping, onStop, sessionId, chatMode }) {
+export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, botTyping, onStop, sessionId, chatMode, canUseFullAgent = false, membershipPlan = 'free' }) {
     const theme = 'dark';
     const { currentUser: user, userProfile, loading } = useAuth();
     const [text, setText] = useState('');
@@ -126,24 +126,39 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
 
         if (text.length > 5000) {
             console.warn("Message too long (max 5000 chars)");
-            alert("Message must be under 5000 characters."); 
+            alert("Message must be under 5000 characters.");
             return;
         }
-        
+
         const payload = {
             text: text.trim(),
             files: uploadedFiles,
             isWebSearch: isWebSearchActive
         };
 
+        if (chatMode === 'agent' && !canUseFullAgent) {
+            if (isContinuationPayload(payload.text)) {
+                alert('Agent continuation is available on Plus, Pro, or Business plans.');
+                return;
+            }
+
+            const trialKey = `relyce_agent_free_count:${user?.uid || 'anon'}:${sessionId || 'nosession'}`;
+            const usedCount = Number(localStorage.getItem(trialKey) || '0');
+            if (usedCount >= 2) {
+                alert('Free Agent limit reached for this chat (2 messages). Upgrade to Plus, Pro, or Business for unlimited Agent usage.');
+                return;
+            }
+            localStorage.setItem(trialKey, String(usedCount + 1));
+        }
+
         if (shouldPromptReactChecklist(payload.text) && !showReactChecklist) {
-            // Send directly without checklist intercept
             finalizeSend(payload);
             return;
         }
 
         finalizeSend(payload);
     };
+
 
     const handleStop = () => {
         if (onStop) {
@@ -167,7 +182,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
             onFileUpload(file.name);
             try {
                 if (!user) {
-                    console.error('❌ No user found, cannot upload file');
+                    console.error('No user found, cannot upload file');
                     if (onFileUploadComplete) onFileUploadComplete(previewId, false);
                     return;
                 }
@@ -384,6 +399,21 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                 }
             `}</style>
 
+            {chatMode === 'normal' && (
+                <div className="w-full max-w-[900px] mx-auto mb-2 chat-input-container text-[10px] uppercase tracking-widest text-zinc-500">
+                    Mode: Normal - fast, single-tool responses.
+                </div>
+            )}
+            {chatMode === 'business' && (
+                <div className="w-full max-w-[900px] mx-auto mb-2 chat-input-container text-[10px] uppercase tracking-widest text-cyan-300/80">
+                    Mode: Business - structured answers with verification.
+                </div>
+            )}
+            {chatMode === 'agent' && (
+                <div className="w-full max-w-[900px] mx-auto mb-2 chat-input-container text-[10px] uppercase tracking-widest text-amber-300/90">
+                    {canUseFullAgent ? 'Mode: Agent - full tools + automation.' : 'Mode: Agent Trial - 2 messages/chat, continuation disabled.'}
+                </div>
+            )}
             {uploadError && (
                 <div className="w-full max-w-[900px] mx-auto mb-2 chat-input-container">
                     <div className="p-3 border bg-red-900/10 border-red-500/20 text-red-400 text-xs tracking-wide uppercase flex items-center justify-between">
@@ -533,3 +563,4 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
         </div>
     );
 }
+
