@@ -560,10 +560,9 @@ export async function uploadFile(file, sessionId = 'general') {
       method: 'POST',
       headers: { ...authHeaders },
       body: formData,
-    });
-    
-    if (!response.ok) throw new Error('Upload failed');
-    return await response.json();
+    });    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.detail || payload?.error || 'Upload failed');
+    return payload;
   } catch (error) {
     console.error('uploadFile error:', error);
     return { error: error.message };

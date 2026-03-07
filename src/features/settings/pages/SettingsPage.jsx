@@ -1,23 +1,22 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import ReactDOM from 'react-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
-import { User, Lock, Trash2, CreditCard, ExternalLink, Bell, Shield, Globe, Download, AlertTriangle, X, Hash, Link as LinkIcon, Save, Loader2, Check, Edit2, MessageSquare, Camera, ImageIcon, Cpu, BrainCircuit, ChevronRight, Copy, Plus, Brain } from 'lucide-react';
+import { User, Lock, Trash2, CreditCard, ExternalLink, Bell, Shield, Globe, Download, AlertTriangle, X, Hash, Link as LinkIcon, Save, Loader2, Check, Edit2, MessageSquare, Camera, ImageIcon, Cpu, BrainCircuit, ChevronRight, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteUser, updatePassword, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, deleteDoc, collection, getDocs, query, where, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject, getStorage } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, auth, storage } from '../../../utils/firebaseConfig.js';
 import toast from 'react-hot-toast';
 
 // A reusable card component for settings sections
 const SettingsCard = ({ title, children }) => {
   return (
-    <div className="rounded-[2px] shadow-sm overflow-hidden mb-8 transition-colors duration-300 bg-[#030508] border border-white/5">
-      <h2 className="text-base font-light tracking-wide px-6 py-4 border-b border-white/5 text-zinc-100 flex items-center gap-2">
+    <div className="rounded-xl shadow-sm overflow-hidden mb-8 transition-colors duration-300 bg-zinc-900 border border-zinc-800 ring-1 ring-zinc-800/50">
+      <h2 className="text-base font-semibold px-6 py-4 border-b border-zinc-800 text-zinc-100 flex items-center gap-2">
         {title}
       </h2>
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-zinc-800">
         {children}
       </div>
     </div>
@@ -40,32 +39,9 @@ const DeleteAccountModal = ({ isOpen, onClose, user }) => {
     setError('');
 
     try {
-      const storage = getStorage();
-      
-      const filesRef = collection(db, 'users', user.uid, 'files');
-      const filesSnapshot = await getDocs(filesRef);
-      
-      const deleteFilePromises = filesSnapshot.docs.map(async (fileDoc) => {
-        const fileData = fileDoc.data();
-        if (fileData.storagePath) {
-          try {
-            const fileRef = ref(storage, fileData.storagePath);
-            await deleteObject(fileRef);
-          } catch (e) {
-            console.log('Could not delete file from storage:', e);
-          }
-        }
-      });
-      await Promise.all(deleteFilePromises);
-
-      const personalitiesRef = collection(db, 'users', user.uid, 'personalities');
-      const personalitiesSnapshot = await getDocs(personalitiesRef);
-      const deletePersonalitiesPromises = personalitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePersonalitiesPromises);
-
+      // Delete user's chat sessions
       const chatSessionsRef = collection(db, 'users', user.uid, 'chatSessions');
       const chatSessions = await getDocs(chatSessionsRef);
-      
       const deletePromises = chatSessions.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
 
@@ -117,17 +93,17 @@ const DeleteAccountModal = ({ isOpen, onClose, user }) => {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="rounded-[2px] shadow-2xl max-w-md w-full p-6 transition-colors duration-300 bg-[#030508] border border-white/5"
+            className="rounded-xl shadow-2xl max-w-md w-full p-6 transition-colors duration-300 bg-zinc-900 border border-zinc-800 ring-1 ring-zinc-800"
           >
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-[2px] flex items-center justify-center bg-red-900/10 border border-red-500/20">
-                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-red-900/20">
+                  <AlertTriangle className="w-6 h-6 text-red-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-light tracking-wide text-white">Delete Account</h3>
-                  <p className="text-sm font-light text-zinc-500">This action cannot be undone</p>
+                  <h3 className="text-lg font-semibold text-white">Delete Account</h3>
+                  <p className="text-sm text-slate-400">This action cannot be undone</p>
                 </div>
               </div>
               <button
@@ -251,15 +227,15 @@ const ClearChatModal = ({ isOpen, onClose, user, onSuccess }) => {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="rounded-[2px] shadow-2xl max-w-md w-full p-6 bg-[#030508] border border-white/5"
+            className="rounded-xl shadow-2xl max-w-md w-full p-6 bg-zinc-900 border border-zinc-800 ring-1 ring-zinc-800"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-[2px] flex items-center justify-center bg-orange-900/10 border border-orange-500/20">
-                <MessageSquare className="w-6 h-6 text-orange-500" />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-orange-900/20">
+                <MessageSquare className="w-6 h-6 text-orange-400" />
               </div>
               <div>
-                <h3 className="text-lg font-light tracking-wide text-white">Clear Chat History</h3>
-                <p className="text-sm font-light text-zinc-500">This will delete all conversations</p>
+                <h3 className="text-lg font-semibold text-white">Clear Chat History</h3>
+                <p className="text-sm text-slate-400">This will delete all conversations</p>
               </div>
             </div>
 
@@ -330,15 +306,15 @@ const PasswordResetModal = ({ isOpen, onClose, user }) => {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="rounded-[2px] shadow-2xl max-w-md w-full p-6 bg-[#030508] border border-white/5"
+            className="rounded-xl shadow-2xl max-w-md w-full p-6 bg-zinc-900 border border-zinc-800 ring-1 ring-zinc-800"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-[2px] flex items-center justify-center bg-emerald-900/10 border border-emerald-500/20">
-                <Lock className="w-6 h-6 text-emerald-500" />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-900/20">
+                <Lock className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-lg font-light tracking-wide text-white">Change Password</h3>
-                <p className="text-sm font-light text-zinc-500">We'll send you a reset link</p>
+                <h3 className="text-lg font-semibold text-white">Change Password</h3>
+                <p className="text-sm text-slate-400">We'll send you a reset link</p>
               </div>
             </div>
 
@@ -507,15 +483,15 @@ const EditProfileModal = ({ isOpen, onClose, user, userProfile, onUpdate }) => {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="rounded-[2px] shadow-2xl max-w-md w-full p-6 bg-[#030508] border border-white/5"
+            className="rounded-xl shadow-2xl max-w-md w-full p-6 bg-zinc-900 border border-zinc-800 ring-1 ring-zinc-800"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-[2px] flex items-center justify-center bg-blue-900/10 border border-blue-500/20">
-                <Edit2 className="w-6 h-6 text-blue-500" />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-900/20">
+                <Edit2 className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-light tracking-wide text-white">Edit Profile</h3>
-                <p className="text-sm font-light text-zinc-500">Update your profile picture and name</p>
+                <h3 className="text-lg font-semibold text-white">Edit Profile</h3>
+                <p className="text-sm text-slate-400">Update your profile picture and name</p>
               </div>
             </div>
 
@@ -616,494 +592,16 @@ const ToggleSwitch = ({ checked, onChange, disabled }) => (
 // A reusable settings row component
 const SettingsRow = ({ icon, title, description, control }) => {
   return (
-    <div className="flex items-center justify-between p-4 sm:px-6 hover:bg-white/[0.02] transition-colors duration-200 group">
+    <div className="flex items-center justify-between p-4 sm:px-6 hover:bg-zinc-800/20 transition-colors duration-200">
       <div className="flex items-center gap-4">
-        <div className="text-zinc-500 p-2 rounded-[2px] bg-white/[0.02] border border-white/5 group-hover:border-white/10 transition-colors">{icon}</div>
+        <div className="text-zinc-400 p-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50">{icon}</div>
         <div>
-          <h3 className="text-sm font-light tracking-wide text-zinc-200">{title}</h3>
-          <div className="text-xs font-light tracking-wide text-zinc-500 mt-0.5">{description}</div>
+          <h3 className="text-sm font-medium text-zinc-200">{title}</h3>
+          <div className="text-xs text-zinc-500 mt-0.5">{description}</div>
         </div>
       </div>
       <div>{control}</div>
     </div>
-  );
-};
-
-// Memory Importer Component
-const EXPORT_PROMPT = `Export all of my stored memories and any context you've learned about me from past conversations. Preserve my words verbatim where possible, especially for instructions and preferences.
-
-## Categories (output in this order):
-
-1. **Instructions**: Rules I've explicitly asked you to follow going forward — tone, format, style, "always do X", "never do Y", and corrections to your behavior. Only include rules from stored memories, not from conversations.
-
-2. **Identity**: Name, age, location, education, family, relationships, languages, and personal interests.
-
-3. **Career**: Current and past roles, companies, and general skill areas.
-
-4. **Projects**: Projects I meaningfully built or committed to. Ideally ONE entry per project. Include what it does, current status, and any key decisions. Use the project name or a short descriptor as the first words of the entry.
-
-5. **Preferences**: Opinions, tastes, and working-style preferences that apply broadly.
-
-## Format:
-
-Use section headers for each category. Within each category, list one entry per line, sorted by oldest date first. Format each line as:
-
-[YYYY-MM-DD] - Entry content here.
-
-If no date is known, use [unknown] instead.
-
-## Output:
-- Wrap the entire export in a single code block for easy copying.
-- After the code block, state whether this is the complete set or if more remain.`;
-
-const MemoryImporter = ({ userProfile, onImportDone }) => {
-  const embedded = !!onImportDone; // if onImportDone provided, we're inside MemoryManager
-  const [isOpen, setIsOpen] = useState(embedded); // always open in embedded mode
-  const [memoryText, setMemoryText] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [importResult, setImportResult] = useState(null);
-
-  const userId = userProfile?.uniqueUserId;
-
-  const handleCopyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(EXPORT_PROMPT);
-      setCopied(true);
-      toast.success('Prompt copied! Paste it into your other AI.');
-      setTimeout(() => setCopied(false), 3000);
-    } catch {
-      toast.error('Failed to copy');
-    }
-  };
-
-  const handleImport = async () => {
-    if (!memoryText.trim() || !userId) return;
-    setIsImporting(true);
-    setImportResult(null);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/api/memories/import`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, text: memoryText })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        setImportResult(data);
-        toast.success(`${data.imported} memories imported!`);
-        setMemoryText('');
-        if (onImportDone) onImportDone(data);
-      } else {
-        toast.error(data.message || 'Import failed');
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error('Import failed');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handleClose = () => {
-    setIsOpen(false);
-    setMemoryText('');
-    setImportResult(null);
-  };
-
-  const renderImportContent = () => (
-    <>
-      {/* Step 1: Copy prompt */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2.5 mb-3">
-          <span className="w-6 h-6 rounded-full bg-emerald-600/20 text-emerald-400 text-xs font-bold flex items-center justify-center shrink-0">1</span>
-          <span className="text-sm text-zinc-300">Copy this prompt into a chat with your other AI provider</span>
-        </div>
-        <div className="relative">
-          <div className="bg-[#0d1017] border border-white/10 rounded-lg p-4 text-[13px] text-zinc-400 leading-relaxed max-h-[140px] overflow-y-auto pr-20">
-            {EXPORT_PROMPT}
-          </div>
-          <button
-            onClick={handleCopyPrompt}
-            className="absolute top-3 right-3 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-1.5 rounded-md"
-          >
-            {copied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
-          </button>
-        </div>
-      </div>
-
-      {/* Step 2: Paste results */}
-      <div className="mb-5">
-        <div className="flex items-center gap-2.5 mb-3">
-          <span className="w-6 h-6 rounded-full bg-emerald-600/20 text-emerald-400 text-xs font-bold flex items-center justify-center shrink-0">2</span>
-          <span className="text-sm text-zinc-300">Paste results below to add to Relyce's memory</span>
-        </div>
-        <textarea
-          value={memoryText}
-          onChange={(e) => setMemoryText(e.target.value)}
-          rows="7"
-          className="bg-[#0d1017] border border-white/10 text-zinc-200 text-sm rounded-lg focus:ring-emerald-500/30 focus:border-emerald-500/50 block w-full p-4 placeholder-zinc-600 transition-colors resize-none"
-          placeholder="Paste your memory details here"
-          autoFocus
-        />
-      </div>
-
-      {/* Import result */}
-      {importResult && importResult.entries && (
-        <div className="mb-5 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
-          <p className="text-sm text-emerald-400 font-medium mb-2">{importResult.imported} memories imported:</p>
-          <div className="space-y-1.5">
-            {importResult.entries.slice(0, 8).map((e, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-500/70 bg-emerald-500/10 px-1.5 py-0.5 rounded">{e.category}</span>
-                <span className="text-zinc-300">{e.content}</span>
-              </div>
-            ))}
-            {importResult.entries.length > 8 && (
-              <p className="text-xs text-zinc-500">+{importResult.entries.length - 8} more</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
-        {!embedded && (
-          <button
-            onClick={handleClose}
-            className="px-5 py-2.5 text-sm text-zinc-400 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10 rounded-lg transition-all"
-          >
-            Cancel
-          </button>
-        )}
-        <button
-          onClick={handleImport}
-          disabled={!memoryText.trim() || isImporting}
-          className="px-5 py-2.5 text-sm bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all flex items-center gap-2 font-medium"
-        >
-          {isImporting ? <><Loader2 size={14} className="animate-spin" /> Parsing...</> : 'Add to memory'}
-        </button>
-      </div>
-    </>
-  );
-
-  if (!isOpen && !embedded) {
-    return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2.5 w-full border border-dashed border-white/10 hover:border-white/20 bg-transparent hover:bg-white/[0.02] text-zinc-500 hover:text-zinc-300 text-xs font-mono tracking-widest uppercase transition-all"
-      >
-        <Plus size={14} />
-        <span>Import Memories from Other AI</span>
-      </button>
-    );
-  }
-
-  // Embedded mode: render content directly (no portal)
-  if (embedded) {
-    return renderImportContent();
-  }
-
-  // Standalone mode: render as portal modal
-  return ReactDOM.createPortal(
-    <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-    >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg mx-4 bg-[#1a1d24] border border-white/10 rounded-xl shadow-2xl shadow-black/50 p-6 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-semibold text-zinc-100">Import memory to Relyce</h3>
-          <button onClick={handleClose} className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/10 rounded-lg transition-all">
-            <X size={18} />
-          </button>
-        </div>
-        {renderImportContent()}
-      </div>
-    </div>,
-    document.body
-  );
-};
-
-// Full Memory Manager Component (themed to match About/Chat page)
-const MemoryManager = ({ userId }) => {
-  const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
-  const [view, setView] = useState('summary');
-  const [memories, setMemories] = useState([]);
-  const [summary, setSummary] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editText, setEditText] = useState('');
-
-  const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-
-  const catStyle = {
-    identity: 'text-blue-300/80 border-blue-400/20',
-    profession: 'text-emerald-300/80 border-emerald-400/20',
-    preference: 'text-purple-300/80 border-purple-400/20',
-    project: 'text-amber-300/80 border-amber-400/20',
-    context: 'text-zinc-400/80 border-zinc-500/20',
-  };
-
-  const fetchMemories = useCallback(async () => {
-    if (!userId) return;
-    try {
-      const res = await fetch(`${API}/api/memories/${userId}`);
-      const data = await res.json();
-      setMemories(data.memories || []);
-    } catch (e) { console.error(e); }
-  }, [userId, API]);
-
-  const fetchSummary = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/api/memories/summary/${userId}`);
-      const data = await res.json();
-      setSummary(data.summary || '');
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [userId, API]);
-
-  const handleOpen = () => {
-    setIsOpen(true);
-    setView('summary');
-    fetchSummary();
-    fetchMemories();
-  };
-
-  const handleDelete = async (memId) => {
-    try {
-      await fetch(`${API}/api/memories/${userId}/${memId}`, { method: 'DELETE' });
-      setMemories(prev => prev.filter(m => m.id !== memId));
-      toast.success('Memory removed');
-    } catch { toast.error('Failed to delete'); }
-  };
-
-  const handleEdit = async (memId) => {
-    if (!editText.trim()) return;
-    try {
-      await fetch(`${API}/api/memories/${userId}/${memId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editText })
-      });
-      setMemories(prev => prev.map(m => m.id === memId ? { ...m, content: editText } : m));
-      setEditingId(null);
-      setEditText('');
-      toast.success('Memory updated');
-    } catch { toast.error('Failed to update'); }
-  };
-
-  const handleClearAll = async () => {
-    if (!confirm('Delete all memories? This cannot be undone.')) return;
-    try {
-      await fetch(`${API}/api/memories/clear/${userId}`, { method: 'DELETE' });
-      setMemories([]);
-      setSummary('');
-      toast.success('All memories cleared');
-    } catch { toast.error('Failed to clear'); }
-  };
-
-  const handleSeeWhatLearned = () => {
-    setIsOpen(false);
-    navigate('/chat');
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('relyce-start-chat', { 
-        detail: { message: 'I updated my memory. What did you learn about me?' } 
-      }));
-    }, 600);
-  };
-
-  if (!isOpen) {
-    return (
-      <button
-        onClick={handleOpen}
-        className="flex items-center gap-4 w-full py-4 text-left group"
-      >
-        <div className="w-9 h-9 rounded-full border border-emerald-500/20 flex items-center justify-center">
-          <Brain size={16} className="text-emerald-500/70" />
-        </div>
-        <div className="flex-1">
-          <span className="text-sm font-light text-zinc-200 group-hover:text-white transition-colors">Manage memory</span>
-          <p className="text-[10px] tracking-wider uppercase font-mono text-zinc-600 mt-0.5">View what Relyce remembers</p>
-        </div>
-        <ChevronRight size={14} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-      </button>
-    );
-  }
-
-  return ReactDOM.createPortal(
-    <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      onClick={(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-      
-      {/* Modal — About page theme */}
-      <div className="relative w-full max-w-[560px] mx-4 bg-[#030508] border border-white/[0.06] rounded-none shadow-2xl shadow-black/80 max-h-[85vh] flex flex-col overflow-hidden">
-        
-        {/* Subtle top accent line */}
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
-
-        {/* Header */}
-        <div className="px-8 pt-7 pb-4 flex items-start justify-between">
-          <div>
-            {(view === 'edits' || view === 'import') && (
-              <button 
-                onClick={() => setView(view === 'import' ? 'edits' : 'summary')} 
-                className="flex items-center gap-2 text-[10px] font-mono tracking-[0.15em] uppercase text-zinc-500 hover:text-zinc-300 transition-colors mb-3"
-              >
-                <ChevronRight size={10} className="rotate-180" /> 
-                {view === 'import' ? 'Back to edits' : 'Back to memory'}
-              </button>
-            )}
-            <h3 className="text-xl font-light tracking-tight text-white">
-              {view === 'summary' ? 'Manage memory' : view === 'edits' ? 'Manage edits' : 'Import memory'}
-            </h3>
-          </div>
-          <button 
-            onClick={() => setIsOpen(false)} 
-            className="p-2 -m-2 text-zinc-600 hover:text-white transition-colors duration-300"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Summary View */}
-        {view === 'summary' && (
-          <>
-            <p className="px-8 text-xs font-light text-zinc-500 mb-5 leading-relaxed">
-              Here's what Relyce remembers about you. This summary is generated from your stored memories.
-            </p>
-            
-            <div className="px-8 flex-1 overflow-y-auto mb-5">
-              <div className="border border-white/[0.04] bg-white/[0.01] p-6 min-h-[180px]">
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center h-44 gap-4">
-                    <Loader2 size={18} className="animate-spin text-zinc-600" />
-                    <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-600">Updating memory...</span>
-                  </div>
-                ) : (
-                  <div className="text-[13px] font-light text-zinc-400 leading-[1.8] whitespace-pre-wrap">
-                    {summary.split('**').map((part, i) => 
-                      i % 2 === 1 
-                        ? <strong key={i} className="text-zinc-200 font-medium">{part}</strong> 
-                        : <span key={i}>{part}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="px-8 pb-7 space-y-3">
-              <button
-                onClick={() => { setView('edits'); fetchMemories(); }}
-                className="flex items-center justify-between w-full py-3 border-t border-white/5 group"
-              >
-                <span className="text-sm font-light text-zinc-400 group-hover:text-zinc-200 transition-colors">Manage edits</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono text-zinc-600">{memories.length}</span>
-                  <ChevronRight size={12} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-                </div>
-              </button>
-              
-              <button
-                onClick={handleSeeWhatLearned}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-black font-medium text-sm tracking-wide hover:bg-zinc-200 transition-colors duration-300"
-              >
-                See what Relyce learned about you
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Edits View */}
-        {view === 'edits' && (
-          <>
-            <p className="px-8 text-xs font-light text-zinc-500 mb-4">
-              You can edit or remove individual memories.
-            </p>
-            
-            <div className="flex items-center justify-between px-8 mb-4">
-              <button
-                onClick={() => setView('import')}
-                className="text-[10px] font-mono tracking-[0.15em] uppercase text-emerald-500/70 hover:text-emerald-400 transition-colors flex items-center gap-1.5"
-              >
-                <Plus size={10} /> Import
-              </button>
-              {memories.length > 0 && (
-                <button
-                  onClick={handleClearAll}
-                  className="text-[10px] font-mono tracking-[0.15em] uppercase text-zinc-600 hover:text-red-400 transition-colors flex items-center gap-1.5"
-                >
-                  <Trash2 size={10} /> Clear all
-                </button>
-              )}
-            </div>
-            
-            <div className="px-8 flex-1 overflow-y-auto mb-6">
-              <div className="border border-white/[0.04] max-h-[400px] overflow-y-auto">
-                {memories.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 gap-3">
-                    <Brain size={20} className="text-zinc-700" />
-                    <p className="text-xs font-light text-zinc-600">No memories yet. Start chatting or import from another AI.</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-white/[0.03]">
-                    {memories.map(mem => (
-                      <div key={mem.id} className="flex items-start gap-3 px-4 py-3 group hover:bg-white/[0.015] transition-colors duration-300">
-                        <span className={`text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 border shrink-0 mt-0.5 ${catStyle[mem.category] || catStyle.context}`}>
-                          {mem.category}
-                        </span>
-                        {editingId === mem.id ? (
-                          <div className="flex-1 flex gap-2">
-                            <input
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              className="flex-1 bg-transparent border-b border-emerald-500/30 text-zinc-200 text-xs py-1 focus:outline-none focus:border-emerald-500/60 font-light"
-                              autoFocus
-                              onKeyDown={(e) => { if (e.key === 'Enter') handleEdit(mem.id); if (e.key === 'Escape') setEditingId(null); }}
-                            />
-                            <button onClick={() => handleEdit(mem.id)} className="text-emerald-500/60 hover:text-emerald-400 p-1"><Check size={12} /></button>
-                            <button onClick={() => setEditingId(null)} className="text-zinc-600 hover:text-zinc-400 p-1"><X size={12} /></button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-xs font-light text-zinc-400 flex-1 leading-relaxed">{mem.content}</span>
-                            <button
-                              onClick={() => { setEditingId(mem.id); setEditText(mem.content); }}
-                              className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-emerald-400 transition-all p-1 shrink-0"
-                            >
-                              <Edit2 size={10} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(mem.id)}
-                              className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all p-1 shrink-0"
-                            >
-                              <X size={10} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Import View */}
-        {view === 'import' && (
-          <div className="px-8 pb-7">
-            <MemoryImporter userProfile={{ uniqueUserId: userId }} onImportDone={() => { fetchMemories(); setView('edits'); }} />
-          </div>
-        )}
-      </div>
-    </div>,
-    document.body
   );
 };
 
@@ -1277,34 +775,33 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-[#030508] relative">
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay z-0" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
-      <div className="max-w-6xl mx-auto relative z-10">
-        <div className="flex items-center justify-between mb-16">
-          <h1 className="text-4xl font-light text-white tracking-tight">Settings</h1>
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-black">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-white tracking-tight">Settings</h1>
           <button
             onClick={() => navigate(-1)}
-            className="px-5 py-2.5 text-xs font-mono uppercase tracking-widest rounded-none text-zinc-400 bg-transparent border border-white/10 hover:bg-white/5 hover:text-white transition-all duration-300"
+            className="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-white transition-all duration-200"
           >
             ← Back
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           {/* Sidebar Navigation */}
           <div className="md:col-span-3">
-            <div className="sticky top-8 space-y-2">
+            <div className="sticky top-8 space-y-1">
               {['General', 'Personalization', 'Subscription', 'Notifications', 'Data Controls', 'Security'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`w-full text-left px-4 py-3 rounded-none flex items-center gap-3 transition-all duration-300 text-xs font-mono tracking-widest uppercase group border-b ${
+                  className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-all duration-200 text-sm font-medium group ${
                     activeTab === tab 
-                      ? 'bg-transparent text-emerald-400 border-emerald-500/50' 
-                      : 'border-transparent text-zinc-600 hover:text-zinc-300 hover:border-white/10'
+                      ? 'bg-zinc-900/80 text-emerald-400 border border-zinc-800 shadow-sm ring-1 ring-zinc-800' 
+                      : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200'
                   }`}
                 >
-                  <span className={`transition-colors duration-300 ${activeTab === tab ? 'text-emerald-400' : 'text-zinc-600 group-hover:text-zinc-300'}`}>
+                  <span className={`transition-colors duration-200 ${activeTab === tab ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-300'}`}>
                     {getTabIcon(tab)}
                   </span>
                   {tab}
@@ -1331,10 +828,10 @@ export default function SettingsPage() {
                           <img
                             src={userProfile?.photoURL || user?.photoURL}
                             alt="Profile"
-                            className="w-16 h-16 rounded-[2px] object-cover border border-white/10 shadow-sm"
+                            className="w-16 h-16 rounded-full object-cover border-2 border-zinc-700 shadow-sm"
                           />
                         ) : (
-                          <div className="w-16 h-16 rounded-[2px] bg-emerald-900/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 text-2xl font-light shadow-sm">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white text-2xl font-bold shadow-sm">
                             {(userProfile?.displayName || user?.displayName || user?.email || 'U')[0].toUpperCase()}
                           </div>
                         )}
@@ -1345,7 +842,7 @@ export default function SettingsPage() {
                       </div>
                       <button
                         onClick={() => setShowEditProfileModal(true)}
-                        className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-none border border-white/10 bg-transparent hover:bg-white/5 text-zinc-400 flex items-center gap-2 transition-colors"
+                        className="px-4 py-2 text-xs font-semibold rounded-md border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 flex items-center gap-2 transition-colors"
                       >
                          Change
                       </button>
@@ -1357,7 +854,7 @@ export default function SettingsPage() {
                       control={
                         <button
                           onClick={() => setShowEditProfileModal(true)}
-                          className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest rounded-none border border-white/10 bg-transparent hover:bg-white/5 text-zinc-400 flex items-center gap-2 transition-colors"
+                          className="px-4 py-2 text-xs font-semibold rounded-md border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 flex items-center gap-2 transition-colors"
                         >
                            Edit
                         </button>
@@ -1430,6 +927,26 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
+                      <div className="p-4 border-b border-zinc-800/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+                            <Cpu size={18} />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-zinc-100">Available Agent Tools</h3>
+                            <p className="text-sm text-zinc-500">Tools the agent can use in chat.</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {AGENT_TOOL_BADGES.map((tool) => (
+                            <span key={tool} className="text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.02] text-zinc-300">
+                              {tool}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-zinc-500 mt-3">Some tools access external websites. If tools are disabled, the agent will ask for permission.</p>
+                      </div>
+
                       <SettingsRow
                         icon={<MessageSquare size={18} />}
                         title="Base Style & Tone"
@@ -1438,7 +955,7 @@ export default function SettingsPage() {
                           <select
                             value={tone}
                             onChange={(e) => handleToneChange(e.target.value)}
-                            className="bg-[#0a0d14] border border-white/10 text-zinc-300 text-sm font-light rounded-[2px] focus:ring-emerald-500/20 focus:border-emerald-500/50 block w-40 p-2"
+                            className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm rounded-md focus:ring-emerald-500 focus:border-emerald-500 block w-40 p-2"
                           >
                             <option value="Default">Default</option>
                             <option value="Professional">Professional</option>
@@ -1459,7 +976,7 @@ export default function SettingsPage() {
                           <select
                             value={emoji}
                             onChange={(e) => handleEmojiChange(e.target.value)}
-                            className="bg-[#0a0d14] border border-white/10 text-zinc-300 text-sm font-light rounded-[2px] focus:ring-emerald-500/20 focus:border-emerald-500/50 block w-40 p-2"
+                            className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm rounded-md focus:ring-emerald-500 focus:border-emerald-500 block w-40 p-2"
                           >
                             <option value="Default">Default</option>
                             <option value="More">More</option>
@@ -1470,14 +987,43 @@ export default function SettingsPage() {
                       
                       <div className="px-6 pb-6 pt-4 border-t border-zinc-800/50 mt-2">
                          <h3 className="text-sm font-semibold text-zinc-200 mb-4 flex items-center gap-2">
-                            Memories
+                            About You <span className="text-xs font-normal text-zinc-500 ml-auto">Used to personalize responses</span>
                          </h3>
-                         <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-                            Relyce learns from your conversations and imported memories to personalize your experience.
-                         </p>
-                         
-                         {/* Claude-style Memory Manager */}
-                         <MemoryManager userId={userProfile?.uniqueUserId} />
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                            <div>
+                                <label className="block mb-2 text-xs font-medium text-zinc-400">Nickname</label>
+                                <input 
+                                    type="text" 
+                                    value={nickname}
+                                    onChange={(e) => setNickname(e.target.value)}
+                                    onBlur={(e) => handlePersonalizationBlur('nickname', e.target.value)}
+                                    className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm rounded-md focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 placeholder-zinc-600 transition-colors"
+                                    placeholder="What should we call you?"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-xs font-medium text-zinc-400">Occupation</label>
+                                <input 
+                                    type="text" 
+                                    value={occupation}
+                                    onChange={(e) => setOccupation(e.target.value)}
+                                    onBlur={(e) => handlePersonalizationBlur('occupation', e.target.value)}
+                                    className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm rounded-md focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 placeholder-zinc-600 transition-colors"
+                                    placeholder="What do you do?"
+                                />
+                            </div>
+                         </div>
+                         <div>
+                            <label className="block mb-2 text-xs font-medium text-zinc-400">More about you</label>
+                            <textarea 
+                                value={aboutMe}
+                                onChange={(e) => setAboutMe(e.target.value)}
+                                onBlur={(e) => handlePersonalizationBlur('aboutMe', e.target.value)}
+                                rows="3"
+                                className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm rounded-md focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 placeholder-zinc-600 transition-colors resize-none"
+                                placeholder="Any specific interests, goals, or preferences?"
+                            ></textarea>
+                         </div>
                       </div>
                   </SettingsCard>
                 )}

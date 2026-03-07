@@ -72,6 +72,31 @@ const extractContinueMeta = (content) => {
   }
 };
 
+const extractContinueContext = (content, meta) => {
+  if (!content || !meta?.file) return content || "";
+  const fenceRegex = /```[\s\S]*?```/g;
+  let lastMatch = null;
+  let match;
+  while ((match = fenceRegex.exec(content)) !== null) {
+    lastMatch = match;
+  }
+  if (!lastMatch) return content;
+
+  const block = lastMatch[0];
+  const headerMatch = block.match(/^```[^\n]*\n([\s\S]*)\n```$/);
+  const inner = headerMatch ? headerMatch[1] : block;
+  const lines = inner.split(/\r?\n/);
+  const tailLines = meta.lines && Number.isFinite(meta.lines)
+    ? lines.slice(-Math.max(1, Math.min(240, meta.lines)))
+    : lines.slice(-120);
+
+  return [
+    `## ${meta.file}`,
+    "```",
+    tailLines.join("\n"),
+    "```",
+  ].join("\n");
+};
 const buildContinuePrompt = (meta, content) => {
   return [
     "Continue generating UI code.",
@@ -89,6 +114,14 @@ const buildContinuePrompt = (meta, content) => {
     "</PREVIOUS_OUTPUT>",
   ].join("\n");
 };
+const AGENT_TOOL_BADGES = [
+  "search_web", "search_news", "search_scholar", "search_weather", "search_finance",
+  "search_currency", "search_company", "search_legal", "search_jobs", "search_academic",
+  "search_tech_docs", "search_products", "search_competitors", "search_trends", "compare_products",
+  "summarize_url", "extract_tables", "faq_builder", "document_compare",
+  "extract_entities", "validate_code", "generate_tests", "execute_code",
+  "sentiment_scan", "data_cleaner", "unit_cost_calc",
+];
 
 const ChatWindow = memo(function ChatWindow({
   currentSessionId,
@@ -126,10 +159,10 @@ const ChatWindow = memo(function ChatWindow({
 
   const handleContinue = useCallback((msg, meta) => {
     if (!msg || !meta) return;
-    if (chatMode !== 'normal') return;
-    const prompt = buildContinuePrompt(meta, msg.content);
+    const context = extractContinueContext(msg.content, meta);
+    const prompt = buildContinuePrompt(meta, context);
     handleSend({ text: prompt });
-  }, [chatMode, handleSend]);
+  }, [handleSend]);
 
   const prevMessagesLengthRef = useRef(messages.length);
   const isAutoScrollingRef = useRef(false);
@@ -293,12 +326,27 @@ const ChatWindow = memo(function ChatWindow({
       <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto overflow-x-hidden relative mobile-messages-container pt-[60px] md:pt-0 custom-chat-scrollbar chat-messages-container ${isTransitioning ? 'transitioning' : ''}`}>
         {!loading && !isTransitioning && !isSessionSwitchingRef.current && messages.length === 0 && (
           <div className="min-h-[calc(100vh-200px)] w-full"></div>
+        )}        {chatMode === "agent" && (
+          <div className="max-w-4xl mx-auto w-full px-4 pt-4">
+            <div className="border border-white/10 bg-white/[0.02] rounded-2xl p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500 mb-2">
+                <span className="text-cyan-300">Agent Tools Available</span>
+                <span className="text-zinc-600">• Web access required for some tools</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {AGENT_TOOL_BADGES.map((tool) => (
+                  <span key={tool} className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full border border-white/10 bg-white/[0.02] text-zinc-300">
+                    {tool}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
-
         {messages.length > 0 && (
           <div className="max-w-4xl mx-auto w-full px-4 py-8 md:py-12 overflow-x-hidden">
             {messages.map((msg, index) => {
-              const continueMeta = chatMode === 'normal' ? extractContinueMeta(msg.content) : null;
+              const continueMeta = extractContinueMeta(msg.content);
               const thinkingVisibility = userProfile?.settings?.personalization?.thinkingVisibility || 'auto';
               return (
               <MessageComponent

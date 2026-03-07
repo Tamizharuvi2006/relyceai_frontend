@@ -524,7 +524,7 @@ export default function ChatInput({ onSend, onFileUpload, onFileUploadComplete, 
                     </button>
                 </div>
 
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,image/*,.txt,.doc,.docx" className="hidden" />
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,.txt,.md,.csv,.json,.docx" className="hidden" />
             </div>
 
             <p className="text-[11px] font-sans tracking-wide text-center mt-4 px-4 leading-relaxed text-zinc-500 pb-2">

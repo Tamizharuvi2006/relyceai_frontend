@@ -443,6 +443,123 @@ const MarkdownComponents = {
 };
 
 // --- End hoisted components ---
+const parseToolResults = (content) => {
+  if (!content || !content.includes("TOOL_RESULT:")) return { cleanContent: content, toolResults: [] };
+  const pattern = /TOOL_RESULT:\s*([A-Za-z0-9_]+)[\s\S]*?(?=TOOL_RESULT:|$)/g;
+  const toolResults = [];
+  let match;
+  while ((match = pattern.exec(content)) !== null) {
+    const block = match[0];
+    const tool = match[1];
+    const status = (block.match(/STATUS:\s*([^\n]+)/i) || [])[1] || "unknown";
+    const source = (block.match(/SOURCE:\s*([^\n]+)/i) || [])[1] || "";
+    const confidence = (block.match(/CONFIDENCE:\s*([^\n]+)/i) || [])[1] || "";
+    const reason = (block.match(/REASON:\s*([^\n]+)/i) || [])[1] || "";
+    let data = null;
+    let rawData = "";
+    const dataMatch = block.match(/DATA:\s*\n([\s\S]*)/i);
+    if (dataMatch && dataMatch[1]) {
+      rawData = dataMatch[1].trim();
+      try {
+        data = JSON.parse(rawData);
+      } catch {
+        data = null;
+      }
+    }
+    toolResults.push({ tool, status, source, confidence, reason, data, rawData });
+  }
+  const cleanContent = content.replace(pattern, "").trim();
+  return { cleanContent, toolResults };
+};
+
+const ToolResultCard = ({ result }) => {
+  const { tool, status, confidence, reason, data, rawData } = result;
+  const statusColor = status === "success" ? "text-emerald-300" : "text-rose-300";
+  const badgeColor = status === "success" ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20";
+
+  const renderData = () => {
+    if (tool === "validate_code" && data?.summary) {
+      const { total, high, medium, low } = data.summary;
+      return (
+        <div className="flex gap-4 text-xs text-zinc-400">
+          <span>Total: <span className="text-zinc-200">{total}</span></span>
+          <span>High: <span className="text-rose-300">{high}</span></span>
+          <span>Med: <span className="text-amber-300">{medium}</span></span>
+          <span>Low: <span className="text-emerald-300">{low}</span></span>
+        </div>
+      );
+    }
+    if (tool === "extract_entities" && data?.counts) {
+      return (
+        <div className="flex flex-wrap gap-2 text-xs text-zinc-300">
+          {Object.entries(data.counts).map(([k, v]) => (
+            <span key={k} className="px-2 py-1 rounded border border-white/10 bg-white/[0.02]">{k}: {v}</span>
+          ))}
+        </div>
+      );
+    }
+    if (tool === "document_compare" && data?.diff) {
+      const lines = String(data.diff).split("\n");
+      return (
+        <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-black/30 border border-white/10 rounded-lg p-3 max-h-64 overflow-auto">
+          {lines.map((line, idx) => {
+            let cls = "text-zinc-300";
+            if (line.startsWith("+") && !line.startsWith("+++")) cls = "text-emerald-300";
+            if (line.startsWith("-") && !line.startsWith("---")) cls = "text-rose-300";
+            return <div key={idx} className={cls}>{line}</div>;
+          })}
+        </pre>
+      );
+    }
+    if (tool === "extract_tables" && (data?.tables || data?.csv_preview)) {
+      return (
+        <div className="space-y-2">
+          <div className="text-xs text-zinc-400">Tables: <span className="text-zinc-200">{data?.tables?.length || 0}</span></div>
+          {data?.csv_preview ? (
+            <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-black/30 border border-white/10 rounded-lg p-3 max-h-40 overflow-auto">
+              {data.csv_preview}
+            </pre>
+          ) : null}
+        </div>
+      );
+    }
+    if (tool === "unit_cost_calc" && data?.items) {
+      return (
+        <div className="text-xs text-zinc-300">
+          <div className="mb-2">Total: <span className="text-emerald-300">{data.total}</span> {data.currency || ""}</div>
+          <div className="grid grid-cols-3 gap-2">
+            {data.items.map((item, idx) => (
+              <div key={idx} className="px-2 py-1 rounded border border-white/10 bg-white/[0.02]">
+                <div className="text-zinc-200">{item.name}</div>
+                <div className="text-zinc-500">qty {item.quantity} @ {item.unit_cost}</div>
+                <div className="text-emerald-300">= {item.total}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    const printable = data ? JSON.stringify(data, null, 2) : rawData || "";
+    return printable ? (
+      <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-black/30 border border-white/10 rounded-lg p-3 max-h-64 overflow-auto">
+        {printable}
+      </pre>
+    ) : null;
+  };
+
+  return (
+    <div className="mt-3 mb-4 border border-white/10 rounded-2xl bg-white/[0.02] p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs uppercase tracking-widest text-zinc-500 font-mono">Tool Result</div>
+        <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded ${badgeColor} border ${statusColor}`}>{status}</span>
+      </div>
+      <div className="text-sm text-zinc-200 mb-2">{tool.replace(/_/g, " ")}</div>
+      <div className="text-[11px] text-zinc-500 mb-3">Confidence: {confidence || "n/a"}</div>
+      {reason ? <div className="text-xs text-rose-300 mb-2">{reason}</div> : null}
+      {renderData()}
+    </div>
+  );
+};
 
 const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, onContinue, continueMeta, isLastMessage, chatMode, thinkingVisibility = 'auto' }, ref) => {
   const [showCopyButton, setShowCopyButton] = useState(false);
@@ -549,8 +666,8 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const isSearching = msg.isSearching;
   const isGenerating = msg.isGenerating;
   const sources = msg.sources || [];
-
-  const parsedContent = useMemo(() => parseThinkingContent(msg.content || ""), [msg.content]);
+  const parsedToolResults = useMemo(() => parseToolResults(msg.content || ""), [msg.content]);
+  const parsedContent = useMemo(() => parseThinkingContent(parsedToolResults.cleanContent || ""), [parsedToolResults.cleanContent]);
   const displayContent = useMemo(() => {
     let cleaned = stripContinueMarkers(parsedContent.displayContent || "");
     cleaned = cleaned.replace(/\[\/?THINKING\]/gi, "").trim();
@@ -559,7 +676,11 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const thinkingContent = parsedContent.thinkingContent || "";
   const normalizedThinking = useMemo(() => normalizeThinkingContent(thinkingContent), [thinkingContent]);
   const formattedThinking = useMemo(() => formatThinkingForDisplay(normalizedThinking), [normalizedThinking]);
-  const preprocessedDisplay = useMemo(() => preprocessContent(displayContent), [displayContent]);
+  const preprocessedDisplay = useMemo(() => {
+    if (!displayContent) return "";
+    if (isStreaming) return displayContent;
+    return preprocessContent(displayContent);
+  }, [displayContent, isStreaming]);
 
   const hasVisibleContent = Boolean(displayContent && displayContent.trim().length > 0);
   const indicatorActive = Boolean((isSearching || isGenerating) && !hasVisibleContent && !formattedThinking);
@@ -693,6 +814,9 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
               thinkingDurationMs={thinkingDurationMs}
               isStreaming={isStreaming}
           />
+          {parsedToolResults.toolResults.map((result, idx) => (
+            <ToolResultCard key={`${result.tool}-${idx}`} result={result} />
+          ))}
 
           {sources.length > 0 && !showIndicator && !indicatorFade && !ghostSpace && (
             <SourcesDisplay sources={sources} />
@@ -703,13 +827,17 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
             <IntelligenceBar intelligence={msg.intelligence} isStreaming={isStreaming} />
           )}
 
-          {displayContent && (
+                    {displayContent && (
             <div className="relative" data-streaming={isStreaming ? 'true' : undefined}>
-              <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 mt-4">
-                <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
-                  {preprocessedDisplay}
-                </ReactMarkdown>
-              </div>
+              {isStreaming ? (
+                <div className="streaming-plain">{displayContent}</div>
+              ) : (
+                <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 mt-4">
+                  <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
+                    {preprocessedDisplay}
+                  </ReactMarkdown>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -719,12 +847,12 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
             <button onClick={handleCopy} className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5" title={copied ? "Copied!" : "Copy text"}>
               <Copy size={12} className={copied ? "text-emerald-400" : ""} /> {copied ? <span className="text-emerald-400">Copied</span> : 'Copy text'}
             </button>
-            {isGeneric && continueMeta && (
+            {continueMeta && (
               <span className="text-[11px] font-medium tracking-wide text-zinc-500 border border-white/5 bg-white/[0.02] px-3 py-1.5 rounded-full flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" /> Continuation Available
               </span>
             )}
-            {isGeneric && continueMeta && onContinue && (
+            {continueMeta && onContinue && (
               <button onClick={() => onContinue(msg, continueMeta)} className="text-[11px] font-medium tracking-wide text-zinc-300 hover:text-white transition-colors bg-white/5 px-4 py-1.5 rounded-full flex items-center gap-2 border border-white/10 hover:border-white/20">
                 <Sparkles size={12} className="text-emerald-400" /> Proceed
               </button>

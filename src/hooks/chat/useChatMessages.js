@@ -303,8 +303,9 @@ useEffect(() => {
 
         let animationFrameId = null;
         let lastFlushTime = 0;
-        const FLUSH_INTERVAL_MS = 16; 
-        let pendingContent = '';
+        const FLUSH_INTERVAL_MS = 48;
+        const FLUSH_CHAR_THRESHOLD = 60;
+        let pendingContent = "";
         let isScheduled = false;
 
         const performFlush = (timestamp) => {
@@ -318,9 +319,13 @@ useEffect(() => {
             }
 
             if (pendingContent.length > 0 && streamingMessageIdRef.current) {
+                if ((timestamp - lastFlushTime) < FLUSH_INTERVAL_MS && pendingContent.length < FLUSH_CHAR_THRESHOLD) {
+                    scheduleFlush();
+                    return;
+                }
                 const botMsgId = streamingMessageIdRef.current;
                 const contentToFlush = pendingContent;
-                pendingContent = '';
+                pendingContent = "";
                 lastFlushTime = timestamp;
 
                 const setMessages = setMessagesRef.current;
@@ -358,7 +363,7 @@ useEffect(() => {
             }
         };
 
-        const bufferCheckInterval = setInterval(checkBuffer, 16); // Check more frequently
+        const bufferCheckInterval = setInterval(checkBuffer, 32); // Check more frequently
 
         return () => {
             clearInterval(pingInterval);
