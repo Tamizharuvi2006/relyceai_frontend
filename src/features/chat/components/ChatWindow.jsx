@@ -361,7 +361,7 @@ const ChatWindow = memo(function ChatWindow({
           </div>
         )}
         {messages.length > 0 && (
-          <div className="max-w-4xl mx-auto w-full px-4 py-8 md:py-12 overflow-x-hidden">
+          <div className="max-w-4xl mx-auto w-full px-4 pt-8 pb-40 md:pt-12 md:pb-48 overflow-x-hidden">
             {messages.map((msg, index) => {
               const continueMetaRaw = extractContinueMeta(msg.content);
               const continueMeta = isAgentTrial ? null : continueMetaRaw;
