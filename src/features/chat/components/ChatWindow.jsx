@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useRef } from 'react';
+﻿import React, { memo, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { LogIn } from 'lucide-react';
 import ChatInput from './ChatInput';
@@ -277,6 +277,29 @@ const ChatWindow = memo(function ChatWindow({
     };
   }, [botTyping]);
 
+  // Keep viewport pinned after streaming stops to avoid jump when markdown finalizes.
+  useEffect(() => {
+    if (botTyping) return;
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 220;
+    if (!isNearBottom) return;
+
+    let raf1 = null;
+    let raf2 = null;
+    raf1 = requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+      raf2 = requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    });
+
+    return () => {
+      if (raf1) cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [messages, botTyping]);
   // Track user scroll - user can always opt out during streaming by scrolling up
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -429,4 +452,5 @@ const ChatWindow = memo(function ChatWindow({
 });
 
 export default ChatWindow;
+
 
