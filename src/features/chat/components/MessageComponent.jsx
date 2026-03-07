@@ -736,6 +736,13 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
       processed = `\`\`\`${isTerminal ? 'bash' : 'code'}\n${processed.trim()}\n\`\`\``;
     }
 
+    const looksLikeHtmlDoc = /<!doctype\s+html|<html[\s>]/i.test(processed);
+    if (looksLikeHtmlDoc && !processed.includes("```")) {
+      processed = `\`\`\`html
+${processed.trim()}
+\`\`\``;
+    }
+
     processed = processed.replace(
       /Source:\s*(https?:\/\/[^\s]+)/gi,
       (match, url) => {
@@ -779,6 +786,20 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
       .replace(/^\n+/, "");
   };
   const [thinkingDurationMs, setThinkingDurationMs] = useState(0);
+  const extractStreamingCodeBlock = (value) => {
+    if (!value || !value.includes("```")) return null;
+    const openFence = value.indexOf("```");
+    if (openFence < 0) return null;
+    const fenceHead = value.slice(openFence + 3).split("\n")[0] || "";
+    const language = fenceHead.trim().toLowerCase() || "code";
+    let codeBody = value.slice(openFence + 3 + fenceHead.length);
+    if (codeBody.startsWith("\n")) codeBody = codeBody.slice(1);
+    const closeFence = codeBody.lastIndexOf("```");
+    if (closeFence >= 0) {
+      codeBody = codeBody.slice(0, closeFence);
+    }
+    return { language, code: codeBody };
+  };
   const thinkingStartTimeRef = useRef(null);
   
   const isSearching = msg.isSearching;
@@ -976,19 +997,33 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
             <IntelligenceBar intelligence={msg.intelligence} isStreaming={isStreaming} />
           )}
 
-                    {displayContent && (
-            <div className="relative" data-streaming={isStreaming ? 'true' : undefined}>
-              {(isStreaming || !renderMarkdown) ? (
-                <div className="streaming-plain">{formatStreamingForDisplay(displayContent)}</div>
-              ) : (
-                <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 mt-4">
-                  <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
-                    {preprocessedDisplay}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </div>
-          )}
+          {displayContent && (() => {
+            const liveCode = isStreaming ? extractStreamingCodeBlock(displayContent) : null;
+            return (
+              <div className="relative" data-streaming={isStreaming ? 'true' : undefined}>
+                {(isStreaming || !renderMarkdown) ? (
+                  liveCode ? (
+                    <div className="overflow-hidden my-4 border border-white/[0.08] bg-[#0a0d14] rounded-2xl">
+                      <div className="px-4 py-2 text-[11px] tracking-wider uppercase text-zinc-500 border-b border-white/[0.06]">
+                        {liveCode.language}
+                      </div>
+                      <pre className="m-0 p-4 text-[13px] leading-relaxed font-mono whitespace-pre overflow-x-auto text-zinc-100">
+                        {liveCode.code}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div className="streaming-plain">{formatStreamingForDisplay(displayContent)}</div>
+                  )
+                ) : (
+                  <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 mt-4">
+                    <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
+                      {preprocessedDisplay}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         
         {displayContent && !isSearching && !isGenerating && !isStreaming && (
