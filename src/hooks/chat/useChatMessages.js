@@ -41,6 +41,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     const streamingMessageIdRef = useRef(null);
     const wsManagerRef = useRef(null);
     const tokenBufferRef = useRef('');
+    const streamModeRef = useRef('normal');
     const wsCallbacksRef = useRef(null);
     const tokenProviderRef = useRef(null);
 
@@ -303,14 +304,17 @@ useEffect(() => {
 
         let animationFrameId = null;
         let lastFlushTime = 0;
-        const FLUSH_INTERVAL_MS = 40;
-        const FLUSH_CHAR_THRESHOLD = 48;
         let pendingContent = "";
         let isScheduled = false;
 
         const performFlush = (timestamp) => {
             isScheduled = false;
             animationFrameId = null;
+
+            // Keep agent streaming unchanged; smooth normal/deepsearch by batching larger token chunks.
+            const isNormalLike = streamModeRef.current === 'normal' || streamModeRef.current === 'deepsearch';
+            const flushIntervalMs = isNormalLike ? 80 : 40;
+            const flushCharThreshold = isNormalLike ? 96 : 48;
 
             const chunk = tokenBufferRef.current;
             if (chunk) {
@@ -319,7 +323,7 @@ useEffect(() => {
             }
 
             if (pendingContent.length > 0 && streamingMessageIdRef.current) {
-                if ((timestamp - lastFlushTime) < FLUSH_INTERVAL_MS && pendingContent.length < FLUSH_CHAR_THRESHOLD) {
+                if ((timestamp - lastFlushTime) < flushIntervalMs && pendingContent.length < flushCharThreshold) {
                     scheduleFlush();
                     return;
                 }
@@ -363,7 +367,7 @@ useEffect(() => {
             }
         };
 
-        const bufferCheckInterval = setInterval(checkBuffer, 30); // Faster cadence to reduce visible stream lag
+        const bufferCheckInterval = setInterval(checkBuffer, 45);
 
         return () => {
             clearInterval(pingInterval);
@@ -601,6 +605,7 @@ useEffect(() => {
             // Send via WebSocket (preferred), fallback to SSE if not connected
             try {
                 const effectiveMode = isWebSearch ? 'deepsearch' : chatMode;
+                streamModeRef.current = effectiveMode;
                 const personalityToSend = effectiveMode === 'normal' ? activePersonality : null;
                 const userSettings = userProfile?.settings || null;
                 const fileIds = files.map((f) => f.fileId).filter(Boolean);
@@ -685,6 +690,16 @@ useEffect(() => {
 
     return { handleSend, handleStop, handleReconnect, handleFileUpload, handleFileUploadComplete, handleDownloadPDF, handleShare, handleCopyLink };
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
