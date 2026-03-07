@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -7,6 +7,7 @@ import { Copy, Download, Image, FileText, Globe, ExternalLink, Search, Sparkles,
 import { getFileIcon, formatFileSize } from '../../../utils/chatHelpers';
 import IntelligenceBar from './IntelligenceBar';
 import AgentMetaBlock from './AgentMetaBlock';
+import PDFService from '../../../services/pdfService';
 import './MessageComponent.css';
 
 const THINKING_START = "[THINKING]";
@@ -90,7 +91,7 @@ const formatThinkingForDisplay = (text) => {
     .replace(/\r\n/g, "\n")
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\*\*/g, "")
-    .replace(/[â€¢]/g, "*")
+    .replace(/[Ã¢â‚¬Â¢]/g, "*")
     .replace(/\s*\*\s*\*\s*/g, "\n")
     .replace(/([^\n])\s*(\d+(?:\.\d+)*)(?:\.){1,}\s+/g, "$1\n$2. ")
     .replace(/\n{3,}/g, "\n\n");
@@ -130,7 +131,7 @@ const formatThinkingForDisplay = (text) => {
       if (!chunk) continue;
       let trimmed = chunk.trim();
       if (!trimmed) continue;
-      trimmed = trimmed.replace(/^\s*[*â€¢-]\s*/, "");
+      trimmed = trimmed.replace(/^\s*[*Ã¢â‚¬Â¢-]\s*/, "");
       trimmed = trimmed.replace(/\s{2,}/g, " ");
       const subparts = trimmed
         .split(/\s+\*\s+/)
@@ -344,16 +345,78 @@ const isSafeUrl = (url) => {
 
 // --- Hoisted to module scope to prevent React from re-mounting markdown DOM on every streaming tick ---
 
+const LANGUAGE_FILE_EXTENSIONS = {
+  javascript: "js",
+  js: "js",
+  typescript: "ts",
+  ts: "ts",
+  jsx: "jsx",
+  tsx: "tsx",
+  python: "py",
+  py: "py",
+  java: "java",
+  c: "c",
+  cpp: "cpp",
+  csharp: "cs",
+  cs: "cs",
+  go: "go",
+  rust: "rs",
+  ruby: "rb",
+  php: "php",
+  swift: "swift",
+  kotlin: "kt",
+  sql: "sql",
+  html: "html",
+  css: "css",
+  scss: "scss",
+  sass: "sass",
+  json: "json",
+  yaml: "yml",
+  yml: "yml",
+  xml: "xml",
+  bash: "sh",
+  sh: "sh",
+  shell: "sh",
+  powershell: "ps1",
+  ps1: "ps1",
+  markdown: "md",
+  md: "md",
+  text: "txt",
+};
+
+const getCodeFileExtension = (language) => {
+  const key = String(language || "text").toLowerCase();
+  return LANGUAGE_FILE_EXTENSIONS[key] || "txt";
+};
+
 const CodeBlockWithCopy = ({ code, language, ...props }) => {
   const [copied, setCopied] = useState(false);
+  const normalizedCode = String(code).replace(/\n$/, "");
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(String(code).replace(/\n$/, ""));
+      await navigator.clipboard.writeText(normalizedCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy code: ', err);
+    }
+  };
+
+  const handleDownload = () => {
+    try {
+      const extension = getCodeFileExtension(language);
+      const blob = new Blob([normalizedCode], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `snippet-${Date.now()}.${extension}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download code snippet:", err);
     }
   };
 
@@ -363,14 +426,28 @@ const CodeBlockWithCopy = ({ code, language, ...props }) => {
         <span className="text-[11px] text-zinc-500 font-medium tracking-wider">
           {language || 'code'}
         </span>
-        <button
-          onClick={handleCopy}
-          className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5 opacity-0 group-hover/code:opacity-100"
-        >
-          {copied ? <span className="text-emerald-400">Copied</span> : <>Copy code</>}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleDownload}
+            className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover/code:opacity-100"
+            aria-label="Download code"
+            type="button"
+          >
+            <Download size={12} />
+            <span>Download</span>
+          </button>
+          <button
+            onClick={handleCopy}
+            className="text-[11px] font-medium tracking-wide text-zinc-500 hover:text-white transition-colors flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover/code:opacity-100"
+            aria-label="Copy code"
+            type="button"
+          >
+            <Copy size={12} />
+            {copied ? <span className="text-emerald-400">Copied</span> : <span>Copy code</span>}
+          </button>
+        </div>
       </div>
-      
+
       <div className="overflow-x-auto relative" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent' }}>
         <SyntaxHighlighter
           style={atomDark}
@@ -386,13 +463,12 @@ const CodeBlockWithCopy = ({ code, language, ...props }) => {
           }}
           {...props}
         >
-          {String(code).replace(/\n$/, "")}
+          {normalizedCode}
         </SyntaxHighlighter>
       </div>
     </div>
   );
 };
-
 const MarkdownComponents = {
   code({ _node, inline, className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || "");
@@ -539,6 +615,30 @@ const ToolResultCard = ({ result }) => {
         </div>
       );
     }
+    if (tool === "pdf_maker") {
+      const textContent = String(data?.content || rawData || "").trim();
+      const title = String(data?.title || "Document Export");
+      const filename = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'document-export'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      return (
+        <div className="space-y-2">
+          <div className="text-xs text-zinc-400">{data?.message || 'PDF content prepared'}</div>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await PDFService.generateAndDownloadTextPDF(textContent, { title }, filename);
+              } catch (error) {
+                console.error('PDF maker download failed:', error);
+              }
+            }}
+            className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+          >
+            <Download size={14} />
+            Download PDF
+          </button>
+        </div>
+      );
+    }
     const printable = data ? JSON.stringify(data, null, 2) : rawData || "";
     return printable ? (
       <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-black/30 border border-white/10 rounded-lg p-3 max-h-64 overflow-auto">
@@ -619,7 +719,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
         
         const friendlyName = toolName === 'search_web' ? 'Web Search' : toolName.replace(/_/g, ' ');
         // Use bold and code tags (inline elements) instead of blockquotes to avoid ReactDOM nested <p> errors
-        return `**⚡ Agent Action: ${friendlyName}** \`${displayArgs}\``;
+        return `**âš¡ Agent Action: ${friendlyName}** \`${displayArgs}\``;
       }
     );
 
@@ -641,9 +741,9 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
       (match, url) => {
         try {
           const domain = new URL(url).hostname.replace('www.', '');
-          return `[🔗 ${domain}](${url})`;
+          return `[ðŸ”— ${domain}](${url})`;
         } catch {
-          return `[🔗 Source](${url})`;
+          return `[ðŸ”— Source](${url})`;
         }
       }
     );
@@ -666,7 +766,13 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     if (!value) return value;
     return value
       .replace(/\r\n/g, "\n")
-      .replace(/(#{1,6}\s+)/g, "\n$1")
+      // Hide raw markdown tokens while streaming; final render still uses full markdown.
+      .replace(/(^|\n)\s*#{1,6}\s*/g, "$1")
+      .replace(/```[\w-]*\n?/g, "")
+      .replace(/```/g, "")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\*\*/g, "")
+      .replace(/__/g, "")
       .replace(/\s+-\s+/g, "\n- ")
       .replace(/\s*\*\s+/g, "\n* ")
       .replace(/\n{3,}/g, "\n\n")
@@ -919,3 +1025,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
 }));
 
 export default MessageComponent;
+
+
+
+

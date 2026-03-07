@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+﻿import { useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../utils/firebaseConfig';
 import ShareService from '../../services/shareService';
@@ -437,6 +437,50 @@ useEffect(() => {
     }, [setFileUploads]);
 
 
+    const isPdfMakerRequest = useCallback((input = '') => {
+        const q = String(input || '').toLowerCase();
+        if (!q.includes('pdf')) return false;
+        return /(make|create|convert|export|download|save|generate)/.test(q);
+    }, []);
+
+    const resolvePdfContent = useCallback((input = '') => {
+        const q = String(input || '').trim();
+        const lower = q.toLowerCase();
+        const quoted = q.match(/"([\s\S]+?)"|'([\s\S]+?)'/);
+
+        if (/\b(this chat|full chat|entire chat|all chat|these chats|whole chat)\b/.test(lower)) {
+            return { type: 'chat', content: '', title: 'Chat Conversation' };
+        }
+
+        if (/\b(last answer|last response|last message)\b/.test(lower)) {
+            const lastBot = [...(messagesRef.current || [])].reverse().find(m => m.role === 'bot' && (m.content || '').trim());
+            if (lastBot) {
+                return { type: 'text', content: String(lastBot.content || ''), title: 'Last Assistant Response' };
+            }
+        }
+
+        if (quoted && (quoted[1] || quoted[2])) {
+            return { type: 'text', content: String(quoted[1] || quoted[2]), title: 'Requested Content' };
+        }
+
+        const cleaned = q
+            .replace(/\b(make|create|convert|export|download|save|generate)\b/gi, '')
+            .replace(/\b(this|these|that|as|to|into|in)\b/gi, '')
+            .replace(/\b(pdf|document|file|content|chat|please)\b/gi, '')
+            .replace(/[\s:,-]+/g, ' ')
+            .trim();
+
+        if (cleaned) {
+            return { type: 'text', content: cleaned, title: 'Requested Content' };
+        }
+
+        return { type: 'chat', content: '', title: 'Chat Conversation' };
+    }, [messagesRef]);
+
+    const safePdfFilename = useCallback((title = 'relyce-export') => {
+        const base = String(title || 'relyce-export').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'relyce-export';
+        return `${base}-${new Date().toISOString().slice(0, 10)}.pdf`;
+    }, []);
     const handleSend = useCallback(async (messageData) => {
         if (!userId || typeof userId !== 'string' || userId.length < 10) return;
         if (!currentSessionId || typeof currentSessionId !== 'string') return;
@@ -451,7 +495,55 @@ useEffect(() => {
 
         if (text.length > 10000) text = text.substring(0, 10000);
 
-        if (text.trim() || files.length > 0) {
+        const trimmedText = text.trim();
+        if (trimmedText && files.length === 0 && isPdfMakerRequest(trimmedText)) {
+            const tempMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+            const botMessageId = `bot_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+            const userMessage = {
+                id: tempMessageId,
+                role: 'user',
+                content: trimmedText,
+                timestamp: new Date().toISOString(),
+            };
+
+            try {
+                const target = resolvePdfContent(trimmedText);
+                const filename = safePdfFilename(target.title || 'relyce-export');
+                if (target.type === 'chat') {
+                    const exportMessages = (messagesRef.current || []).filter(m => (m.content || '').trim());
+                    await PDFService.generateAndDownloadChatPDF(
+                        exportMessages,
+                        { title: target.title || 'Chat Conversation', date: new Date(), participants: ['User', 'Relyce AI'] },
+                        filename
+                    );
+                } else {
+                    await PDFService.generateAndDownloadTextPDF(
+                        target.content,
+                        { title: target.title || 'Document Export', date: new Date(), participants: ['User', 'Relyce AI'] },
+                        filename
+                    );
+                }
+
+                setMessages(prev => [...prev, userMessage, {
+                    id: botMessageId,
+                    role: 'bot',
+                    content: `PDF ready. Downloaded as ${filename}`,
+                    timestamp: new Date().toISOString(),
+                }]);
+            } catch (error) {
+                console.error('PDF maker failed:', error);
+                setMessages(prev => [...prev, userMessage, {
+                    id: botMessageId,
+                    role: 'bot',
+                    content: 'PDF generation failed. Please try again.',
+                    isError: true,
+                    timestamp: new Date().toISOString(),
+                }]);
+            }
+            return;
+        }
+
+        if (trimmedText || files.length > 0) {
             tokenBufferRef.current = "";
             const tempMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
             const botMessageId = `bot_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -563,7 +655,7 @@ useEffect(() => {
                 }
             }
         }
-    }, [userId, currentSessionId, chatMode, userUniqueId, setMessages, setBotTyping, setCurrentMessageId, setIsDeepSearchActive, activePersonality, userProfile, setWsConnected, finalizeStream, failStream]);
+    }, [userId, currentSessionId, chatMode, userUniqueId, setMessages, setBotTyping, setCurrentMessageId, setIsDeepSearchActive, activePersonality, userProfile, setWsConnected, finalizeStream, failStream, isPdfMakerRequest, resolvePdfContent, safePdfFilename, messagesRef]);
 
     const handleDownloadPDF = async (msgs) => {
         if (!msgs?.length) return alert('No chat to download!');
@@ -593,3 +685,6 @@ useEffect(() => {
 
     return { handleSend, handleStop, handleReconnect, handleFileUpload, handleFileUploadComplete, handleDownloadPDF, handleShare, handleCopyLink };
 }
+
+
+
