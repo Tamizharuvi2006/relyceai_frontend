@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+﻿import { useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../utils/firebaseConfig';
 import ShareService from '../../services/shareService';
@@ -303,8 +303,8 @@ useEffect(() => {
 
         let animationFrameId = null;
         let lastFlushTime = 0;
-        const FLUSH_INTERVAL_MS = 48;
-        const FLUSH_CHAR_THRESHOLD = 60;
+        const FLUSH_INTERVAL_MS = 80;
+        const FLUSH_CHAR_THRESHOLD = 120;
         let pendingContent = "";
         let isScheduled = false;
 
@@ -363,7 +363,7 @@ useEffect(() => {
             }
         };
 
-        const bufferCheckInterval = setInterval(checkBuffer, 32); // Check more frequently
+        const bufferCheckInterval = setInterval(checkBuffer, 60); // Check less frequently to reduce UI jitter
 
         return () => {
             clearInterval(pingInterval);

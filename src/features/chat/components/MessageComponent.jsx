@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -568,6 +568,8 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
   const [holdFinalStep, setHoldFinalStep] = useState(false);
   const [indicatorFade, setIndicatorFade] = useState(false);
   const [ghostSpace, setGhostSpace] = useState(false);
+  const [renderMarkdown, setRenderMarkdown] = useState(false);
+  const markdownTimerRef = useRef(null);
   const indicatorStartRef = useRef(0);
   const indicatorTimeoutRef = useRef(null);
   const holdTimeoutRef = useRef(null);
@@ -747,6 +749,36 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     };
   }, [indicatorActive]);
 
+  useEffect(() => {
+    if (markdownTimerRef.current) {
+      clearTimeout(markdownTimerRef.current);
+      markdownTimerRef.current = null;
+    }
+    if (isStreaming) {
+      setRenderMarkdown(false);
+      return;
+    }
+    if (displayContent) {
+      markdownTimerRef.current = setTimeout(() => {
+        setRenderMarkdown(true);
+        markdownTimerRef.current = null;
+      }, 90);
+      return () => {
+        if (markdownTimerRef.current) {
+          clearTimeout(markdownTimerRef.current);
+          markdownTimerRef.current = null;
+        }
+      };
+    }
+    setRenderMarkdown(false);
+    return () => {
+      if (markdownTimerRef.current) {
+        clearTimeout(markdownTimerRef.current);
+        markdownTimerRef.current = null;
+      }
+    };
+  }, [isStreaming, displayContent]);
+
   if (msg.role === "user") {
     return (
       <div ref={ref} className={`flex justify-end mb-10 group w-full px-4 md:px-0`} >
@@ -829,7 +861,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
 
                     {displayContent && (
             <div className="relative" data-streaming={isStreaming ? 'true' : undefined}>
-              {isStreaming ? (
+              {(isStreaming || !renderMarkdown) ? (
                 <div className="streaming-plain">{displayContent}</div>
               ) : (
                 <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 mt-4">
