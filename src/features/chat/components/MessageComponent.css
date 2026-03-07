@@ -202,4 +202,12 @@
 .mask-fade-bottom {
   mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
-\n/* Streaming plain text to reduce markdown flicker */\n.streaming-plain {\n  white-space: pre-wrap;\n  word-break: break-word;\n  line-height: 1.7;\n  color: #d4d4d8;\n}\n
+
+/* Streaming plain text to reduce markdown flicker */
+.streaming-plain {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+  color: #d4d4d8;
+}
+
