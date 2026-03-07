@@ -955,17 +955,18 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
           )}
 
           {/* Integrated Methodology & Process Card (now at top) */}
-          <AgentMetaBlock 
-              meta={msg.agentMeta} 
-              logs={msg.executionLog} 
+          {chatMode !== "normal" && (
+            <AgentMetaBlock
+              meta={msg.agentMeta}
+              logs={msg.executionLog}
               thinkingContent={formattedThinking}
               thinkingDurationMs={thinkingDurationMs}
               isStreaming={isStreaming}
-          />
+            />
+          )}
           {parsedToolResults.toolResults.map((result, idx) => (
             <ToolResultCard key={`${result.tool}-${idx}`} result={result} />
           ))}
-
           {sources.length > 0 && !showIndicator && !indicatorFade && !ghostSpace && (
             <SourcesDisplay sources={sources} />
           )}
