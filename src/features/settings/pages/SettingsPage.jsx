@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { User, Lock, Trash2, CreditCard, ExternalLink, Bell, Shield, Globe, Download, AlertTriangle, X, Hash, Link as LinkIcon, Save, Loader2, Check, Edit2, MessageSquare, Camera, ImageIcon, Cpu, BrainCircuit, ChevronRight, Copy } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteUser, updatePassword, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, deleteDoc, collection, getDocs, query, where, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
@@ -119,13 +119,13 @@ const DeleteAccountModal = ({ isOpen, onClose, user }) => {
 
             {/* Warning */}
             <div className="rounded-lg p-4 mb-6 bg-red-900/20 border border-red-800">
-              <h4 className="font-medium mb-2 text-red-200">⚠️ This will permanently delete:</h4>
+              <h4 className="font-medium mb-2 text-red-200">Warning: This will permanently delete:</h4>
               <ul className="text-sm space-y-1 text-red-300">
-                <li>• Your account and profile</li>
-                <li>• All chat conversations</li>
-                <li>• Shared chat links</li>
-                <li>• Subscription and billing data</li>
-                <li>• All other associated data</li>
+                <li>- Your account and profile</li>
+                <li>- All chat conversations</li>
+                <li>- Shared chat links</li>
+                <li>- Subscription and billing data</li>
+                <li>- All other associated data</li>
               </ul>
             </div>
 
@@ -608,6 +608,7 @@ const SettingsRow = ({ icon, title, description, control }) => {
 export default function SettingsPage() {
   const { currentUser: user, role, userProfile, refreshUserProfile } = useAuth();
   const navigate = useNavigate();
+  const { tab } = useParams();
 
   // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -760,6 +761,30 @@ export default function SettingsPage() {
   };
 
   const [activeTab, setActiveTab] = useState('General');
+  const tabAliasMap = {
+    general: 'General',
+    personalization: 'Personalization',
+    personalisation: 'Personalization',
+    subscription: 'Subscription',
+    notifications: 'Notifications',
+    'data-controls': 'Data Controls',
+    security: 'Security',
+  };
+
+  useEffect(() => {
+    if (!tab) return;
+    const normalizedTab = String(tab).trim().toLowerCase();
+    const mapped = tabAliasMap[normalizedTab];
+    if (mapped) {
+      setActiveTab(mapped);
+    }
+  }, [tab]);
+
+  const handleTabChange = (nextTab) => {
+    setActiveTab(nextTab);
+    const slug = nextTab.toLowerCase().replace(/\s+/g, '-');
+    navigate(`/settings/${slug}`, { replace: false });
+  };
 
   // Tab Icons helper
   const getTabIcon = (tab) => {
@@ -783,7 +808,7 @@ export default function SettingsPage() {
             onClick={() => navigate(-1)}
             className="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-white transition-all duration-200"
           >
-            ← Back
+            Back
           </button>
         </div>
 
@@ -794,7 +819,7 @@ export default function SettingsPage() {
               {['General', 'Personalization', 'Subscription', 'Notifications', 'Data Controls', 'Security'].map(tab => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => handleTabChange(tab)}
                   className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-all duration-200 text-sm font-medium group ${
                     activeTab === tab 
                       ? 'bg-zinc-900/80 text-emerald-400 border border-zinc-800 shadow-sm ring-1 ring-zinc-800' 

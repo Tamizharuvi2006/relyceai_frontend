@@ -145,6 +145,7 @@ const router = createBrowserRouter([
       { path: "/membership", element: <ProtectedRoute><LazyWrapper><Membership /></LazyWrapper></ProtectedRoute> },
       
       { path: "/settings", element: <LazyWrapper><Settings /></LazyWrapper> },
+      { path: "/settings/:tab", element: <LazyWrapper><Settings /></LazyWrapper> },
       { path: "/files", element: <Navigate to="/workspace?tab=files" replace /> },
       { path: "/library", element: <ProtectedRoute><LazyWrapper><LibraryPage /></LazyWrapper></ProtectedRoute> },
       { path: "/shared/:shareId", element: <LazyWrapper><SharedChat /></LazyWrapper> },

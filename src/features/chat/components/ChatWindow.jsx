@@ -140,7 +140,7 @@ const ChatWindow = memo(function ChatWindow({
   onInitialMessageConsumed,
 }) {
   const theme = 'dark';
-  const { currentUser: user, userProfile, loading: authLoading } = useAuth();
+  const { currentUser: user, userProfile, membership, loading: authLoading } = useAuth();
 
   const {
     messages, loading, wsConnected, botTyping, isReconnecting,
@@ -156,8 +156,20 @@ const ChatWindow = memo(function ChatWindow({
     activePersonality: externalActivePersonality, setActivePersonality: externalSetActivePersonality,
     personalities: externalPersonalities,
   });
-  const membershipPlan = (userProfile?.membership?.plan || 'free').toLowerCase();
-  const canUseFullAgent = ['plus', 'pro', 'business'].includes(membershipPlan);
+  const rawMembershipPlan = (
+    membership?.plan ||
+    membership?.planName ||
+    userProfile?.membership?.plan ||
+    userProfile?.membership?.planName ||
+    userProfile?.membershipPlan ||
+    'free'
+  );
+  const membershipPlan = String(rawMembershipPlan).trim().toLowerCase();
+  const normalizedPlan = membershipPlan
+    .replace(/\s+/g, '')
+    .replace('professional', 'pro')
+    .replace('businessplan', 'business');
+  const canUseFullAgent = ['plus', 'pro', 'business'].includes(normalizedPlan);
   const isAgentTrial = chatMode === 'agent' && !canUseFullAgent;
 
   const handleContinue = useCallback((msg, meta) => {
