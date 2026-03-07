@@ -227,7 +227,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                                 // (contains agent_state). Prevents non-agent mode JSON from
                                 // accidentally triggering AgentMetaBlock/FloatingAgentStatus.
                                 if (!parsedInfo.agent_state && !agentMeta?.agent_state) {
-                                    return msg; // Skip — not an agent payload
+                                    return msg; // Skip - not an agent payload
                                 }
                                 
                                 const nextMeta = { ...agentMeta, ...parsedInfo };
@@ -494,10 +494,12 @@ useEffect(() => {
                     const sessionRef = doc(db, "users", userId, "chatSessions", currentSessionId);
                     // Async check without awaiting to blocking UI
                     getDoc(sessionRef).then(sessionSnap => {
-                         if (sessionSnap.exists() && sessionSnap.data().name === 'New Chat') {
+                         const currentName = sessionSnap.exists() ? String(sessionSnap.data().name || "").trim() : "";
+                         const isDefaultName = !currentName || ["new chat", "new session", "conversation"].includes(currentName.toLowerCase());
+                         if (isDefaultName) {
                             let chatName = plainText.substring(0, 60);
-                            if (chatName.length < plainText.length) chatName += '...';
-                            if (!chatName) chatName = 'Conversation';
+                            if (chatName.length < plainText.length) chatName += "...";
+                            if (!chatName) chatName = "Conversation";
                             ChatService.updateSessionName(userId, currentSessionId, chatName);
                         }
                     });

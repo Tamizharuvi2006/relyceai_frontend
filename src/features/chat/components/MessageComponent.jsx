@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -662,6 +662,16 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
     return processed;
   };
 
+  const formatStreamingForDisplay = (value) => {
+    if (!value) return value;
+    return value
+      .replace(/\r\n/g, "\n")
+      .replace(/(#{1,6}\s+)/g, "\n$1")
+      .replace(/\s+-\s+/g, "\n- ")
+      .replace(/\s*\*\s+/g, "\n* ")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/^\n+/, "");
+  };
   const [thinkingDurationMs, setThinkingDurationMs] = useState(0);
   const thinkingStartTimeRef = useRef(null);
   
@@ -862,7 +872,7 @@ const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, on
                     {displayContent && (
             <div className="relative" data-streaming={isStreaming ? 'true' : undefined}>
               {(isStreaming || !renderMarkdown) ? (
-                <div className="streaming-plain">{displayContent}</div>
+                <div className="streaming-plain">{formatStreamingForDisplay(displayContent)}</div>
               ) : (
                 <div className="prose prose-invert max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 mt-4">
                   <ReactMarkdown components={MarkdownComponents} remarkPlugins={[remarkGfm]}>
