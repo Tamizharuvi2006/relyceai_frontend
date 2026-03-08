@@ -41,6 +41,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
     const streamingMessageIdRef = useRef(null);
     const wsManagerRef = useRef(null);
     const tokenBufferRef = useRef('');
+    const pendingFlushRef = useRef('');
     const streamModeRef = useRef('normal');
     const wsCallbacksRef = useRef(null);
     const tokenProviderRef = useRef(null);
@@ -49,13 +50,15 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
         const botMsgId = streamingMessageIdRef.current;
         if (!botMsgId) return;
         const chunk = tokenBufferRef.current;
+        const pendingChunk = pendingFlushRef.current;
         tokenBufferRef.current = "";
+        pendingFlushRef.current = "";
 
         setMessages(prev => prev.map(msg =>
             msg.id === botMsgId
                 ? {
                     ...msg,
-                    content: (msg.content || '') + chunk,
+                    content: (msg.content || '') + pendingChunk + chunk,
                     isStreaming: false,
                     isGenerating: false,
                     isSearching: false
@@ -213,6 +216,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                             isSearching = true;
                             searchQuery = infoText.replace("Searching with:", "").trim();
                             tokenBufferRef.current = ""; // Clear buffer on search start
+                            pendingFlushRef.current = "";
                         } else if (infoText.startsWith("INTEL:")) {
                             // Intelligence metadata from backend
                             try {
@@ -313,7 +317,7 @@ useEffect(() => {
 
         let animationFrameId = null;
         let lastFlushTime = 0;
-        let pendingContent = "";
+        let pendingContent = pendingFlushRef.current || "";
         let isScheduled = false;
 
         const performFlush = (timestamp) => {
@@ -329,6 +333,7 @@ useEffect(() => {
             if (chunk) {
                 tokenBufferRef.current = '';
                 pendingContent += chunk;
+                pendingFlushRef.current = pendingContent;
             }
 
             if (pendingContent.length > 0 && streamingMessageIdRef.current) {
@@ -339,6 +344,7 @@ useEffect(() => {
                 const botMsgId = streamingMessageIdRef.current;
                 const contentToFlush = pendingContent;
                 pendingContent = "";
+                pendingFlushRef.current = "";
                 lastFlushTime = timestamp;
 
                 const setMessages = setMessagesRef.current;
@@ -356,8 +362,8 @@ useEffect(() => {
                 });
             }
 
-            // Continuously schedule next frame if there is still data or streaming is active
-            if (tokenBufferRef.current || pendingContent || streamingMessageIdRef.current) {
+            // Keep scheduling only while there is buffered content to flush.
+            if (tokenBufferRef.current || pendingContent) {
                 scheduleFlush();
             }
         };
@@ -421,6 +427,7 @@ useEffect(() => {
             wsManagerRef.current.stopGeneration();
         }
         tokenBufferRef.current = ""; // Clear buffer
+        pendingFlushRef.current = "";
         setBotTyping(false);
         setIsDeepSearchActive(false);
         setCurrentMessageId(null);
