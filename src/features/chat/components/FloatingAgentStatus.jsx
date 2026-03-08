@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, Cpu } from 'lucide-react';
 
@@ -15,7 +15,7 @@ export const FloatingAgentStatus = ({ messages, isTyping }) => {
 
   const stateMap = {
     planning: "Planning Strategy",
-    researching: "Researching",
+    researching: "Researching",`r`n    searching_web: "Searching the web",
     using_tool: `Running${meta?.tool ? `: ${meta.tool}` : ''}`,
     awaiting_confirmation: "Awaiting Review",
     repairing: "Repairing",
@@ -53,3 +53,4 @@ export const FloatingAgentStatus = ({ messages, isTyping }) => {
     </AnimatePresence>
   );
 };
+

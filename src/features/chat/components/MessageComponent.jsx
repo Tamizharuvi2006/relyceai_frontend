@@ -235,7 +235,7 @@ const ProcessingIndicator = ({ query, showSearch, holdFinalStep }) => (
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-20"></span>
             <Search size={14} className="text-zinc-400 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
         </div>
-        <span className="text-[13px] font-sans tracking-wide text-zinc-400 font-light animate-pulse mt-1">Deep search active...</span>
+        <span className="text-[13px] font-sans tracking-wide text-zinc-400 font-light animate-pulse mt-1">Searching the web</span>
       </div>
     ) : (
       <ThinkingLoader />
