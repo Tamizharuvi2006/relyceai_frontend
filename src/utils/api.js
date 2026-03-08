@@ -1,4 +1,4 @@
-// src/utils/api.js
+﻿// src/utils/api.js
 // FastAPI Backend Integration Layer
 // Production-ready REST API and WebSocket communication
 import { auth } from './firebaseConfig';
@@ -232,6 +232,25 @@ export async function* streamChatMessage(message, sessionId, userId, chatMode = 
           console.warn('Failed to parse SSE line:', line);
         }
       }
+    const tail = (buffer || "").trim();
+    if (tail && tail.startsWith("data: ")) {
+      try {
+        const data = JSON.parse(tail.slice(6));
+        if (data.type === "token") {
+          yield { type: "token", content: data.content };
+        } else if (data.type === "info") {
+          try {
+            yield { type: "info", payload: JSON.parse(data.content) };
+          } catch (e) {
+            yield { type: "info", payload: data.content };
+          }
+        } else if (data.type === "error") {
+          throw new Error(data.content);
+        }
+      } catch (e) {
+        console.warn("Failed to parse trailing SSE line:", tail);
+      }
+    }
     }
   } catch (error) {
     console.error('streamChatMessage error:', error);
@@ -547,7 +566,7 @@ export async function webSearch(query, tools = ['Search']) {
 }
 
 /**
- * File Upload API — routes to RAG server for document indexing
+ * File Upload API â€” routes to RAG server for document indexing
  */
 export async function uploadFile(file, sessionId = 'general') {
   try {
@@ -560,7 +579,8 @@ export async function uploadFile(file, sessionId = 'general') {
       method: 'POST',
       headers: { ...authHeaders },
       body: formData,
-    });    const payload = await response.json().catch(() => null);
+    });
+    const payload = await response.json().catch(() => null);
     if (!response.ok) throw new Error(payload?.detail || payload?.error || 'Upload failed');
     return payload;
   } catch (error) {
