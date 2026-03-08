@@ -203,6 +203,7 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                         
                         let agentMeta = msg.agentMeta || {};
                         let executionLog = msg.executionLog || [];
+                        let parsedInfo = null;
 
                         if (infoText === "processing") {
                             isSearching = false;
@@ -222,20 +223,17 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                             }
                         } else {
                             try {
-                                const parsedInfo = JSON.parse(infoText);
+                                parsedInfo = JSON.parse(infoText);
                                 
-                                // GUARD: Only merge into agentMeta if this is an actual agent signal
-                                // (contains agent_state). Prevents non-agent mode JSON from
-                                // accidentally triggering AgentMetaBlock/FloatingAgentStatus.
-                                if (!parsedInfo.agent_state && !agentMeta?.agent_state) {
-                                    return msg; // Skip - not an agent payload
-                                }
-                                
-                                const nextMeta = { ...agentMeta, ...parsedInfo };
+                                const hasFollowups = Array.isArray(parsedInfo.followups);
+                                const hasActionChips = Array.isArray(parsedInfo.action_chips);
 
-                                if (JSON.stringify(nextMeta) === JSON.stringify(agentMeta)) {
+                                // Ignore unrelated INFO payloads, but keep followup payloads even without agent_state.
+                                if (!parsedInfo.agent_state && !agentMeta?.agent_state && !hasFollowups && !hasActionChips && !parsedInfo.followup_mode) {
                                     return msg;
                                 }
+
+                                const nextMeta = parsedInfo.agent_state ? { ...agentMeta, ...parsedInfo } : agentMeta;
 
                                 agentMeta = nextMeta;
                                 
@@ -253,13 +251,24 @@ export default function useChatMessages({ core, currentSessionId, userId, onMess
                             }
                         }
 
+                        const nextFollowups = Array.isArray(parsedInfo?.followups)
+                            ? parsedInfo.followups
+                            : (Array.isArray(msg.followups) ? msg.followups : []);
+                        const nextActionChips = Array.isArray(parsedInfo?.action_chips)
+                            ? parsedInfo.action_chips
+                            : (Array.isArray(msg.actionChips) ? msg.actionChips : []);
+                        const nextFollowupMode = parsedInfo?.followup_mode || msg.followupMode || null;
+
                         return {
                             ...msg,
                             isSearching,
                             searchQuery,
                             intelligence,
                             agentMeta,
-                            executionLog
+                            executionLog,
+                            followups: nextFollowups,
+                            actionChips: nextActionChips,
+                            followupMode: nextFollowupMode,
                         };
                     }));
                 },
@@ -638,10 +647,17 @@ useEffect(() => {
                                 
                                 return {
                                     ...msg,
-                                    agentMeta: { ...msg.agentMeta, ...chunk.payload },
+                                    agentMeta: chunk.payload.agent_state ? { ...msg.agentMeta, ...chunk.payload } : (msg.agentMeta || {}),
                                     executionLog: newLog && !currentLogs.includes(newLog) 
                                       ? [...currentLogs, newLog] 
-                                      : currentLogs
+                                      : currentLogs,
+                                    followups: Array.isArray(chunk.payload?.followups)
+                                      ? chunk.payload.followups
+                                      : (Array.isArray(msg.followups) ? msg.followups : []),
+                                    actionChips: Array.isArray(chunk.payload?.action_chips)
+                                      ? chunk.payload.action_chips
+                                      : (Array.isArray(msg.actionChips) ? msg.actionChips : []),
+                                    followupMode: chunk.payload?.followup_mode || msg.followupMode || null,
                                 };
                             }
                             return msg;

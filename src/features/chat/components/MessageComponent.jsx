@@ -661,7 +661,7 @@ const ToolResultCard = ({ result }) => {
   );
 };
 
-const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, onContinue, continueMeta, isLastMessage, chatMode, thinkingVisibility = 'auto' }, ref) => {
+const MessageComponent = memo(forwardRef(({ msg, index, theme, onCopyMessage, onContinue, onFollowupClick, continueMeta, isLastMessage, chatMode, thinkingVisibility = 'auto' }, ref) => {
   const [showCopyButton, setShowCopyButton] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showIndicator, setShowIndicator] = useState(false);
@@ -805,6 +805,8 @@ ${processed.trim()}
   const isSearching = msg.isSearching;
   const isGenerating = msg.isGenerating;
   const sources = msg.sources || [];
+  const followups = Array.isArray(msg.followups) ? msg.followups : [];
+  const actionChips = Array.isArray(msg.actionChips) ? msg.actionChips : [];
   const parsedToolResults = useMemo(() => parseToolResults(msg.content || ""), [msg.content]);
   const parsedContent = useMemo(() => parseThinkingContent(parsedToolResults.cleanContent || ""), [parsedToolResults.cleanContent]);
   const displayContent = useMemo(() => {
@@ -1025,6 +1027,31 @@ ${processed.trim()}
             );
           })()}
         </div>
+          {(!isStreaming && !isSearching && !isGenerating && (followups.length > 0 || actionChips.length > 0)) && (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {followups.map((q, i) => (
+                <button
+                  key={'followup-' + i + '-' + q}
+                  onClick={() => onFollowupClick && onFollowupClick(q)}
+                  className="text-[12px] px-3 py-1.5 rounded-full border border-white/15 bg-white/[0.03] text-zinc-200 hover:text-white hover:border-emerald-400/40 transition-colors"
+                  title="Ask follow-up"
+                >
+                  {q}
+                </button>
+              ))}
+              {actionChips.map((chip, i) => (
+                <button
+                  key={'action-' + i + '-' + chip}
+                  onClick={() => onFollowupClick && onFollowupClick(chip)}
+                  className="text-[12px] px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:text-emerald-200 hover:border-emerald-400/50 transition-colors"
+                  title="Run quick action"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
+
         
         {displayContent && !isSearching && !isGenerating && !isStreaming && (
           <div className="mt-8 pt-4 border-t border-white/5 flex gap-4 items-center opacity-30 group-hover:opacity-100 transition-opacity">

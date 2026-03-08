@@ -179,6 +179,12 @@ const ChatWindow = memo(function ChatWindow({
     handleSend({ text: prompt });
   }, [handleSend]);
 
+  const handleFollowupClick = useCallback((question) => {
+    const q = typeof question === 'string' ? question.trim() : '';
+    if (!q) return;
+    handleSend({ text: q });
+  }, [handleSend]);
+
   const prevMessagesLengthRef = useRef(messages.length);
   const isAutoScrollingRef = useRef(false);
   const lastUserMessageRef = useRef(null);
@@ -394,7 +400,7 @@ const ChatWindow = memo(function ChatWindow({
                 key={msg.id}
                 ref={(el) => { if (el) { if (msg.role === 'user') lastUserMessageRef.current = el; if (index === messages.length - 1 && msg.role === 'bot') lastBotMessageRef.current = el; } }}
                 msg={msg} index={index} theme={theme} chatMode={chatMode} onCopyMessage={copyMessageToClipboard}
-                onContinue={handleContinue} continueMeta={continueMeta} isLastMessage={index === messages.length - 1} thinkingVisibility={thinkingVisibility}
+                onContinue={handleContinue} onFollowupClick={handleFollowupClick} continueMeta={continueMeta} isLastMessage={index === messages.length - 1} thinkingVisibility={thinkingVisibility}
               />
               );
             })}
